@@ -55,8 +55,6 @@
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
 #define CC2420_NO_ACKNOWLEDGEMENTS 1
-
-//#include "Reset.h"
 #include "AM.h"
 #include "Serial.h"
 
@@ -104,12 +102,21 @@ implementation
     };
 
     // serial queue & management
+    // uartQueue = queue of received radio packets 
+    // waiting to be send over UART.
+    // Real messages are stored in bufs. Pointers to this
+    // queue is given as return value of Packet.receive 
+    // -> where to store next message.
     message_t uartQueueBufs[UART_QUEUE_LEN];
+    // array of pointers to messages in queue. Messages are really stored 
+    // in buffs or in 1 message queue in receive buffer.
     message_t * uartQueue[UART_QUEUE_LEN];
     uint8_t uartIn, uartOut;
     bool uartBusy, uartFull;
 
     // radio queue & management
+    // radioQueue = queue of received uart packets 
+    // waiting to be send over radio    
     message_t radioQueueBufs[RADIO_QUEUE_LEN];
     message_t * radioQueue[RADIO_QUEUE_LEN];
     uint8_t radioIn, radioOut;
@@ -152,28 +159,38 @@ implementation
         call Leds.led2Toggle();
     }
     
-    event void UartTimer.fired(){
-        if (inReset==TRUE) return;
-        
-        // if over, perform HW restart with watchdog
-        if (uartFailCounter > UART_RESET_THRESHOLD){
-            uartFailCounter=0;
-            inReset=TRUE;
-            
-            dropBlink();
-            call Reset.reset();
-            
-            // initiate restart. STOP radio, STOP serial, START serial, START radio;
-            //call RadioControl.stop();
-        } else {
-                post uartSendTask();
-        }
+    // event timer for UART - send next packet
+	event void UartTimer.fired() {
+		if(inReset == TRUE) 
+			return;
+
+		// if over, perform HW restart with watchdog
+		if(uartFailCounter > UART_RESET_THRESHOLD) {
+			uartFailCounter = 0;
+			inReset = TRUE;
+
+			dropBlink();
+			call Reset.reset();
+
+			// initiate restart. STOP radio, STOP serial, START serial, START radio;
+			//call RadioControl.stop();
+		}
+		else {
+			// thresholds are OK, just send message
+			post uartSendTask();
+		}
     }
     
+    // event timer for radio - send next packet
     event void RadioTimer.fired(){
         post radioSendTask();
     }
     
+    // timer controls radio reset - if something went wrong
+    // in radio stack, it may become unresponsible and restart is needed
+    // reset works in 4 phases: radio stop, serial stop, serial start, radio start 
+    // each resetTimer tick should change phase.
+    // on phase -1 is performed HW reset (watchdog)
     event void ResetTimer.fired(){
         error_t curError;
         
@@ -190,10 +207,14 @@ implementation
                 failBlink();
                 call Reset.reset();
                 
+                // this code should not be reached
+                // otherwise hardware reset does not work...
                 dropBlink();
                 sucBlink();
             }
             
+            // depending on current reset phase changes are made to devices
+            // there are 4 phases at all 
             if (resetPhase==0){
                 // phase 0 = stop radio
                 curError = call RadioControl.stop();
@@ -322,9 +343,9 @@ implementation
         }
     }
 
-    // eventhandler, on system boot
+    // event handler, on system boot
     // perform init tasks
-    // prepare queues, start interfaces
+    // prepare queues, starts interfaces
     event void Boot.booted() {
         uint8_t i;
 
@@ -342,12 +363,7 @@ implementation
         }
         radioIn = radioOut = 0;
         radioBusy = FALSE;
-        radioFull = TRUE;
-
-        // start radio & serial
-        //call RadioControl.start();
-        //call SerialControl.start();
-        
+        radioFull = TRUE;        
         // prepare interfaces by special way of reset
 /*
         inReset=TRUE;
@@ -355,12 +371,14 @@ implementation
         call ResetTimer.startOneShot(RESET_TIME);
  * 
 */
-        dropBlink();
+		dropBlink();
+		
+		// start radio & serial
         call RadioControl.start();
         call SerialControl.start();
     }
 
-    // eventhandler, radio start done
+    // event handler, radio start done
     event void RadioControl.startDone(error_t error) {
         uint8_t i;
         
@@ -388,7 +406,7 @@ implementation
         }
     }
 
-    // eventhandler, serial start done
+    // event handler, serial start done
     event void SerialControl.startDone(error_t error) {
         uint8_t i;
         if (error == SUCCESS) {
@@ -415,6 +433,7 @@ implementation
         }
     }
 
+	// event handler - serial interface was stopped
     event void SerialControl.stopDone(error_t error) {
         if (error == SUCCESS) {
             sucBlink();
@@ -431,6 +450,7 @@ implementation
         }
     }
 
+    // event handler - radio interface was stopped
     event void RadioControl.stopDone(error_t error) {
         if (error == SUCCESS) {
             sucBlink();
@@ -448,10 +468,12 @@ implementation
         }
     }
 
+	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioSnoop.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
         return receive(msg, payload, len, id);
     }
 
+	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioReceive.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
         return receive(msg, payload, len, id);
     }
@@ -464,30 +486,40 @@ implementation
         // if in reset do nothing for now
         if (inReset==TRUE) return ret;
         
-        if (!signal RadioIntercept.forward[id](msg, payload, len))
+        // decision point if message should be forwarded or ignored
+        // in this signal processing function can be packet processed
+        if (!signal RadioIntercept.forward[id](msg, payload, len)){
+        	// packet is not interesting for me, skip
             return ret;
+        }
 
         atomic
         {
             // if serial queue is not full, we can put message to it
+            // as consequence message received from radio is forwarded to
+            // UART queue to be sent over UART to application
             if (!uartFull) {
+            	// pointer to free memory block where to store new message
+            	// is stored to ret. Here will be stored new message received
+            	// in next event.
                 ret = uartQueue[uartIn];
+                // to current free place in queue is stored actualy received 
+                // message from radio.
                 uartQueue[uartIn] = msg;
-
+				// next slot in queue - cyclic buffer, move
                 uartIn = (uartIn + 1) % UART_QUEUE_LEN;
 
-                if (uartIn == uartOut)
+				// cyclic queue is full - 1bit signalization
+                if (uartIn == uartOut){
                     uartFull = TRUE;
+                }
 
                 if (!uartBusy) {
                     // timer replaced
-                    //post uartSendTask();
+                    // start timed message sending - better performance in event driven OS
                     timedUartSendTask();
             
                     uartBusy = TRUE;
-                } 
-                else {
-                    //dropBlink();
                 }
             } else {
                 // serial queue full
@@ -497,8 +529,7 @@ implementation
 */              
                 failBlink();
                 dropBlink();
-                
-                
+                 
                 uartFull=TRUE;
                 radioFull=TRUE;
                 ++uartFailCounter;
@@ -515,6 +546,7 @@ implementation
         return ret;
     }
 
+	// starts timer for UART message sending if applicable
     void timedUartSendTask(){
         // do nothing if in middle of reset process
         if (inReset==TRUE) return;
@@ -526,7 +558,7 @@ implementation
         }
     }
 
-    // task, send data to serial
+    // task, send data to serial from queue
     // manage queue
     task void uartSendTask() {
         uint8_t len;
@@ -535,8 +567,8 @@ implementation
         error_t sendError;
         message_t* msg;
         
-        //sucBlink();
-        
+        // inPointer==outPointer and queue is not full => queue is empty
+        // nothing to do. return
         atomic
         if (uartIn == uartOut && !uartFull) {
             uartBusy = FALSE;
@@ -590,7 +622,7 @@ implementation
         timedUartSendTask();
     }
 
-    // eventhandler, serial send done
+    // event handler, serial send done
     event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {
         if (error != SUCCESS){
             failBlink();
@@ -606,6 +638,7 @@ implementation
             // 
             atomic
             if (msg == uartQueue[uartOut]) {
+            	// out pointer is incremented, quivalent of (uartOut+1 `mod` UART_QUEUE_LEN)
                 if (++uartOut >= UART_QUEUE_LEN)
                     uartOut = 0;
                 if (uartFull)
@@ -618,12 +651,10 @@ implementation
         timedUartSendTask();
     }
 
-    // eventhandler, receive message on serial
+    // event handler, receive message on serial
     event message_t * UartReceive.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
         message_t *ret = msg;
         bool reflectToken = FALSE;
-
-        //sucBlink();
         
         // should I forward this message catched on serial to radio?
         if (!signal SerialIntercept.forward[id](msg, payload, len))
@@ -688,7 +719,7 @@ implementation
         }
     }
 
-    // ebenthandler, radio send done
+    // event handler, radio send done, remove from queue if successfull
     event void RadioSend.sendDone[am_id_t id](message_t* msg, error_t error) {
         if (error != SUCCESS){
             failBlink();
