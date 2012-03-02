@@ -48,15 +48,27 @@
 #endif 
 
 module RssiBaseC {
-  uses interface Intercept as RssiMsgIntercept;
-  uses interface Intercept as SimpleRssiMsgIntercept;
+	uses {
+		interface Intercept as RssiMsgIntercept;
+  		interface Intercept as SimpleRssiMsgIntercept;
+  		interface Intercept as CommandMsgIntercept;
+  		interface Intercept as SerialCommandIntercept;
+  		interface AMSend as UartAMSend;
+  		interface AMSend as UartCmdAMSend;
+	}
+
 /*
   uses interface Intercept as Report;
 */
-  
+  uses interface Timer<TMilli> as AliveTimer;
   uses interface Timer<TMilli> as SendTimer;
   uses interface AMSend as PingMsgSend;
   uses interface SplitControl as RadioControl;
+  uses interface SplitControl as SerialControl;
+  uses interface Packet as UartPacket;
+  uses interface AMPacket as UartAMPacket;
+  uses interface Packet as RadioPacket;
+  uses interface AMPacket as RadioAMPacket;  
   uses interface Packet;
   uses interface AMPacket;
   uses interface Leds;
@@ -72,101 +84,223 @@ module RssiBaseC {
 
 } implementation {
   message_t pkt;
-  bool busy = FALSE;
+  message_t cmdPkt;
+  
+  bool busy = TRUE;
+  bool serialBusy = TRUE;
+  
   uint16_t counter = 0;
-
   uint8_t blinkCnSend = 0;
+  
+  // buffer for last rssi value
+  uint16_t lastRssiValue=0;
+  am_addr_t lastNodeId;
+  bool doReportSend=FALSE;
 
   // forward declarations
   void sendBlink();
   uint16_t getRssi(message_t *msg);
-/*
-  void task sendEchoReply();
-*/
+  
+  // reporting
+  void task sendReport();
+  void task sendAlive();
 
   // decision function, should be message cathed on radio forwarded to serial on BS?
   // we can change some fields in given message
   // todo: report against given message type ID
-  event bool RssiMsgIntercept.forward(message_t *msg, void *payload, uint8_t len) {
-    // get message payload
-    MultiPingResponseMsg *rssiMsg = (MultiPingResponseMsg*) payload;
+	event bool RssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
+		// store RSSI to local buffer
+		lastRssiValue = getRssi(msg);
+		lastNodeId = call RadioAMPacket.source(msg);
+		doReportSend = TRUE;
+		
+		// initiate task sending
+		
+		
+		// get message payload
+		//MultiPingResponseMsg * rssiMsg = (MultiPingResponseMsg * ) payload;
 
-    // fill rssi field in
-    // RSSI of packet arrived
-    rssiMsg->rssi = 0;//getRssi(msg);
+		// fill rssi field in
+		// RSSI of packet arrived
+		//rssiMsg->rssi = 0;//getRssi(msg); 
 
-    sendBlink();
+		sendBlink();
 
-    // TRUE -> Yes, forward this message to serial port
-    return TRUE;
-  }
+		// TRUE -> Yes, forward this message to serial port
+		return TRUE;
+	}
 
-  event bool SimpleRssiMsgIntercept.forward(message_t *msg, void *payload, uint8_t len) {
-    // get message payload
-    RssiMsg *rssiMsg = (RssiMsg*) payload;
+	event bool SimpleRssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
+		// get message payload
+		RssiMsg * rssiMsg = (RssiMsg * ) payload;
 
-    // fill rssi field in
-    // RSSI of packet arrived
-    rssiMsg->rssi = getRssi(msg);
+		// fill rssi field in
+		// RSSI of packet arrived
+		rssiMsg->rssi = getRssi(msg);
 
-    sendBlink();
+		sendBlink();
 
-    // TRUE -> Yes, forward this message to serial port
-    return TRUE;
-  }
+		// TRUE -> Yes, forward this message to serial port
+		return TRUE;
+	}
+  
+	event bool CommandMsgIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		// OK we can forward command messages to application, no problem ;-)
+		return TRUE;
+	}
 
-/*
-  event bool Report.forward(message_t *msg, void *payload, uint8_t len){
-      return TRUE;
-  }
-*/
+	// Controls forwarding of messages received on serial interface.
+	// If is packet destined for me only
+	event bool SerialCommandIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		// if message is destined for me, process it, get destination
+		am_addr_t destination = call UartAMPacket.destination(msg);
+		bool forMe = call UartAMPacket.isForMe(msg);
+		
+		if (forMe){
+			// process command here...
+			sendBlink();
+			
+			// do not forward private communication:)
+			return (AM_BROADCAST_ADDR==destination);
+		}
+		
+		return TRUE;
+	}
+	
+	/************************ SIGNALIZATION ************************/
   void sendBlink() {
     // no blinking here, overhead
       return;
       
       
-      if (blinkCnSend==0){
+      if (TRUE || blinkCnSend==0){
         call Leds.led1Toggle();
       }
 
       //blinkCnSend = (blinkCnSend+1) % 10;
       blinkCnSend=0;
   }  
+	
+	/************************ INITIALIZATION ************************/
+	event void Boot.booted() {
+		// nothing to say, you are goood ;-)
+	}
+  
+  	event void RadioControl.startDone(error_t error){
+		busy=FALSE;
+	}
 
-  // system bood event handler
-  event void Boot.booted(){
-  	busy = TRUE;
-        call RadioControl.start();
-  }
-  
-  event void SendTimer.fired(){
-/*
-        post sendEchoReply();
-*/
-  }
-  
- /**
-  * Radio Control Start Done
-  */
-  event void RadioControl.startDone(error_t result){
-    //do not send now
-    if (result == SUCCESS) {
-      ;//call SendTimer.startPeriodic(500);
-    }
-    else {
-      call RadioControl.start();
-    }
-    
-    busy = FALSE;
-  }
+	event void RadioControl.stopDone(error_t error){
+		busy=TRUE;
+	}
 
-  // stop done, empty event handler, nothing to do here
-  event void RadioControl.stopDone(error_t result){
-  }
+	event void SerialControl.stopDone(error_t error){
+		serialBusy=TRUE;
+		call AliveTimer.stop();
+	}
+
+	event void SerialControl.startDone(error_t error){
+		serialBusy=FALSE;
+		call AliveTimer.startPeriodic(3000);
+	}
   
-  event void PingMsgSend.sendDone(message_t *m, error_t error){
-  	busy = FALSE;
-  }
+    /************************ SENDING ************************/
+	event void SendTimer.fired() {
+		;
+	}
+
+	event void PingMsgSend.sendDone(message_t * m, error_t error) {
+		busy = FALSE;
+	}
+  
+  	// send RSSI report to application
+	void task sendReport() {
+		if(doReportSend == FALSE) {
+			return;
+		}
+
+		if( ! serialBusy) {
+			MultiPingResponseReportMsg * btrpkt = (MultiPingResponseReportMsg* ) (call UartAMSend.getPayload(&pkt, sizeof(MultiPingResponseReportMsg)));
+			// only one report here, yet
+			btrpkt->datanum=1;
+			btrpkt->counter=counter++;
+			btrpkt->nodecounter[0] = 0;
+			btrpkt->nodeid[0] = lastNodeId;
+			btrpkt->rssi[0] = lastRssiValue;
+			
+			//PingMsg * btrpkt = (PingMsg * )(call Packet.getPayload(&pkt, 0));
+			//btrpkt->nodeid = TOS_NODE_ID;
+			//btrpkt->counter = counter;
+			if(call UartAMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MultiPingResponseReportMsg)) == SUCCESS) {
+				serialBusy = TRUE;
+				sendBlink();
+			}
+			else {
+				post sendReport();
+			}
+		}
+		else {
+			post sendReport();
+		}
+	}
+  
+  	event void UartAMSend.sendDone(message_t *msg, error_t error){
+  		serialBusy = FALSE;
+		if(error == SUCCESS) {
+			doReportSend = FALSE;
+		}
+		else {
+			post sendReport();
+		}
+	}
+	
+	// alive counter fired -> signalize that I am alive to application
+	event void AliveTimer.fired(){
+		if (serialBusy){
+			return;
+		}
+		
+		post sendAlive();
+	}
+	
+	// sends alive packet to application to know that node is OK
+	void task sendAlive(){
+		if (serialBusy) {
+			dbg("Cannot send indentify message");
+			post sendAlive();
+		}
+		
+		CommandMsg * btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
+		// only one report here, yet
+		btrpkt->command_id = counter;
+		btrpkt->reply_on_command = COMMAND_IDENTIFY;
+		btrpkt->command_code = COMMAND_ACK;
+		btrpkt->command_version = 1;
+		btrpkt->command_data = NODE_BS;
+		// fill radio chip here
+#ifdef __CC2420_H__
+        btrpkt->command_data_next[0]=1;
+#elif defined(PLATFORM_IRIS)
+        btrpkt->command_data_next[0]=2;
+#elif defined(TDA5250_MESSAGE_H)
+        btrpkt->command_data_next[0]=3;
+#else
+        btrpkt->command_data_next[0]=4;
+#endif
+        // fill node ID
+        btrpkt->command_data_next[1] = TOS_NODE_ID;
+		if(call UartCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
+			serialBusy = TRUE;
+			sendBlink();
+		}
+		else {
+			dbg("Cannot send identify message");	
+		}
+	}
+	
+	event void UartCmdAMSend.sendDone(message_t *msg, error_t error){
+		serialBusy=FALSE;
+	}
   
 /*
   void task sendEchoReply(){	      
@@ -190,6 +324,7 @@ module RssiBaseC {
   }
 */
 
+/************************ READING ************************/
 // radio dependent code, RSSI reading
 // RSSI extraction from packet metadata
 #ifdef __CC2420_H__
@@ -219,5 +354,4 @@ module RssiBaseC {
 #error Radio chip not supported! This demo currently works only \
          for motes with CC1000, CC2420, RF230 or TDA5250 radios.
 #endif
-
 }

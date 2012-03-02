@@ -93,6 +93,10 @@ module BaseStationP @safe() {
     	// msg sending - reporting
     	interface AMSend as SerialSend[am_id_t id];
     	
+    	// just for notification on radio start/stop
+    	interface SplitControl as BSRadioControl;
+    	interface SplitControl as BSSerialControl;
+    	
     	// receive interface for serial is not needed here, messages can be processed in SerialIntercept
     	// if needed... Receiving is not problem with serial interface started...
     	// interface Receive as SerialReceive[am_id_t id]; 
@@ -414,6 +418,9 @@ implementation
                 resetPhase++;
                 call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            // signalize 
+            signal BSRadioControl.startDone(error);
         } else {
             failBlink();
             dropBlink();
@@ -442,6 +449,9 @@ implementation
                 resetPhase++;
                 call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            // signalize 
+            signal BSSerialControl.startDone(error);
         } else {
             failBlink();
             dropBlink();
@@ -459,6 +469,9 @@ implementation
             // sucessfull reset, move to next phase
             resetPhase++;
             call ResetTimer.startOneShot(RESET_TIME);
+            
+            // signalize 
+            signal BSSerialControl.stopDone(error);
         } else {
             failBlink();
             dropBlink();
@@ -476,6 +489,9 @@ implementation
             // sucessfull reset, move to next phase
             resetPhase++;
             call ResetTimer.startOneShot(RESET_TIME);
+            
+            // signalize 
+            signal BSRadioControl.stopDone(error);
         } else {
             call RadioControl.stop();
             failBlink();
@@ -888,5 +904,42 @@ implementation
         }
 
         return SUCCESS;
+	}
+
+	/************************* SPLIT CONTROL *********************************/
+	command error_t BSRadioControl.stop(){
+		// not supported, just observer
+		return FAIL;
+	}
+
+	command error_t BSRadioControl.start(){
+		// not supported, just observer
+		return FAIL;
+	}
+
+	command error_t BSSerialControl.start(){
+		// not supported, just observer
+		return FAIL;
+	}
+
+	command error_t BSSerialControl.stop(){
+		// not supported, just observer
+		return FAIL;
+	}
+	
+	default event void BSRadioControl.startDone(error_t error) {
+		return;
+	}
+	
+	default event void BSRadioControl.stopDone(error_t error) {
+		return;
+	}
+	
+	default event void BSSerialControl.startDone(error_t error) {
+		return;
+	}	
+	
+	default event void BSSerialControl.stopDone(error_t error) {
+		return;
 	}
 }

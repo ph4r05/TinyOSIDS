@@ -94,6 +94,10 @@ configuration BaseStationC {
     	
     	// msg sending - reporting
     	interface AMSend as SerialSend[am_id_t id];
+    	
+    	// just for notification on radio start/stop
+    	interface SplitControl as BSRadioControl;
+    	interface SplitControl as BSSerialControl;
 		
 	}
 }
@@ -109,6 +113,8 @@ implementation {
   RadioIntercept = BaseStationP.RadioIntercept;
   SerialIntercept = BaseStationP.SerialIntercept;
   SerialSend = BaseStationP.SerialSend;
+  BSRadioControl = BaseStationP.BSRadioControl;
+  BSSerialControl = BaseStationP.BSSerialControl;
   
   MainC.Boot <- BaseStationP;
 
