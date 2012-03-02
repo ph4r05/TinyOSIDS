@@ -86,8 +86,16 @@
 
 //#include "Reset.h"
 configuration BaseStationC {
-  provides interface Intercept as RadioIntercept[am_id_t amid];
-  provides interface Intercept as SerialIntercept[am_id_t amid];
+	provides {
+		// interface for intercepting radio traffic (control forwarding)
+    	interface Intercept as RadioIntercept[am_id_t amid];
+    	// interface for intercepting serial traffic (control forwarding)
+    	interface Intercept as SerialIntercept[am_id_t amid];
+    	
+    	// msg sending - reporting
+    	interface AMSend as SerialSend[am_id_t id];
+		
+	}
 }
 implementation {
   components MainC, BaseStationP, LedsC, ResetC;
@@ -100,6 +108,7 @@ implementation {
 
   RadioIntercept = BaseStationP.RadioIntercept;
   SerialIntercept = BaseStationP.SerialIntercept;
+  SerialSend = BaseStationP.SerialSend;
   
   MainC.Boot <- BaseStationP;
 
