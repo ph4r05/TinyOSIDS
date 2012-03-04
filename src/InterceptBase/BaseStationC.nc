@@ -98,7 +98,9 @@ configuration BaseStationC {
     	// just for notification on radio start/stop
     	interface SplitControl as BSRadioControl;
     	interface SplitControl as BSSerialControl;
-		
+    	
+    	// forwarding control
+    	interface StdControl as BSControl;
 	}
 }
 implementation {
@@ -115,6 +117,7 @@ implementation {
   SerialSend = BaseStationP.SerialSend;
   BSRadioControl = BaseStationP.BSRadioControl;
   BSSerialControl = BaseStationP.BSSerialControl;
+  BSControl = BaseStationP.BSControl;
   
   MainC.Boot <- BaseStationP;
 

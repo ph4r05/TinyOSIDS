@@ -125,6 +125,7 @@ module RssiBaseC {
 		//rssiMsg->rssi = 0;//getRssi(msg); 
 
 		sendBlink();
+		post sendReport();
 
 		// TRUE -> Yes, forward this message to serial port
 		return TRUE;
@@ -133,12 +134,16 @@ module RssiBaseC {
 	event bool SimpleRssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
 		// get message payload
 		RssiMsg * rssiMsg = (RssiMsg * ) payload;
+		lastRssiValue = getRssi(msg);
+		lastNodeId = call RadioAMPacket.source(msg);
+		doReportSend = TRUE;
 
 		// fill rssi field in
 		// RSSI of packet arrived
 		rssiMsg->rssi = getRssi(msg);
-
 		sendBlink();
+
+		post sendReport();
 
 		// TRUE -> Yes, forward this message to serial port
 		return TRUE;
@@ -201,12 +206,14 @@ module RssiBaseC {
 
 	event void SerialControl.startDone(error_t error){
 		serialBusy=FALSE;
-		call AliveTimer.startPeriodic(3000);
+		call AliveTimer.startPeriodic(5000);
+		//call SendTimer.startPeriodic(1500);
 	}
   
     /************************ SENDING ************************/
 	event void SendTimer.fired() {
-		;
+		doReportSend = TRUE;
+		post sendReport();
 	}
 
 	event void PingMsgSend.sendDone(message_t * m, error_t error) {
@@ -265,12 +272,13 @@ module RssiBaseC {
 	
 	// sends alive packet to application to know that node is OK
 	void task sendAlive(){
+		CommandMsg * btrpkt = NULL;
 		if (serialBusy) {
 			dbg("Cannot send indentify message");
 			post sendAlive();
 		}
 		
-		CommandMsg * btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
+		btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
 		// only one report here, yet
 		btrpkt->command_id = counter;
 		btrpkt->reply_on_command = COMMAND_IDENTIFY;

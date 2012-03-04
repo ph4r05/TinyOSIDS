@@ -68,7 +68,8 @@ configuration RssiBaseAppC {
   App.SerialCommandIntercept->BaseStationC.SerialIntercept[AM_COMMANDMSG];
 // sending reports to UART via queue
   App.UartAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
-  App.UartCmdAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
+// sending commands and alive reports  
+ App.UartCmdAMSend -> BaseStationC.SerialSend[AM_COMMANDMSG];
  // split controll notifiers
   App.RadioControl -> BaseStationC.BSRadioControl;
   App.SerialControl -> BaseStationC.BSSerialControl;

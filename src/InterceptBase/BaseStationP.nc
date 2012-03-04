@@ -97,6 +97,8 @@ module BaseStationP @safe() {
     	interface SplitControl as BSRadioControl;
     	interface SplitControl as BSSerialControl;
     	
+    	// forwarding control
+    	interface StdControl as BSControl;
     	// receive interface for serial is not needed here, messages can be processed in SerialIntercept
     	// if needed... Receiving is not problem with serial interface started...
     	// interface Receive as SerialReceive[am_id_t id]; 
@@ -106,8 +108,8 @@ module BaseStationP @safe() {
 implementation
 {  
     enum {
-        UART_QUEUE_LEN = 32,
-        RADIO_QUEUE_LEN = 32,
+        UART_QUEUE_LEN = 24,
+        RADIO_QUEUE_LEN = 16,
         TIME_TO_RESET=10000,
         UART_TIME=10,
         RADIO_TIME=5,
@@ -142,12 +144,15 @@ implementation
     uint8_t radioIn, radioOut;
     bool radioBusy, radioFull;
 
+	// is TRUE then forward by default
+	bool doForward = TRUE;
+
     //uint8_t count = 0;
     uint8_t tmpLen;
     
     uint8_t uartFailCounter = 0;
     bool inReset=FALSE;
-    uint8_t resetPhase=0;
+    int8_t resetPhase=0;
 
     // forward declarations
     task void uartSendTask();
@@ -308,7 +313,7 @@ implementation
                     //EBUSY if the component is in the middle of powering down i.e. a stop() command has been called, and a stopDone() event is pending
                     failBlink();
                     
-                    resetPhase=1;
+                    resetPhase=2;
                     call ResetTimer.startOneShot(RESET_TIME);
                     return;
                 } else if (curError == SUCCESS){
@@ -334,7 +339,7 @@ implementation
                     return;
                 } else if (curError == EBUSY){
                     //EBUSY if the component is in the middle of powering down i.e. a stop() command has been called, and a stopDone() event is pending
-                    resetPhase=0;
+                    resetPhase=3;
                     failBlink();
                     call ResetTimer.startOneShot(RESET_TIME);
                     return;
@@ -386,17 +391,17 @@ implementation
         radioBusy = FALSE;
         radioFull = TRUE;        
         // prepare interfaces by special way of reset
-/*
+
         inReset=TRUE;
         resetPhase=2;
         call ResetTimer.startOneShot(RESET_TIME);
- * 
-*/
+ 
+
 		dropBlink();
 		
-		// start radio & serial
-        call RadioControl.start();
-        call SerialControl.start();
+//		// start radio & serial
+//        call RadioControl.start();
+//        call SerialControl.start();
     }
 
     // event handler, radio start done
@@ -522,7 +527,7 @@ implementation
         
         // decision point if message should be forwarded or ignored
         // in this signal processing function can be packet processed
-        if (!signal RadioIntercept.forward[id](msg, payload, len)){
+        if (!(signal RadioIntercept.forward[id](msg, payload, len))){
         	// packet is not interesting for me, skip
             return ret;
         }
@@ -807,12 +812,12 @@ implementation
     // decision function, should be current message catched on radio forwarded to serial?
     // is usually overriden in component using this interface
     default event bool RadioIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
-        return TRUE;
+        return doForward;
     }
 
     // shold be message cathed on serial forwarded to radio?
     default event bool SerialIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
-        return TRUE;
+        return doForward;
     }
 
 	/***************** AMSend Commands ****************/
@@ -866,10 +871,10 @@ implementation
                 // set fields as radio packet - BaseStation assumes that radio 
                 // packets are in this queue -> no problem, next calls will
                 // consider message as radio message and puts correct fields
-                call RadioAMPacket.setDestination(msg, addr);
-                call RadioAMPacket.setType(msg, id);
-                call RadioAMPacket.setSource(msg, TOS_NODE_ID);
-                call RadioPacket.setPayloadLength(msg, len);
+                call RadioAMPacket.setDestination(ret, addr);
+                call RadioAMPacket.setType(ret, id);
+                call RadioAMPacket.setSource(ret, TOS_NODE_ID);
+                call RadioPacket.setPayloadLength(ret, len);
                 
                 // store external message pointer - indicates externality, provides binding
                 // for messageSent event
@@ -877,7 +882,7 @@ implementation
                 
                 // to current free place in queue is stored actualy received 
                 // message from radio.
-                uartQueue[uartIn] = msg;
+                uartQueue[uartIn] = ret;
 				// next slot in queue - cyclic buffer, move
                 uartIn = (uartIn + 1) % UART_QUEUE_LEN;
 
@@ -925,6 +930,16 @@ implementation
 	command error_t BSSerialControl.stop(){
 		// not supported, just observer
 		return FAIL;
+	}
+	
+	command error_t BSControl.stop(){
+		doForward=FALSE;
+		return SUCCESS;
+	}
+
+	command error_t BSControl.start(){
+		doForward=TRUE;
+		return SUCCESS;
 	}
 	
 	default event void BSRadioControl.startDone(error_t error) {
