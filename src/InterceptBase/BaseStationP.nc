@@ -559,10 +559,10 @@ implementation
                 uartQueue[uartIn] = msg;
                 // signalize that this message is internal
                 uartQueueExternal[uartIn] = NULL;
+                // packet is from radio
+				uartPacketSerial[uartIn/8] &= ~(1<<(uartIn%8));
 				// next slot in queue - cyclic buffer, move
                 uartIn = (uartIn + 1) % UART_QUEUE_LEN;
-				// packet is from radio
-				uartPacketSerial[uartIn/8] &= ~(1<<uartIn%8);
 				// cyclic queue is full - 1bit signalization
                 if (uartIn == uartOut){
                     uartFull = TRUE;
@@ -632,7 +632,7 @@ implementation
         msg = uartQueue[uartOut];
         
         // depending on packet type
-        if ((uartPacketSerial[uartIn/8] & (1<<uartIn%8))>0) {
+        if ((uartPacketSerial[uartOut/8] & (1<<(uartOut%8)))>0) {
         	// packet is serial - pushed by amsend or enqueued
         	tmpLen = len = call UartPacket.payloadLength(msg);
         	id = call UartAMPacket.type(msg);
@@ -895,7 +895,7 @@ implementation
 		        	   call UartPacket.getPayload(msg, len), 
 		        	   len);
                 // assumes that packet is serial
-                uartPacketSerial[uartIn/8] |= (1<<uartIn%8);
+                uartPacketSerial[uartIn/8] |= (1<<(uartIn%8));
                 // set fields as radio packet - BaseStation assumes that radio 
                 // packets are in this queue -> no problem, next calls will
                 // consider message as radio message and puts correct fields
@@ -1029,13 +1029,15 @@ implementation
 
 	        // ser proper packet-type flag
 	        if (newVal->isRadioMsg){
-	        	uartPacketSerial[uartIn/8] &= ~(1<<uartIn%8);
+	        	uartPacketSerial[uartIn/8] &= ~(1<<(uartIn%8));
 	        } else {
-	        	uartPacketSerial[uartIn/8] |= (1<<uartIn%8);
+	        	uartPacketSerial[uartIn/8] |= (1<<(uartIn%8));
 	        }
 	        
 	        // set always to 1 here
 	        uartPacketExternal[uartIn/8] |= (1<<uartIn%8);
+	        
+	        //memcpy(ret, newVal->msg, sizeof(message_t));
 	        
 	        // set fields as radio packet - BaseStation assumes that radio 
 	        // packets are in this queue -> no problem, next calls will
