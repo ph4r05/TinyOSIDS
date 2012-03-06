@@ -132,8 +132,8 @@ module SendingMoteC {
   uses interface PacketField<uint8_t> as PacketTransmitPower;
 #elif defined(TDA5250_MESSAGE_H)
   uses interface Tda5250Packet;    
-#else
-  uses interface PacketField<uint8_t> as PacketRSSI;
+//#else
+//  uses interface PacketField<uint8_t> as PacketRSSI;
 #endif  
 } implementation {
 
@@ -1799,7 +1799,10 @@ module SendingMoteC {
    }
 #else
   #error Radio chip not supported! This demo currently works only \
-         for motes with CC1000, CC2420, RF230 or TDA5250 radios.  
+         for motes with CC1000, CC2420, RF230 or TDA5250 radios.
+uint16_t getRssi(message_t *msg){
+	return 0;
+}           
 #endif
 
 /**
@@ -1967,6 +1970,25 @@ module SendingMoteC {
 
 #else
   #error Radio chip not supported! This demo currently works only \
-         for motes with CC1000, CC2420, RF230 or TDA5250 radios.  
+         for motes with CC1000, CC2420, RF230 or TDA5250 radios.
+void setPower(message_t *msg, uint8_t power){
+	;
+}
+	
+void setChannel(uint8_t new_channel){
+	;
+}	
+
+error_t readNoiseFloor(){
+	return FAIL;	
+}
+
+void setAutoAck(bool enableAutoAck, bool hwAutoAck){
+	;
+}	
+
+uint8_t getChannel(){
+	return 0;
+}
 #endif
 }
