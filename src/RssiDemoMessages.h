@@ -36,6 +36,10 @@
 #ifndef RSSIDEMOMESSAGES_H__
 #define RSSIDEMOMESSAGES_H__
 
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
 // redefine TOSH_DATA_LENGTH ??
 //#define TOSH_DATA_LENGTH 32
 
@@ -50,8 +54,24 @@ enum {
   AM_COMMANDMSG = 14,
   
   AM_MULTIPINGRESPONSEREPORTMSG = 16,
-  AM_MULTIPINGRESPONSETINYREPORTMSG = 17
+  AM_MULTIPINGRESPONSETINYREPORTMSG = 17,
+  
+  AM_NOISEFLOORREADINGMSG = 18
 };
+
+typedef struct serialqueue_element{
+  nx_struct message_t * msg;
+  // payload pointer
+  void * payload;
+  // address to send message to
+  uint16_t addr;
+  // length of message to send - parameter to AMSend.send = length of payload
+  uint8_t len;
+  // AM message type
+  uint8_t id;
+  // if 1=> radio packet, otherwise serial
+  bool isRadioMsg;
+} serialqueue_element_t;
 
 // ping response
 // RssiMeassured
@@ -86,42 +106,64 @@ typedef nx_struct PingMsg{
 
 // message to request multiple packets from destination
 // 1:N packets
-typedef nx_struct MultiPingMsg{
-//        // nodeid:)
-//	nx_uint8_t nodeid;
-
-        // SEQ number ot this request
+typedef nx_struct MultiPingMsg {
+	// SEQ number ot this request
 	nx_uint16_t counter;
 
-        // tx power of destination
+	// tx power of destination
 	nx_uint8_t txpower;
 
-        // channel at which to send
+	// channel at which to send
 	nx_uint8_t channel;
 
-        // number of packets to send
-        nx_uint16_t packets;
+	// number of packets to send
+	nx_uint16_t packets;
 
-        // timer delay between message send in ms
-        nx_uint16_t delay;
+	// timer delay between message send in ms
+	nx_uint16_t delay;
+	
+	// desired packet size in bytes
+	nx_uint8_t size;
+	
+	// target = packets. CurPacket is incremented when:
+	// TRUE => only on succ sent packet => sendDone()==SUCC
+	// FALSE => on every Send()==SUCC
+	nx_bool counterStrategySuccess;
+	
+	// if true then timer is started periodically and at each timer tick
+	// message is sent 
+	// if false new mesage is sent after previous message was successfully sent in 
+	// sendDone()
+	nx_bool timerStrategyPeriodic;
 } MultiPingMsg;
 
-typedef nx_struct MultiPingResponseMsg{
-    // SEQ number
-    nx_uint16_t counter;
+// packet intended to be sent over serial line to indicate meassured noise floor
+typedef nx_struct NoiseFloorReadingMsg {
+	// SEQ number
+	nx_uint16_t counter;
 
-    // RSSI from mobile node (intercept base will fill this in)
-    // todo:
-    //    optimize this, define new message, basestation will wrap this to new message
-    //    time overhead???
-    nx_int16_t rssi;
+	// noise floor reading from node
+	nx_int16_t noise;
+} NoiseFloorReadingMsg;
+
+typedef nx_struct MultiPingResponseMsg {
+	// SEQ number
+	nx_uint16_t counter;
+
+	// data field to support variable sized messages
+	nx_uint8_t data[0];
 } MultiPingResponseMsg;
 
+#ifndef RSSI_QUEUE_LEN
+#define RSSI_QUEUE_LEN 32
+#endif
+
 typedef nx_struct MultiPingResponseReportStruct {
-    nx_uint8_t nodeid;
-    nx_uint8_t nodecounter;
-    nx_int16_t rssi;
-} MultiPingResponseReportStruct;
+	nx_uint16_t nodeid;
+	nx_uint16_t nodecounter;
+	nx_int16_t rssi;
+	nx_uint8_t len;
+} MultiPingResponseReportStruct_t;
 
 // maximum size of report queue buffer
 #define MAX_REPORT_QUEUE_SIZE 100
@@ -130,60 +172,60 @@ typedef nx_struct MultiPingResponseReportStruct {
 // need to take into account TOSH_DATA_LENGTH
 // packet structure size must be smaller than TOSH_DATA_LENGTH
 // otherwise no packet will be send
-#define MULTIPINGRESPONSEREPORT_MAXDATA 4
+#define MULTIPINGRESPONSEREPORT_MAXDATA 3
 
 // boot up timer request
 #define BOOTUPTIMER_FIRST 500
 #define BOOTUPTIMER_NEXT 5000
 
 // used by static nodes to report RSSI values of mobile node
-typedef nx_struct MultiPingResponseReportMsg{
-    // SEQ number
-    nx_uint16_t counter;
+typedef nx_struct MultiPingResponseReportMsg {
+	// SEQ number
+	nx_uint16_t counter;
 
-    // number of correct data
-    nx_uint8_t datanum;
+	// number of correct data
+	nx_uint8_t datanum;
 
-    // unifiing structure
-    // mig has problem to convert this message to java class
-    // mig cannot work wih structures inside messages
-    //MultiPingResponseReportStruct buff[8];
-    nx_uint16_t nodeid[MULTIPINGRESPONSEREPORT_MAXDATA];
-    nx_uint16_t nodecounter[MULTIPINGRESPONSEREPORT_MAXDATA];
-    nx_int16_t rssi[MULTIPINGRESPONSEREPORT_MAXDATA];
+	// unifiing structure
+	// mig has problem to convert this message to java class
+	// mig cannot work wih structures inside messages
+	//MultiPingResponseReportStruct buff[8];
+	nx_uint16_t nodeid[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_uint16_t nodecounter[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_int16_t rssi[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_int8_t len[MULTIPINGRESPONSEREPORT_MAXDATA];
 } MultiPingResponseReportMsg;
 
-
 // massReportPacket
-typedef nx_struct MassReportMsg{
-    // SEQ number
-    nx_uint16_t counter;
+typedef nx_struct MassReportMsg {
+	// SEQ number
+	nx_uint16_t counter;
 
-    // number of correct data
-    nx_uint8_t datanum;
+	// number of correct data
+	nx_uint8_t datanum;
 
-    // unifiing structure
-    // mig has problem to convert this message to java class
-    // mig cannot work wih structures inside messages
-    //MultiPingResponseReportStruct buff[8];
-    nx_uint8_t nodeid[MULTIPINGRESPONSEREPORT_MAXDATA];
-    nx_uint16_t nodecounter[MULTIPINGRESPONSEREPORT_MAXDATA];
-    nx_int16_t rssi[MULTIPINGRESPONSEREPORT_MAXDATA];
+	// unifiing structure
+	// mig has problem to convert this message to java class
+	// mig cannot work wih structures inside messages
+	//MultiPingResponseReportStruct buff[8];
+	nx_uint8_t nodeid[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_uint16_t nodecounter[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_int16_t rssi[MULTIPINGRESPONSEREPORT_MAXDATA];
 } MassReportMsg;
 
 // used by static nodes to report RSSI values of mobile node
 // lightweight report message
-typedef nx_struct MultiPingResponseTinyReportMsg{
-    // SEQ number
-    nx_uint16_t counter;
+typedef nx_struct MultiPingResponseTinyReportMsg {
+	// SEQ number
+	nx_uint16_t counter;
 
-    // unifiing structure
-    // mig has problem to convert this message to java class
-    // mig cannot work wih structures inside messages
-    //MultiPingResponseReportStruct buff[8];
-    nx_uint16_t nodeid;
-    nx_uint16_t nodecounter;
-    nx_int16_t rssi;
+	// unifiing structure
+	// mig has problem to convert this message to java class
+	// mig cannot work wih structures inside messages
+	//MultiPingResponseReportStruct buff[8];
+	nx_uint16_t nodeid;
+	nx_uint16_t nodecounter;
+	nx_int16_t rssi;
 } MultiPingResponseTinyReportMsg;
 
 /**
@@ -229,75 +271,75 @@ typedef nx_struct MultiPingResponseTinyReportMsg{
  *  - setRandomizedThreshold
  *  - etc...
  */
-typedef nx_struct CommandMsg{
-    // command
-    nx_uint8_t command_code;
+typedef nx_struct CommandMsg {
+	// command
+	nx_uint8_t command_code;
 
-    // command version. Support for protocol versioning. Some nodes may use older
-    // firmware. May be used as packet subtype field
-    nx_uint8_t command_version;
+	// command version. Support for protocol versioning. Some nodes may use older
+	// firmware. May be used as packet subtype field
+	nx_uint8_t command_version;
 
-    // unique command identifier
-    // nodes would be able to ACK or NACK commands.
-    // It poses more reliable communication.
-    // @not-implemented-yet
-    nx_uint16_t command_id;
+	// unique command identifier
+	// nodes would be able to ACK or NACK commands.
+	// It poses more reliable communication.
+	// @not-implemented-yet
+	nx_uint16_t command_id;
 
-    // in case of ACK command, it is used as answer on specific command
-    // only sugar, this info could be stored in command_data_next
-    nx_uint8_t reply_on_command;
-    nx_uint16_t reply_on_command_id;
+	// in case of ACK command, it is used as answer on specific command
+	// only sugar, this info could be stored in command_data_next
+	nx_uint8_t reply_on_command;
+	nx_uint16_t reply_on_command_id;
 
-    // some data associated with command (parameters for example)s
-    nx_uint16_t command_data;
+	// some data associated with command (parameters for example)s
+	nx_uint16_t command_data;
 
-    // for future use
-    // may contain another parameters while command_data would tell subtype of protocol
-    nx_uint16_t command_data_next[4];
+	// for future use
+	// may contain another parameters while command_data would tell subtype of protocol
+	nx_uint16_t command_data_next[4];
 } CommandMsg;
 
 /**
  * Defining available commands for nodes
  */
 enum {
-    COMMAND_NONE=0,
-    COMMAND_ABORT=1,
-    COMMAND_IDENTIFY=2,
-    COMMAND_RESET=3,
-    COMMAND_SETTX=4,
-    COMMAND_SETCHANNEL=5,
-    COMMAND_ACK=6,
-    COMMAND_NACK=7,
-    COMMAND_SETBS=8,
-    COMMAND_LOCK=9,
+	COMMAND_NONE = 0,
+	COMMAND_ABORT = 1,
+	COMMAND_IDENTIFY = 2,
+	COMMAND_RESET = 3,
+	COMMAND_SETTX = 4,
+	COMMAND_SETCHANNEL = 5,
+	COMMAND_ACK = 6,
+	COMMAND_NACK = 7,
+	COMMAND_SETBS = 8,
+	COMMAND_LOCK = 9,
 
-    COMMAND_GETREPORTINGSTATUS=10,
+	COMMAND_GETREPORTINGSTATUS = 10,
 
-    COMMAND_SETREPORTINGSTATUS=11,
-    COMMAND_SETDORANDOMIZEDTHRESHOLDING=12,
-    COMMAND_SETQUEUEFLUSHTHRESHOLD=13,
-    COMMAND_SETTINYREPORTS=14,
-    COMMAND_SETOPERATIONMODE=15,
-    COMMAND_SETREPORTPROTOCOL=16,
-    COMMAND_FLUSHREPORTQUEUE=17,
-    COMMAND_SETNOISEFLOORREADING=18,
-    COMMAND_SETSAMPLESENSORREADING=24,
+	COMMAND_SETREPORTINGSTATUS = 11,
+	COMMAND_SETDORANDOMIZEDTHRESHOLDING = 12,
+	COMMAND_SETQUEUEFLUSHTHRESHOLD = 13,
+	COMMAND_SETTINYREPORTS = 14,
+	COMMAND_SETOPERATIONMODE = 15,
+	COMMAND_SETREPORTPROTOCOL = 16,
+	COMMAND_FLUSHREPORTQUEUE = 17,
+	COMMAND_SETNOISEFLOORREADING = 18,
+	COMMAND_SETSAMPLESENSORREADING = 24,
 
-    COMMAND_SETREPORTGAP=19,
+	COMMAND_SETREPORTGAP = 19,
 
-    // sensor readings
-    COMMAND_GETSENSORREADING=20,
-    COMMAND_SENSORREADING=21,
-            
-    // pinning
-    COMMAND_SETPIN=22,
-    COMMAND_GETPIN=23,
-            
-    // settings
-    // Fetching is request sent to base station after booting node up. 
-    // Base station will then re-send node settings from node register to 
-    // booted node (can be after reset already)
-    COMMAND_FETCHSETTINGS=25
+	// sensor readings
+	COMMAND_GETSENSORREADING = 20,
+	COMMAND_SENSORREADING = 21,
+
+	// pinning
+	COMMAND_SETPIN = 22,
+	COMMAND_GETPIN = 23,
+
+	// settings
+	// Fetching is request sent to base station after booting node up. 
+	// Base station will then re-send node settings from node register to 
+	// booted node (can be after reset already)
+	COMMAND_FETCHSETTINGS = 25
 };
 
 // node ID boudnary for mobile nodes
@@ -309,53 +351,68 @@ enum {
  * Identifications for COMMAND_IDENTIFY
  */
 enum {
-    NODE_REPORTING=1,
-    NODE_TALKING=2,
-    NODE_BS=3,
-    NODE_DEAD=4
+	NODE_REPORTING = 1,
+	NODE_TALKING = 2,
+	NODE_BS = 3,
+	NODE_DEAD = 4
 };
-
 
 /**
  * reporting protocols
  */
 enum {
-    REPORTING_MEDIUM=1,
-    REPORTING_TINY=2,
-    REPORTING_MASS=3
+	REPORTING_MEDIUM = 1,
+	REPORTING_TINY = 2,
+	REPORTING_MASS = 3
 };
 
 /**
  * sensor readings
  */
 enum {
-    /*******************************************************************************\
-	* ConditionTypeValide =	000x xxxx xxxx xxxx 					*
-	* 	Last line =	000x 0000 0000 0000 => (A & 1000) / 1000		*
-	* 	typeId =	0000 xxxx 0000 0000 => (A & 0F00) / 0100		*
-	* 	verbId =	0000 0000 xxxx 0000 => (A & 00F0) / 0010		*
-	* 	msg or logic =	0000 0000 0000 x000 => (A & 0008) / 0008 		*
-	* 	msg or logic =	0000 0000 0000 0xxx => (A & 0007) / 0001 		*
-	\*******************************************************************************/
-	SCALE_LAST_LINE = 0x1000, //4096;
-	MASK_LAST_LINE = 0x1000, //4096;
-	SCALE_TYPE = 0x0100, //256;
-	MASK_TYPE = 0x0F00, //3840;
-	SCALE_VERB = 0x0010, //16;
-	MASK_VERB = 0x00F0, //240;
-	SCALE_SELECT_MSG = 0x0008, //8;
-	MASK_SELECT_MSG = 0x0008, //8;
-	SCALE_MSG_LOGIC = 0x0001, //1;
-	MASK_MSG_LOGIC = 0x0007, //7;
+	/*******************************************************************************\
+	 * ConditionTypeValide =	000x xxxx xxxx xxxx 					*
+	 * 	Last line =	000x 0000 0000 0000 => (A & 1000) / 1000		*
+	 * 	typeId =	0000 xxxx 0000 0000 => (A & 0F00) / 0100		*
+	 * 	verbId =	0000 0000 xxxx 0000 => (A & 00F0) / 0010		*
+	 * 	msg or logic =	0000 0000 0000 x000 => (A & 0008) / 0008 		*
+	 * 	msg or logic =	0000 0000 0000 0xxx => (A & 0007) / 0001 		*
+	 \*******************************************************************************/
+	SCALE_LAST_LINE = 0x1000,
+	//4096;
+	MASK_LAST_LINE = 0x1000,
+	//4096;
+	SCALE_TYPE = 0x0100,
+	//256;
+	MASK_TYPE = 0x0F00,
+	//3840;
+	SCALE_VERB = 0x0010,
+	//16;
+	MASK_VERB = 0x00F0,
+	//240;
+	SCALE_SELECT_MSG = 0x0008,
+	//8;
+	MASK_SELECT_MSG = 0x0008,
+	//8;
+	SCALE_MSG_LOGIC = 0x0001,
+	//1;
+	MASK_MSG_LOGIC = 0x0007,
+	//7; 
 
 	/*******************************************************************************\
-	* readingLong =		0000 xxxx xxxx xxxx 					*
-	* 	type reading =	0000 xx00 0000 0000 => (A & 0C00) / 0400		*
-	* 	number alert =	0000 00xx xxxx xxxx => (A & 03FF) / 0001		*
-	\*******************************************************************************/
-	SCALE_TYPE_READ = 0x0400, //1024
-	MASK_TYPE_READ = 0x1C00, //3072
-	SCALE_NUM_ALERT = 0x0001, //1
+	 * readingLong =		0000 xxxx xxxx xxxx 					*
+	 * 	type reading =	0000 xx00 0000 0000 => (A & 0C00) / 0400		*
+	 * 	number alert =	0000 00xx xxxx xxxx => (A & 03FF) / 0001		*
+	 \*******************************************************************************/
+	SCALE_TYPE_READ = 0x0400,
+	//1024
+	MASK_TYPE_READ = 0x1C00,
+	//3072
+	SCALE_NUM_ALERT = 0x0001,
+	//1
 	MASK_NUM_ALERT = 0x03FF //1023
 };
+
+
+
 #endif //RSSIDEMOMESSAGES_H__
