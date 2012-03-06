@@ -45,13 +45,32 @@ configuration RssiBaseAppC {
   components SerialActiveMessageC as Serial;
   
   components ActiveMessageC, MainC, LedsC;  
-  components new AMSenderC(AM_PINGMSG) as PingMsgSender;
+  components new AMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
+  //components new AMSenderC(AM_PINGMSG) as PingMsgSender;
+  // RSSI report send timer
   components new TimerMilliC() as SendTimer;
+  // keep alive send timer
   components new TimerMilliC() as AliveTimer;
+  // send timer for repeated sending of pings
+  components new TimerMilliC() as PingTimer;
+  
+  // RSSI reading queue
+  components new QueueC(MultiPingResponseReportStruct_t, RSSI_QUEUE_LEN) as RSSIQueue;
+  
+  /**************** NOISE FLOOR READING ****************/
+  // repeatedly noise floor reading timer
+  components new TimerMilliC() as NoiseFloorTimer;
 
 #ifdef __CC2420_H__
   components CC2420ActiveMessageC;
   App -> CC2420ActiveMessageC.CC2420Packet;
+  
+   // setting channel
+  components CC2420RadioC;
+  components CC2420ControlC;
+  components CC2420ControlP;
+  App -> CC2420ControlC.CC2420Config;
+  App.ReadRssi -> CC2420ControlP;
 #elif  defined(PLATFORM_IRIS)
   components  RF230ActiveMessageC, PacketField;
   App -> RF230ActiveMessageC.PacketRSSI;
@@ -64,12 +83,25 @@ configuration RssiBaseAppC {
   App.SimpleRssiMsgIntercept -> BaseStationC.RadioIntercept[AM_RSSIMSG];
   App.CommandMsgIntercept -> BaseStationC.RadioIntercept[AM_COMMANDMSG];
   App.RssiMsgIntercept->BaseStationC.RadioIntercept[AM_MULTIPINGRESPONSEMSG];
+  
+// MultiPingRequest intercept from radio
+  App.MultiPingRadioIntercept -> BaseStationC.RadioIntercept[AM_MULTIPINGMSG];
+// MultiPingRequest intercept from serial
+  App.MultiPingSerialIntercept -> BaseStationC.SerialIntercept[AM_MULTIPINGMSG];
+  
 // serial interceptors - do not forward messages for myself
   App.SerialCommandIntercept->BaseStationC.SerialIntercept[AM_COMMANDMSG];
 // sending reports to UART via queue
   App.UartAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
 // sending commands and alive reports  
  App.UartCmdAMSend -> BaseStationC.SerialSend[AM_COMMANDMSG];
+// sending noise floor readings 
+ App.UartNoiseAMSend -> BaseStationC.SerialSend[AM_NOISEFLOORREADINGMSG];
+// Quick serial sending by pushing to queue
+ App.UartQueue -> BaseStationC.SerialQueue;
+ App.RSSIQueue -> RSSIQueue;
+//MultiPingResponseReportStruct_t 
+ 
  // split controll notifiers
   App.RadioControl -> BaseStationC.BSRadioControl;
   App.SerialControl -> BaseStationC.BSSerialControl;
@@ -77,6 +109,8 @@ configuration RssiBaseAppC {
   App.Boot -> MainC;
   App.SendTimer -> SendTimer;
   App.AliveTimer -> AliveTimer;
+  App.PingTimer -> PingTimer;
+  
   App.PingMsgSend -> PingMsgSender;
   //App.RadioControl -> ActiveMessageC;
   App.Leds -> LedsC;
@@ -88,4 +122,7 @@ configuration RssiBaseAppC {
   
   App.UartPacket -> Serial;
   App.UartAMPacket -> Serial;
+  
+  /**************** NOISE FLOOR READING ****************/
+  App.NoiseFloorTimer -> NoiseFloorTimer;
 }

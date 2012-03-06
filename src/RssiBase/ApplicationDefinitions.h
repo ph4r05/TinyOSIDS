@@ -35,9 +35,9 @@
 
 #ifndef APPLICATIONDEFINITIONS_H__
 #define APPLICATIONDEFINITIONS_H__
-/*
-enum {
-  SEND_INTERVAL_MS = 250
-};
-*/
+
+//enum {
+//  RSSI_QUEUE_LEN=32
+//};
+
 #endif //APPLICATIONDEFINITIONS_H__
