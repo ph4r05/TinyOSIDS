@@ -74,6 +74,9 @@
  * @date January 29 2008
  */
 
+#include "../RssiDemoMessages.h"
+
+
 // if iris mote, redefine bootstrap to support WatchDog based restart
 #if defined(PLATFORM_IRIS)
     #ifndef platform_bootstrap
@@ -94,6 +97,11 @@ configuration BaseStationC {
     	
     	// msg sending - reporting
     	interface AMSend as SerialSend[am_id_t id];
+    	
+    	// provide queue on serial for others by queue interface
+    	// only enqueue is permited, deque will fail...
+    	// sending is handled by internal mechanism, no sendDone is performed     	
+    	interface Queue<serialqueue_element_t *> as SerialQueue;
     	
     	// just for notification on radio start/stop
     	interface SplitControl as BSRadioControl;
@@ -118,6 +126,7 @@ implementation {
   BSRadioControl = BaseStationP.BSRadioControl;
   BSSerialControl = BaseStationP.BSSerialControl;
   BSControl = BaseStationP.BSControl;
+  SerialQueue = BaseStationP.SerialQueue;
   
   MainC.Boot <- BaseStationP;
 

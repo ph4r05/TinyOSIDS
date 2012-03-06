@@ -57,6 +57,7 @@
 #define CC2420_NO_ACKNOWLEDGEMENTS 1
 #include "AM.h"
 #include "Serial.h"
+#include "../RssiDemoMessages.h"
 
 module BaseStationP @safe() {
     uses
@@ -93,6 +94,11 @@ module BaseStationP @safe() {
     	// msg sending - reporting
     	interface AMSend as SerialSend[am_id_t id];
     	
+    	// provide queue on serial for others by queue interface
+    	// only enqueue is permited, deque will fail...
+    	// sending is handled by internal mechanism, no sendDone is performed 
+    	interface Queue<serialqueue_element_t *> as SerialQueue;
+    	
     	// just for notification on radio start/stop
     	interface SplitControl as BSRadioControl;
     	interface SplitControl as BSSerialControl;
@@ -111,7 +117,7 @@ implementation
         UART_QUEUE_LEN = 24,
         RADIO_QUEUE_LEN = 16,
         TIME_TO_RESET=10000,
-        UART_TIME=10,
+        UART_TIME=5,
         RADIO_TIME=5,
         RESET_TIME=300,
         
@@ -135,6 +141,12 @@ implementation
     message_t * uartQueueExternal[UART_QUEUE_LEN];
     uint8_t uartIn, uartOut;
     bool uartBusy, uartFull;
+    // indicator - if 1 then packet in uart queue 
+    // is already serial packet - important for determining 
+    // source, destination...
+    uint8_t uartPacketSerial[UART_QUEUE_LEN/8+1];
+    // signalizes whether packet is enqueued from queue
+    uint8_t uartPacketExternal[UART_QUEUE_LEN/8+1];
 
     // radio queue & management
     // radioQueue = queue of received uart packets 
@@ -549,7 +561,8 @@ implementation
                 uartQueueExternal[uartIn] = NULL;
 				// next slot in queue - cyclic buffer, move
                 uartIn = (uartIn + 1) % UART_QUEUE_LEN;
-
+				// packet is from radio
+				uartPacketSerial[uartIn/8] &= ~(1<<uartIn%8);
 				// cyclic queue is full - 1bit signalization
                 if (uartIn == uartOut){
                     uartFull = TRUE;
@@ -617,10 +630,23 @@ implementation
         }
 
         msg = uartQueue[uartOut];
-        tmpLen = len = call RadioPacket.payloadLength(msg);
-        id = call RadioAMPacket.type(msg);
-        addr = call RadioAMPacket.destination(msg);
-        src = call RadioAMPacket.source(msg);
+        
+        // depending on packet type
+        if ((uartPacketSerial[uartIn/8] & (1<<uartIn%8))>0) {
+        	// packet is serial - pushed by amsend or enqueued
+        	tmpLen = len = call UartPacket.payloadLength(msg);
+        	id = call UartAMPacket.type(msg);
+        	addr = call UartAMPacket.destination(msg);
+        	src = call UartAMPacket.source(msg);
+        } else {
+        	// otherwise packet is radio type and came from radio interface
+        	tmpLen = len = call RadioPacket.payloadLength(msg);
+        	id = call RadioAMPacket.type(msg);
+        	addr = call RadioAMPacket.destination(msg);
+        	src = call RadioAMPacket.source(msg);
+        }
+        
+        // set packet source, ok
         call UartAMPacket.setSource(msg, src);
 
         // try to send with SerialActiveMessageC component
@@ -831,13 +857,11 @@ implementation
 	// kind of schyzophrenic interface - returning radio's get payload 
 	// there is assumption that in queue are radio packets - hold it
 	command void * SerialSend.getPayload[am_id_t id](message_t *msg, uint8_t len){
-		return call RadioSend.getPayload[id](msg, len);
-		//return call UartSend.getPayload[id](msg, len);
+		return call UartSend.getPayload[id](msg, len);
 	}
 
 	command uint8_t SerialSend.maxPayloadLength[am_id_t id](){
-		return call RadioSend.maxPayloadLength[id]();
-		//return call UartSend.maxPayloadLength[id]();
+		return call UartSend.maxPayloadLength[id]();
 	}
 
 	command error_t SerialSend.cancel[am_id_t id](message_t *msg){
@@ -866,15 +890,19 @@ implementation
                 ret = uartQueue[uartIn];
                 // copy whole message to defines address, preserve my addresses for 
                 // future - N+1 cycling queue for receive
-                memcpy(ret, msg, sizeof(message_t));
-                
+                //memcpy(ret, msg, sizeof(message_t));
+                memcpy(call UartPacket.getPayload(ret, len), 
+		        	   call UartPacket.getPayload(msg, len), 
+		        	   len);
+                // assumes that packet is serial
+                uartPacketSerial[uartIn/8] |= (1<<uartIn%8);
                 // set fields as radio packet - BaseStation assumes that radio 
                 // packets are in this queue -> no problem, next calls will
                 // consider message as radio message and puts correct fields
-                call RadioAMPacket.setDestination(ret, addr);
-                call RadioAMPacket.setType(ret, id);
-                call RadioAMPacket.setSource(ret, TOS_NODE_ID);
-                call RadioPacket.setPayloadLength(ret, len);
+                call UartAMPacket.setDestination(ret, addr);
+                call UartAMPacket.setType(ret, id);
+                call UartAMPacket.setSource(ret, TOS_NODE_ID);
+                call UartPacket.setPayloadLength(ret, len);
                 
                 // store external message pointer - indicates externality, provides binding
                 // for messageSent event
@@ -956,5 +984,115 @@ implementation
 	
 	default event void BSSerialControl.stopDone(error_t error) {
 		return;
+	}
+	
+	
+	//uartIn, uartOut;
+    //bool uartBusy, uartFull;
+	/************************* SERIAL QUEUE *********************************/
+	command bool SerialQueue.empty() {
+		return uartFull==FALSE && uartIn==uartOut;
+	}
+
+	command uint8_t SerialQueue.size() {
+		return (uartOut > uartIn) ? UART_QUEUE_LEN - uartOut + uartIn : uartIn - uartOut;
+	}
+
+	command uint8_t SerialQueue.maxSize() {
+		return UART_QUEUE_LEN;
+	}
+
+	command error_t SerialQueue.enqueue(serialqueue_element_t * newVal){
+		message_t * ret; 
+
+		// if queue is full, cannot add new
+		if (uartFull) {
+                // serial queue full       
+                failBlink();
+                dropBlink();
+                ++uartFailCounter;
+                
+                return ENOMEM;
+        }
+		
+		// queue manipulation has to be atomic to preserve pointers/counters consistency
+        atomic
+        {
+			// check full again
+			if (uartFull) {
+				return ENOMEM;
+			}
+			// now is guaranted that nothing happened to queue from last check
+			
+	    	// pointer to free memory block. copy here message passed for sending
+	        ret = uartQueue[uartIn];
+
+	        // ser proper packet-type flag
+	        if (newVal->isRadioMsg){
+	        	uartPacketSerial[uartIn/8] &= ~(1<<uartIn%8);
+	        } else {
+	        	uartPacketSerial[uartIn/8] |= (1<<uartIn%8);
+	        }
+	        
+	        // set always to 1 here
+	        uartPacketExternal[uartIn/8] |= (1<<uartIn%8);
+	        
+	        // set fields as radio packet - BaseStation assumes that radio 
+	        // packets are in this queue -> no problem, next calls will
+	        // consider message as radio message and puts correct fields
+	        if (newVal->isRadioMsg){
+	        	// copy whole message to defines address, preserve my addresses for 
+	        	// future - N+1 cycling queue for receive
+		        memcpy(call RadioPacket.getPayload(ret, newVal->len), 
+		        	newVal->payload, newVal->len);
+		        
+	        	
+	        	call RadioAMPacket.setDestination(ret, newVal->addr);
+	        	call RadioAMPacket.setType(ret, newVal->id);
+	        	call RadioAMPacket.setSource(ret, TOS_NODE_ID);
+	        	call RadioPacket.setPayloadLength(ret, newVal->len);
+	        } else {
+	        	// copy whole message to defines address, preserve my addresses for 
+		        // future - N+1 cycling queue for receive
+	        	memcpy(call UartPacket.getPayload(ret, newVal->len), 
+	        		newVal->payload, newVal->len);
+	        	
+	        	call UartAMPacket.setDestination(ret, newVal->addr);
+	        	call UartAMPacket.setType(ret, newVal->id);
+	        	call UartAMPacket.setSource(ret, TOS_NODE_ID);
+	        	call UartPacket.setPayloadLength(ret, newVal->len);
+	        }
+	        
+	        // store external message pointer - indicates externality, provides binding
+	        // for messageSent event
+	        uartQueueExternal[uartIn] = NULL;
+	        // to current free place in queue is stored actualy received 
+	        // message from radio.
+	        uartQueue[uartIn] = ret;
+			// next slot in queue - cyclic buffer, move
+	        uartIn = (uartIn + 1) % UART_QUEUE_LEN;
+			// cyclic queue is full - 1bit signalization
+	        if (uartIn == uartOut){
+	            uartFull = TRUE;
+	        }
+	        
+            // timer replaced
+            // start timed message sending - better performance in event driven OS
+            timedUartSendTask();
+	    }
+
+		return SUCCESS;
+	}
+
+	command serialqueue_element_t * SerialQueue.head(){
+		return NULL;
+	}
+
+	command serialqueue_element_t * SerialQueue.dequeue(){
+		return NULL;
+	}
+
+	command serialqueue_element_t * SerialQueue.element(uint8_t idx){
+		return NULL;
 	}
 }
