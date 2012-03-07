@@ -107,6 +107,9 @@ typedef nx_struct PingMsg{
 // message to request multiple packets from destination
 // 1:N packets
 typedef nx_struct MultiPingMsg {
+	// where to send ping message? single node or broadcast
+	nx_uint16_t destination;
+	
 	// SEQ number ot this request
 	nx_uint16_t counter;
 
@@ -143,7 +146,7 @@ typedef nx_struct NoiseFloorReadingMsg {
 	nx_uint16_t counter;
 
 	// noise floor reading from node
-	nx_int16_t noise;
+	nx_uint16_t noise;
 } NoiseFloorReadingMsg;
 
 typedef nx_struct MultiPingResponseMsg {

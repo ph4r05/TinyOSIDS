@@ -774,7 +774,7 @@ module RssiBaseC {
         // ping coutner
         btrpkt->counter = multiPingCurPackets;
 
-    	if (call PingMsgSend.send(AM_BROADCAST_ADDR, &pingPkt, sizeof(MultiPingResponseMsg) + multiPingRequest.size) == SUCCESS) {
+    	if (call PingMsgSend.send(multiPingRequest.destination, &pingPkt, sizeof(MultiPingResponseMsg) + multiPingRequest.size) == SUCCESS) {
       	    multiPingBusy = TRUE;
     	}
     	else {
