@@ -342,7 +342,12 @@ enum {
 	// Fetching is request sent to base station after booting node up. 
 	// Base station will then re-send node settings from node register to 
 	// booted node (can be after reset already)
-	COMMAND_FETCHSETTINGS = 25
+	COMMAND_FETCHSETTINGS = 25,
+	
+	// base station settings - forwarding from radio to serial?
+	COMMAND_FORWARDING_RADIO_ENABLED = 26,
+	// base station settings - forwarding from serial to radio?
+	COMMAND_FORWARDING_SERIAL_ENABLED = 27
 };
 
 // node ID boudnary for mobile nodes

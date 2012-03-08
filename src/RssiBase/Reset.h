@@ -41,6 +41,9 @@
  * @author Intel Research Berkeley Lab
  */
 
+#ifndef RESET_H__
+#define RESET_H__
+
 // if iris mote, redefine bootstrap
 #if defined(PLATFORM_IRIS)
     #ifndef platform_bootstrap
@@ -74,3 +77,4 @@ void resetMote()
 #endif
 }
 
+#endif //RESET_H__

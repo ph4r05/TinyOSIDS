@@ -35,6 +35,8 @@
 
 #include "ApplicationDefinitions.h"
 #include "../RssiDemoMessages.h"
+#include "Reset.h"
+
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
 #define CC2420_NO_ACKNOWLEDGEMENTS 1
@@ -60,6 +62,10 @@ module RssiBaseC {
   		interface AMSend as UartCmdAMSend;
   		interface AMSend as UartNoiseAMSend;
   		interface Queue<serialqueue_element_t *> as UartQueue;
+  		
+  		interface StdControl as BSControl;
+  		
+  		interface Reset as Reset;
 	}
 
 /*
@@ -164,6 +170,7 @@ module RssiBaseC {
 	void setAutoAck(bool enableAutoAck, bool hwAutoAck);
 	void setAck(message_t *msg, bool status);
 	void CommandReceived(message_t * msg, void * payload, uint8_t len);
+	void task sendCommandACK();
 	void setNoiseInterval(uint16_t interval);
 	void task sendMultipleEcho();
 	
@@ -455,11 +462,9 @@ module RssiBaseC {
 			
 			case COMMAND_RESET : // perform hard HW reset with watchdog to be sure that node is clean
 				btrpktresponse->command_code = COMMAND_ACK;
-
-				// signalize 1 = HW reset was not successful. To bea able to distinguish
-				// between HW and SW reset.
-				//signalize(1);
-				//post sendCommandACK();
+				// should trigger HW restart - by watchdog freeze
+				call Reset.reset();
+				post sendCommandACK();
 			break;
 
 			case COMMAND_ABORT : 
@@ -602,6 +607,30 @@ module RssiBaseC {
 //					// of foreign nodes
 //					;
 //				}
+			break;
+			
+			// disable radio forward
+			case COMMAND_FORWARDING_RADIO_ENABLED:
+				if (btrpkt->command_data>0){
+					call BSControl.start();
+				} else {
+					call BSControl.stop();
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// disable serial forward
+			case COMMAND_FORWARDING_SERIAL_ENABLED: 
+				if (btrpkt->command_data>0){
+					call BSControl.start();
+				} else {
+					call BSControl.stop();
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
 			break;
 
 			default: 

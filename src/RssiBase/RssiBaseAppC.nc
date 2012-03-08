@@ -35,6 +35,7 @@
 
 #include "../RssiDemoMessages.h"
 #include "message.h"
+#include "Reset.h"
 
 configuration RssiBaseAppC {
 } implementation {
@@ -56,6 +57,8 @@ configuration RssiBaseAppC {
   
   // RSSI reading queue
   components new QueueC(MultiPingResponseReportStruct_t, RSSI_QUEUE_LEN) as RSSIQueue;
+  
+  components ResetC;
   
   /**************** NOISE FLOOR READING ****************/
   // repeatedly noise floor reading timer
@@ -122,6 +125,10 @@ configuration RssiBaseAppC {
   
   App.UartPacket -> Serial;
   App.UartAMPacket -> Serial;
+  
+  App.BSControl -> BaseStationC.BSControl;
+  
+  App.Reset -> ResetC;
   
   /**************** NOISE FLOOR READING ****************/
   App.NoiseFloorTimer -> NoiseFloorTimer;
