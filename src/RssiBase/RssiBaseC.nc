@@ -36,6 +36,7 @@
 #include "ApplicationDefinitions.h"
 #include "../RssiDemoMessages.h"
 #include "Reset.h"
+#include "message.h"
 
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
@@ -822,8 +823,8 @@ module RssiBaseC {
 		
 		// get received message
 		btrpkt = (MultiPingMsg * ) payload;
-		// size is contrained to 28
-		if (btrpkt->size>28){
+		// size is contrained to TOSH_DATA_LENGTH
+		if ((btrpkt->size + sizeof(MultiPingResponseMsg))>TOSH_DATA_LENGTH){
 			return;
 		}
 		

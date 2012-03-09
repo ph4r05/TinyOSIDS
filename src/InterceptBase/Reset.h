@@ -40,6 +40,9 @@
  * @author Wei Hong
  * @author Intel Research Berkeley Lab
  */
+ 
+#ifndef RESET_H__
+#define RESET_H__
 
 // if iris mote, redefine bootstrap
 #if defined(PLATFORM_IRIS)
@@ -73,4 +76,6 @@ void resetMote()
 #error "Reset.h not defined/supported for your platform, aborting..."
 #endif
 }
+
+#endif //RESET_H__
 
