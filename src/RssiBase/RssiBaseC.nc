@@ -64,7 +64,7 @@ module RssiBaseC {
   		interface AMSend as UartNoiseAMSend;
   		interface Queue<serialqueue_element_t *> as UartQueue;
   		
-  		interface StdControl as BSControl;
+  		interface InterceptBaseConfig;
   		
   		interface Reset as Reset;
 	}
@@ -188,7 +188,10 @@ module RssiBaseC {
 		if ((call RSSIQueue.maxSize() - call RSSIQueue.size())==0){
 			// queue full -> forward it and exit...
 			post sendReport();
-			return TRUE;
+			// do not waste bandwidth with this useless message
+			// important information is extracted here, for PC app
+			// it has no meaning
+			return FALSE;
 		}
 		
 		atomic {
@@ -204,8 +207,10 @@ module RssiBaseC {
 		sendBlink();
 		post sendReport();
 
-		// TRUE -> Yes, forward this message to serial port
-		return TRUE;
+		// do not waste bandwidth with this useless message
+		// important information is extracted here, for PC app
+		// it has no meaning
+		return FALSE;
 	}
 
 	event bool SimpleRssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
@@ -217,7 +222,10 @@ module RssiBaseC {
 		if ((call RSSIQueue.maxSize() - call RSSIQueue.size())==0){
 			// queue full -> forward it and exit...
 			post sendReport();
-			return TRUE;
+			// do not waste bandwidth with this useless message
+			// important information is extracted here, for PC app
+			// it has no meaning			
+			return FALSE;
 		}
 		
 		atomic {
@@ -233,11 +241,12 @@ module RssiBaseC {
 		sendBlink();
 		post sendReport();
 
-		// TRUE -> Yes, forward this message to serial port
-		return TRUE;
+		// do not waste bandwidth with this useless message
+		// important information is extracted here, for PC app
+		// it has no meaning
+		return FALSE;
 	}
   
-    // TODO: If received message from radio for me - process command
 	event bool CommandMsgIntercept.forward(message_t *msg, void *payload, uint8_t len){
 		// OK we can forward command messages to application, no problem ;-)
 		am_addr_t destination = call UartAMPacket.destination(msg);
@@ -313,7 +322,6 @@ module RssiBaseC {
 	event void SerialControl.startDone(error_t error){
 		serialBusy=FALSE;
 		call AliveTimer.startPeriodic(3000);
-		//call SendTimer.startPeriodic(1500);
 	}
   
     /************************ SENDING ************************/
@@ -613,9 +621,9 @@ module RssiBaseC {
 			// disable radio forward
 			case COMMAND_FORWARDING_RADIO_ENABLED:
 				if (btrpkt->command_data>0){
-					call BSControl.start();
+					call InterceptBaseConfig.setGlobalRadioFilteringEnabled(FALSE);
 				} else {
-					call BSControl.stop();
+					call InterceptBaseConfig.setGlobalRadioFilteringEnabled(TRUE);
 				}
 				
 				btrpktresponse->command_code = COMMAND_ACK;
@@ -625,9 +633,57 @@ module RssiBaseC {
 			// disable serial forward
 			case COMMAND_FORWARDING_SERIAL_ENABLED: 
 				if (btrpkt->command_data>0){
-					call BSControl.start();
+					call InterceptBaseConfig.setGlobalSerialFilteringEnabled(FALSE);
 				} else {
-					call BSControl.stop();
+					call InterceptBaseConfig.setGlobalSerialFilteringEnabled(TRUE);
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// disable radio forward
+			case COMMAND_DEFAULT_FORWARDING_RADIO_ENABLED:
+				if (btrpkt->command_data>0){
+					call InterceptBaseConfig.setDefaultRadioFilteringEnabled(FALSE);
+				} else {
+					call InterceptBaseConfig.setDefaultRadioFilteringEnabled(TRUE);
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// disable serial forward
+			case COMMAND_DEFAULT_FORWARDING_SERIAL_ENABLED: 
+				if (btrpkt->command_data>0){
+					call InterceptBaseConfig.setDefaultSerialFilteringEnabled(FALSE);
+				} else {
+					call InterceptBaseConfig.setDefaultSerialFilteringEnabled(TRUE);
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// forward snooped messages on radio?
+			case COMMAND_RADIO_SNOOPING_ENABLED: 
+				if (btrpkt->command_data>0){
+					call InterceptBaseConfig.setRadioSnoopEnabled(TRUE);
+				} else {
+					call InterceptBaseConfig.setRadioSnoopEnabled(FALSE);
+				}
+				
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// address sniffing?
+			case COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED: 
+				if (btrpkt->command_data>0){
+					call InterceptBaseConfig.setAddressRecognitionEnabled(TRUE);
+				} else {
+					call InterceptBaseConfig.setAddressRecognitionEnabled(FALSE);
 				}
 				
 				btrpktresponse->command_code = COMMAND_ACK;
@@ -886,6 +942,10 @@ module RssiBaseC {
 		return TRUE;
 	}
   
+  
+  	event void InterceptBaseConfig.syncDone(error_t error){
+		// TODO Auto-generated method stub
+	}
 /************************ READING ************************/
 // radio dependent code, RSSI reading
 // RSSI extraction from packet metadata
@@ -1059,4 +1119,6 @@ module RssiBaseC {
 		
 	}
 #endif	
+
+
 }

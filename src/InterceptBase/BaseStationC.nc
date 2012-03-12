@@ -107,8 +107,8 @@ configuration BaseStationC {
     	interface SplitControl as BSRadioControl;
     	interface SplitControl as BSSerialControl;
     	
-    	// forwarding control
-    	interface StdControl as BSControl;
+    	// more complex BS configuration
+    	interface InterceptBaseConfig;
 	}
 }
 implementation {
@@ -125,7 +125,7 @@ implementation {
   SerialSend = BaseStationP.SerialSend;
   BSRadioControl = BaseStationP.BSRadioControl;
   BSSerialControl = BaseStationP.BSSerialControl;
-  BSControl = BaseStationP.BSControl;
+  InterceptBaseConfig = BaseStationP.InterceptBaseConfig;
   SerialQueue = BaseStationP.SerialQueue;
   
   MainC.Boot <- BaseStationP;

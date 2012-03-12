@@ -103,18 +103,19 @@ module BaseStationP @safe() {
     	interface SplitControl as BSRadioControl;
     	interface SplitControl as BSSerialControl;
     	
-    	// forwarding control
-    	interface StdControl as BSControl;
     	// receive interface for serial is not needed here, messages can be processed in SerialIntercept
     	// if needed... Receiving is not problem with serial interface started...
     	// interface Receive as SerialReceive[am_id_t id]; 
+    	
+    	// more complex BS configuration
+    	interface InterceptBaseConfig;
     }
 }
 
 implementation
 {  
     enum {
-        UART_QUEUE_LEN = 24,
+        UART_QUEUE_LEN = 28,
         RADIO_QUEUE_LEN = 16,
         TIME_TO_RESET=10000,
         UART_TIME=5,
@@ -157,7 +158,12 @@ implementation
     bool radioBusy, radioFull;
 
 	// is TRUE then forward by default
-	bool doForward = TRUE;
+	bool globalRadioForward=TRUE;
+	bool globalSerialForward=TRUE;
+	bool defaultRadioForward=FALSE;
+	bool defaultSerialForward=FALSE;
+	bool addressRecognition=TRUE;
+	bool radioSnooping=TRUE;
 
     //uint8_t count = 0;
     uint8_t tmpLen;
@@ -521,6 +527,10 @@ implementation
 
 	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioSnoop.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
+    	if (radioSnooping==FALSE){
+    		return msg;	
+    	}
+    	
         return receive(msg, payload, len, id);
     }
 
@@ -536,6 +546,12 @@ implementation
         
         // if in reset do nothing for now
         if (inReset==TRUE) return ret;
+        
+        // global radio forward is disabled->no received packet from radio to serial
+        // will be re-sended
+        if (globalRadioForward==FALSE){
+        	return ret;
+        }
         
         // decision point if message should be forwarded or ignored
         // in this signal processing function can be packet processed
@@ -740,9 +756,15 @@ implementation
         message_t *ret = msg;
         bool reflectToken = FALSE;
         
+        // global serial forwarding disabled
+		if (globalSerialForward==FALSE){
+			return ret;
+		}
+        
         // should I forward this message catched on serial to radio?
-        if (!signal SerialIntercept.forward[id](msg, payload, len))
+        if (!signal SerialIntercept.forward[id](msg, payload, len)){
             return ret;
+        }
 
         atomic
         if (!radioFull) {
@@ -838,12 +860,12 @@ implementation
     // decision function, should be current message catched on radio forwarded to serial?
     // is usually overriden in component using this interface
     default event bool RadioIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
-        return doForward;
+		return defaultRadioForward;
     }
 
     // shold be message cathed on serial forwarded to radio?
     default event bool SerialIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
-        return doForward;
+		return defaultSerialForward;
     }
 
 	/***************** AMSend Commands ****************/
@@ -958,16 +980,6 @@ implementation
 	command error_t BSSerialControl.stop(){
 		// not supported, just observer
 		return FAIL;
-	}
-	
-	command error_t BSControl.stop(){
-		doForward=FALSE;
-		return SUCCESS;
-	}
-
-	command error_t BSControl.start(){
-		doForward=TRUE;
-		return SUCCESS;
 	}
 	
 	default event void BSRadioControl.startDone(error_t error) {
@@ -1096,5 +1108,63 @@ implementation
 
 	command serialqueue_element_t * SerialQueue.element(uint8_t idx){
 		return NULL;
+	}
+
+
+
+/**
+ * InterceptBaseConfig
+ */
+	command void InterceptBaseConfig.setRadioSnoopEnabled(bool enabled){
+		radioSnooping=enabled;
+	}
+
+	command bool InterceptBaseConfig.getDefaultSerialFilteringEnabled(){
+		return radioSnooping;
+	}
+
+	command void InterceptBaseConfig.setDefaultRadioFilteringEnabled(bool enabled){
+		defaultRadioForward=!enabled;
+	}
+
+	command bool InterceptBaseConfig.getDefaultRadioFilteringEnabled(){
+		return !defaultRadioForward;
+	}
+
+	command void InterceptBaseConfig.setGlobalSerialFilteringEnabled(bool enabled){
+		globalSerialForward=!enabled;
+	}
+
+	async command bool InterceptBaseConfig.getRadioSnoopEnabled(){
+		return !globalSerialForward;
+	}
+
+	command void InterceptBaseConfig.setAddressRecognitionEnabled(bool enabled){
+		//TODO: write functionality here, need to call CC2420 config...
+		addressRecognition=enabled;
+	}
+
+	async command bool InterceptBaseConfig.getAddressRecognitionEnabled(){
+		return addressRecognition;
+	}
+
+	command void InterceptBaseConfig.setDefaultSerialFilteringEnabled(bool enabled){
+		defaultSerialForward=!enabled;
+	}
+
+	command void InterceptBaseConfig.setGlobalRadioFilteringEnabled(bool enabled){
+		 globalRadioForward=!enabled;
+	}
+
+	command bool InterceptBaseConfig.getGlobalSerialFilteringEnabled(){
+		return !globalSerialForward;
+	}
+
+	command error_t InterceptBaseConfig.sync(){
+		return SUCCESS;
+	}
+
+	command bool InterceptBaseConfig.getGlobalRadioFilteringEnabled(){
+		return !globalRadioForward;
 	}
 }

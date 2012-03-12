@@ -89,11 +89,13 @@ configuration RssiBaseAppC {
   
 // MultiPingRequest intercept from radio
   App.MultiPingRadioIntercept -> BaseStationC.RadioIntercept[AM_MULTIPINGMSG];
+  
 // MultiPingRequest intercept from serial
   App.MultiPingSerialIntercept -> BaseStationC.SerialIntercept[AM_MULTIPINGMSG];
-  
 // serial interceptors - do not forward messages for myself
   App.SerialCommandIntercept->BaseStationC.SerialIntercept[AM_COMMANDMSG];
+  
+  
 // sending reports to UART via queue
   App.UartAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
 // sending commands and alive reports  
@@ -126,7 +128,7 @@ configuration RssiBaseAppC {
   App.UartPacket -> Serial;
   App.UartAMPacket -> Serial;
   
-  App.BSControl -> BaseStationC.BSControl;
+  App.InterceptBaseConfig -> BaseStationC.InterceptBaseConfig;
   
   App.Reset -> ResetC;
   

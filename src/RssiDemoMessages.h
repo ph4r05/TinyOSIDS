@@ -347,7 +347,17 @@ enum {
 	// base station settings - forwarding from radio to serial?
 	COMMAND_FORWARDING_RADIO_ENABLED = 26,
 	// base station settings - forwarding from serial to radio?
-	COMMAND_FORWARDING_SERIAL_ENABLED = 27
+	COMMAND_FORWARDING_SERIAL_ENABLED = 27,
+	
+	// base station settings - forwarding from radio to serial? default=without specific wiring
+	COMMAND_DEFAULT_FORWARDING_RADIO_ENABLED = 28,
+	// base station settings - forwarding from serial to radio? setRadioSnoopEnabled
+	COMMAND_DEFAULT_FORWARDING_SERIAL_ENABLED = 29,
+	
+	// base station settings - whether forward messages received on snoop interface?
+	COMMAND_RADIO_SNOOPING_ENABLED = 30,
+	// base station settings - address recognition? if false then mote will sniff foreign messages
+	COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED = 31
 };
 
 // node ID boudnary for mobile nodes
