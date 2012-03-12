@@ -834,7 +834,7 @@ module RssiBaseC {
 		}
 		
 		// timer starting based on strategy chosen
-		if (multiPingRequest.timerStrategyPeriodic==FALSE){
+		if (multiPingRequest.timerStrategyPeriodic==FALSE && multiPingRequest.delay>0){
 			// here start only one shot timer, if this strategy is prefered
 			call PingTimer.startOneShot(multiPingRequest.delay);
 		}
@@ -891,6 +891,7 @@ module RssiBaseC {
 		multiPingCurPackets = 0;
 		// if delay=0 => stop ping send
 		if(btrpkt->delay==0){
+			call PingTimer.stop();
 			return;
 		}
 		
