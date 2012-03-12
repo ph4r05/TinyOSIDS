@@ -1,7 +1,8 @@
 COMPONENT=RssiBaseAppC
 
 INCLUDES= -I..               \
-          -I../InterceptBase
+          -I../InterceptBase \
+          -I../Reset
 
 CFLAGS += $(INCLUDES)
 
