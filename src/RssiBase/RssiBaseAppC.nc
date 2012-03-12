@@ -35,7 +35,7 @@
 
 #include "../RssiDemoMessages.h"
 #include "message.h"
-#include "Reset.h"
+#include "../Reset/Reset.h"
 
 configuration RssiBaseAppC {
 } implementation {

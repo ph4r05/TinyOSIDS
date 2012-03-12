@@ -472,7 +472,12 @@ module RssiBaseC {
 			case COMMAND_RESET : // perform hard HW reset with watchdog to be sure that node is clean
 				btrpktresponse->command_code = COMMAND_ACK;
 				// should trigger HW restart - by watchdog freeze
+				call AliveTimer.stop();
+				call PingTimer.stop();
+				
+				// reset is too fast, application tries to send it 
 				call Reset.reset();
+				// code execution should not reach this statement
 				post sendCommandACK();
 			break;
 

@@ -120,9 +120,9 @@ implementation
         TIME_TO_RESET=10000,
         UART_TIME=5,
         RADIO_TIME=5,
-        RESET_TIME=300,
+        RESET_TIME=400,
         
-        UART_RESET_THRESHOLD=20,
+        UART_RESET_THRESHOLD=30,
     };
 
     // serial queue & management
@@ -415,7 +415,7 @@ implementation
         call ResetTimer.startOneShot(RESET_TIME);
  
 
-		dropBlink();
+		failBlink();
 		
 //		// start radio & serial
 //        call RadioControl.start();
@@ -427,7 +427,7 @@ implementation
         uint8_t i;
         
         // sucessfull starting
-        if (error == SUCCESS) {
+        if (error == SUCCESS || error == EALREADY) {
             sucBlink();
             atomic {
                 for (i = 0; i < RADIO_QUEUE_LEN; i++) {
@@ -438,7 +438,7 @@ implementation
                 radioFull = FALSE;
                 
                 // sucessfull reset, move to next phase
-                resetPhase++;
+                ++resetPhase;
                 call ResetTimer.startOneShot(RESET_TIME);
             }
             
@@ -456,7 +456,7 @@ implementation
     // event handler, serial start done
     event void SerialControl.startDone(error_t error) {
         uint8_t i;
-        if (error == SUCCESS) {
+        if (error == SUCCESS || error == EALREADY) {
             sucBlink();
             atomic {
                 // serial queue init
@@ -469,7 +469,7 @@ implementation
                 uartFull = FALSE;
                 
                 // sucessfull reset, move to next phase
-                resetPhase++;
+                ++resetPhase;
                 call ResetTimer.startOneShot(RESET_TIME);
             }
             
