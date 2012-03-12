@@ -10,10 +10,14 @@ module ResetP
 implementation
 {
 	command void Reset.reset(){
-		call ResetTimer.startOneShot(300);
+		call ResetTimer.startOneShot(100);
 	}
 
 	event void ResetTimer.fired(){
 		resetMote();
+	}
+
+	command void Reset.resetAfterTimeout(uint8_t mili){
+		call ResetTimer.startOneShot(mili);
 	}
 }

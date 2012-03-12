@@ -43,5 +43,8 @@
 
 
 interface Reset {
+  // default reset with timeout timer
   command void reset();
+  // reset after mili miliseconds after this call
+  command void resetAfterTimeout(uint8_t mili);
 }
