@@ -321,7 +321,7 @@ module RssiBaseC {
 
 	event void SerialControl.startDone(error_t error){
 		serialBusy=FALSE;
-		call AliveTimer.startPeriodic(3000);
+		call AliveTimer.startPeriodic(500);
 	}
   
     /************************ SENDING ************************/
@@ -393,8 +393,9 @@ module RssiBaseC {
 	
 	// alive counter fired -> signalize that I am alive to application
 	event void AliveTimer.fired(){
-		if (serialBusy){
-			return;
+		// first 10 messages are sent quickly
+		if (aliveCounter>10){
+			call AliveTimer.startPeriodic(3000);
 		}
 		
 		post sendAlive();
@@ -427,11 +428,20 @@ module RssiBaseC {
 #endif
         // fill node ID
         btrpkt->command_data_next[1] = TOS_NODE_ID;
+        
+        // congestion information
+        // first 8 bites = free slots in radio queue
+        // next 8 bites = free slots in serial queue
+        btrpkt->command_data_next[2] = call InterceptBaseConfig.getRadioQueueFree();
+        btrpkt->command_data_next[2] |= (call InterceptBaseConfig.getSerialQueueFree() << 8);
+        btrpkt->command_data_next[3] = call InterceptBaseConfig.getSerialFailed();
+        
 		if(call UartCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
 			serialBusy = TRUE;
 			sendBlink();
 		}
 		else {
+			post sendAlive();
 			dbg("Cannot send identify message");
 		}
 	}
@@ -884,7 +894,7 @@ module RssiBaseC {
 		
 		// get received message
 		btrpkt = (MultiPingMsg * ) payload;
-		// size is contrained to TOSH_DATA_LENGTH
+		// size is constrained to TOSH_DATA_LENGTH
 		if ((btrpkt->size + sizeof(MultiPingResponseMsg))>TOSH_DATA_LENGTH){
 			return;
 		}

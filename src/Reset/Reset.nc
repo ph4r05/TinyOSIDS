@@ -39,6 +39,7 @@
 /**
  * @author Wei Hong
  * @author Intel Research Berkeley Lab
+ * @author Dusan (ph4r05) Klinec
  */
 
 

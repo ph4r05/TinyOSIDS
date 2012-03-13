@@ -115,11 +115,11 @@ module BaseStationP @safe() {
 implementation
 {  
     enum {
-        UART_QUEUE_LEN = 28,
+        UART_QUEUE_LEN = 32,
         RADIO_QUEUE_LEN = 16,
         TIME_TO_RESET=10000,
-        UART_TIME=5,
-        RADIO_TIME=5,
+        UART_TIME=3,
+        RADIO_TIME=3,
         RESET_TIME=400,
         
         UART_RESET_THRESHOLD=30,
@@ -603,12 +603,11 @@ implementation
                 uartFull=TRUE;
                 radioFull=TRUE;
                 ++uartFailCounter;
-                call UartTimer.stop();
-                
+                timedUartSendTask();
                 // reset with restarting
                 //inReset=TRUE;
                 //resetPhase=0; 
-                call Reset.reset();
+                //call Reset.reset();
                 //call ResetTimer.startOneShot(RESET_TIME);
             }
         }
@@ -639,64 +638,65 @@ implementation
         
         // inPointer==outPointer and queue is not full => queue is empty
         // nothing to do. return
-        atomic
-        if (uartIn == uartOut && !uartFull) {
-            uartBusy = FALSE;
-            return;
-        }
-
-        msg = uartQueue[uartOut];
-        
-        // depending on packet type
-        if ((uartPacketSerial[uartOut/8] & (1<<(uartOut%8)))>0) {
-        	// packet is serial - pushed by amsend or enqueued
-        	tmpLen = len = call UartPacket.payloadLength(msg);
-        	id = call UartAMPacket.type(msg);
-        	addr = call UartAMPacket.destination(msg);
-        	src = call UartAMPacket.source(msg);
-        } else {
-        	// otherwise packet is radio type and came from radio interface
-        	tmpLen = len = call RadioPacket.payloadLength(msg);
-        	id = call RadioAMPacket.type(msg);
-        	addr = call RadioAMPacket.destination(msg);
-        	src = call RadioAMPacket.source(msg);
-        }
-        
-        // set packet source, ok
-        call UartAMPacket.setSource(msg, src);
-
-        // try to send with SerialActiveMessageC component
-        sendError = call UartSend.send[id](addr, uartQueue[uartOut], len);
-        switch(sendError){
-            case SUCCESS:
-                //sucBlink();
-                uartFailCounter=0;
-                break;
-                
-            // was size of packet correct?
-            case ESIZE:
-                // size is problem, remove packet from queue to send
-                ++uartFailCounter;
-                failBlink();
-                
-                // remove here not to waste space in queue
-                if (++uartOut >= UART_QUEUE_LEN)
-                    uartOut = 0;
-                if (uartFull)
-                    uartFull = FALSE;
-                
-                break;
-                
-            case EBUSY:
-                // link is busy, try again later
-                
-                break;
-                
-            case FAIL:
-                // general fail
-                ++uartFailCounter;
-                failBlink();
-                break;
+        atomic {
+	        if (uartIn == uartOut && !uartFull) {
+	            uartBusy = FALSE;
+	            return;
+	        }
+	
+	        msg = uartQueue[uartOut];
+	        
+	        // depending on packet type
+	        if ((uartPacketSerial[uartOut/8] & (1<<(uartOut%8)))>0) {
+	        	// packet is serial - pushed by amsend or enqueued
+	        	tmpLen = len = call UartPacket.payloadLength(msg);
+	        	id = call UartAMPacket.type(msg);
+	        	addr = call UartAMPacket.destination(msg);
+	        	src = call UartAMPacket.source(msg);
+	        } else {
+	        	// otherwise packet is radio type and came from radio interface
+	        	tmpLen = len = call RadioPacket.payloadLength(msg);
+	        	id = call RadioAMPacket.type(msg);
+	        	addr = call RadioAMPacket.destination(msg);
+	        	src = call RadioAMPacket.source(msg);
+	        }
+	        
+	        // set packet source, ok
+	        call UartAMPacket.setSource(msg, src);
+	
+	        // try to send with SerialActiveMessageC component
+	        sendError = call UartSend.send[id](addr, uartQueue[uartOut], len);
+	        switch(sendError){
+	            case SUCCESS:
+	                //sucBlink();
+	                uartFailCounter=0;
+	                break;
+	                
+	            // was size of packet correct?
+	            case ESIZE:
+	                // size is problem, remove packet from queue to send
+	                ++uartFailCounter;
+	                failBlink();
+	                
+	                // remove here not to waste space in queue
+	                if (++uartOut >= UART_QUEUE_LEN)
+	                    uartOut = 0;
+	                if (uartFull)
+	                    uartFull = FALSE;
+	                
+	                break;
+	                
+	            case EBUSY:
+	                // link is busy, try again later
+	                
+	                break;
+	                
+	            case FAIL:
+	                // general fail
+	                ++uartFailCounter;
+	                failBlink();
+	                break;
+	        }
         }
             
         // try to send everything again
@@ -724,18 +724,19 @@ implementation
             
             // CO AK TOTO NIE JE SPRAVA KTORA SA ODOSLALA? NEZAPLNI FRONTU?
             // 
-            atomic
-            if (msg == uartQueue[uartOut]) {
-            	// can signalize external out
-				signalizeExternal=uartQueueExternal[uartOut]!=NULL;
-            	
-            	// out pointer is incremented, equivalent of (uartOut+1 `mod` UART_QUEUE_LEN)
-                if (++uartOut >= UART_QUEUE_LEN)
-                    uartOut = 0;
-                // queue will definitelly cannot be still full after 1 element removal.
-                // equivalent: uartFull = FALSE;
-                if (uartFull)
-                    uartFull = FALSE;
+            atomic {
+	            if (msg == uartQueue[uartOut]) {
+	            	// can signalize external out
+					signalizeExternal=uartQueueExternal[uartOut]!=NULL;
+	            	
+	            	// out pointer is incremented, equivalent of (uartOut+1 `mod` UART_QUEUE_LEN)
+	                if (++uartOut >= UART_QUEUE_LEN)
+	                    uartOut = 0;
+	                // queue will definitelly cannot be still full after 1 element removal.
+	                // equivalent: uartFull = FALSE;
+	                if (uartFull)
+	                    uartFull = FALSE;
+	            }
             }
             
             // signalize external, outside of atomic block
@@ -766,25 +767,26 @@ implementation
             return ret;
         }
 
-        atomic
-        if (!radioFull) {
-            reflectToken = TRUE;
-            ret = radioQueue[radioIn];
-            radioQueue[radioIn] = msg;
-            if (++radioIn >= RADIO_QUEUE_LEN)
-                radioIn = 0;
-            if (radioIn == radioOut)
-                radioFull = TRUE;
-
-            if (!radioBusy) {
-                // timer replaced
-                //post radioSendTask();
-                call RadioTimer.startOneShot(RADIO_TIME);
-                radioBusy = TRUE;
-            }
-            
-        } else {
-            // dropBlink();
+        atomic {
+	        if (!radioFull) {
+	            reflectToken = TRUE;
+	            ret = radioQueue[radioIn];
+	            radioQueue[radioIn] = msg;
+	            if (++radioIn >= RADIO_QUEUE_LEN)
+	                radioIn = 0;
+	            if (radioIn == radioOut)
+	                radioFull = TRUE;
+	
+	            if (!radioBusy) {
+	                // timer replaced
+	                //post radioSendTask();
+	                call RadioTimer.startOneShot(RADIO_TIME);
+	                radioBusy = TRUE;
+	            }
+	            
+	        } else {
+	            // dropBlink();
+	        }
         }
 
         if (reflectToken) {
@@ -1167,4 +1169,16 @@ implementation
 	command bool InterceptBaseConfig.getGlobalRadioFilteringEnabled(){
 		return !globalRadioForward;
 	}
+
+	command uint8_t InterceptBaseConfig.getRadioQueueFree(){
+		return RADIO_QUEUE_LEN - ((radioOut > radioIn) ? RADIO_QUEUE_LEN - radioOut + radioIn : radioIn - radioOut);
+	}
+
+	command uint8_t InterceptBaseConfig.getSerialQueueFree(){
+		return UART_QUEUE_LEN - ((uartOut > uartIn) ? UART_QUEUE_LEN - uartOut + uartIn : uartIn - uartOut);
+	}
+	
+	command uint8_t InterceptBaseConfig.getSerialFailed(){
+		return uartFailCounter;
+	}		
 }

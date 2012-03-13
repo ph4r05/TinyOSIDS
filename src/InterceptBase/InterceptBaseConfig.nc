@@ -43,7 +43,11 @@ interface InterceptBaseConfig {
    * Radio snooping - forward packets from snoop interface to queue
    */
   async command bool getRadioSnoopEnabled();
-  command void setRadioSnoopEnabled( bool enabled ); 
+  command void setRadioSnoopEnabled( bool enabled );
+  
+  command uint8_t getRadioQueueFree();
+  command uint8_t getSerialQueueFree();
+  command uint8_t getSerialFailed(); 
 
   /**
    * Change the short address of the radio.                                                                                                                                               

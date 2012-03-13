@@ -1,5 +1,7 @@
 
-
+/**
+ * @author Dusan (ph4r05) Klinec
+ */
 
 #include "Reset.h"
 module ResetP
