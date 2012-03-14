@@ -439,7 +439,7 @@ module RssiBaseC {
 	        btrpkt->command_data_next[3] = 0;
 	        btrpkt->command_data_next[3] |= (call InterceptBaseConfig.getSerialFailed()<<8);
 	        
-			if(call UartCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
+			if(call UartCmdAMSend.send(TOS_NODE_ID, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
 				serialBusy = TRUE;
 				sendBlink();
 			}
@@ -790,7 +790,7 @@ module RssiBaseC {
 		btrpkt->counter = noiseCounter;
 		btrpkt->noise = noiseData;
 		
-		if(call UartNoiseAMSend.send(AM_BROADCAST_ADDR, &noisePkt, sizeof(NoiseFloorReadingMsg)) == SUCCESS) {
+		if(call UartNoiseAMSend.send(TOS_NODE_ID, &noisePkt, sizeof(NoiseFloorReadingMsg)) == SUCCESS) {
 			noiseBusy=TRUE;
 			sendBlink();
 		}
