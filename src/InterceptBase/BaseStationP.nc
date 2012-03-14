@@ -584,24 +584,14 @@ implementation
                     uartFull = TRUE;
                 }
 
-                if (!uartBusy) {
-                    // timer replaced
-                    // start timed message sending - better performance in event driven OS
-                    timedUartSendTask();
-            
-                    uartBusy = TRUE;
-                }
+                // timer replaced
+                // start timed message sending - better performance in event driven OS
+                timedUartSendTask();
             } else {
-                // serial queue full
-/*
-                uartIn = uartOut = 0;
-                uartFull = FALSE;
-*/              
+                // serial queue full         
                 failBlink();
                 dropBlink();
-                 
-                uartFull=TRUE;
-                radioFull=TRUE;
+
                 ++uartFailCounter;
                 timedUartSendTask();
                 // reset with restarting
@@ -635,6 +625,11 @@ implementation
         am_addr_t addr, src;
         error_t sendError;
         message_t* msg;
+        
+        // busy uart? already sending something?
+        if (uartBusy){
+        	post uartSendTask();
+        }
         
         // inPointer==outPointer and queue is not full => queue is empty
         // nothing to do. return
@@ -707,6 +702,9 @@ implementation
 
     // event handler, serial send done
     event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {
+    	// ph4r05 edit, set uartBusy to false
+        uartBusy = FALSE;
+            
         if (error != SUCCESS){
             failBlink();
             ++uartFailCounter;
@@ -718,9 +716,6 @@ implementation
         	
             uartFailCounter=0;
             sucBlink();
-            
-            // ph4r05 edit, set uartBusy to false
-            uartBusy = FALSE;
             
             // CO AK TOTO NIE JE SPRAVA KTORA SA ODOSLALA? NEZAPLNI FRONTU?
             // 
@@ -943,13 +938,9 @@ implementation
                     uartFull = TRUE;
                 }
 
-                if (!uartBusy) {
-                    // timer replaced
-                    // start timed message sending - better performance in event driven OS
-                    timedUartSendTask();
-            
-                    uartBusy = TRUE;
-                }
+                // timer replaced
+                // start timed message sending - better performance in event driven OS
+                timedUartSendTask();
             } else {
                 // serial queue full       
                 failBlink();

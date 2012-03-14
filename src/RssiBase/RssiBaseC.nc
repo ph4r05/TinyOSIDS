@@ -168,6 +168,7 @@ module RssiBaseC {
   	void setChannel(uint8_t);
   	uint8_t getChannel();
   	error_t readNoiseFloor();
+  	void task readNoideTask();
 	void setAutoAck(bool enableAutoAck, bool hwAutoAck);
 	void setAck(message_t *msg, bool status);
 	void CommandReceived(message_t * msg, void * payload, uint8_t len);
@@ -395,7 +396,7 @@ module RssiBaseC {
 	event void AliveTimer.fired(){
 		// first 10 messages are sent quickly
 		if (aliveCounter>10){
-			call AliveTimer.startPeriodic(3000);
+			call AliveTimer.startPeriodic(2000);
 		}
 		
 		post sendAlive();
@@ -409,45 +410,57 @@ module RssiBaseC {
 			post sendAlive();
 		}
 		
-		btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
-		// only one report here, yet
-		btrpkt->command_id = aliveCounter++;
-		btrpkt->reply_on_command = COMMAND_IDENTIFY;
-		btrpkt->command_code = COMMAND_ACK;
-		btrpkt->command_version = 1;
-		btrpkt->command_data = NODE_BS;
-		// fill radio chip here
-#ifdef __CC2420_H__
-        btrpkt->command_data_next[0]=1;
-#elif defined(PLATFORM_IRIS)
-        btrpkt->command_data_next[0]=2;
-#elif defined(TDA5250_MESSAGE_H)
-        btrpkt->command_data_next[0]=3;
-#else
-        btrpkt->command_data_next[0]=4;
-#endif
-        // fill node ID
-        btrpkt->command_data_next[1] = TOS_NODE_ID;
-        
-        // congestion information
-        // first 8 bites = free slots in radio queue
-        // next 8 bites = free slots in serial queue
-        btrpkt->command_data_next[2] = call InterceptBaseConfig.getRadioQueueFree();
-        btrpkt->command_data_next[2] |= (call InterceptBaseConfig.getSerialQueueFree() << 8);
-        btrpkt->command_data_next[3] = call InterceptBaseConfig.getSerialFailed();
-        
-		if(call UartCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
-			serialBusy = TRUE;
-			sendBlink();
-		}
-		else {
-			post sendAlive();
-			dbg("Cannot send identify message");
+		atomic {
+			btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
+			// only one report here, yet
+			btrpkt->command_id = aliveCounter++;
+			btrpkt->reply_on_command = COMMAND_IDENTIFY;
+			btrpkt->command_code = COMMAND_ACK;
+			btrpkt->command_version = 1;
+			btrpkt->command_data = NODE_BS;
+			// fill radio chip here
+	#ifdef __CC2420_H__
+	        btrpkt->command_data_next[0]=1;
+	#elif defined(PLATFORM_IRIS)
+	        btrpkt->command_data_next[0]=2;
+	#elif defined(TDA5250_MESSAGE_H)
+	        btrpkt->command_data_next[0]=3;
+	#else
+	        btrpkt->command_data_next[0]=4;
+	#endif
+	        // fill node ID
+	        btrpkt->command_data_next[1] = TOS_NODE_ID;
+	        
+	        // congestion information
+	        // first 8 bites = free slots in radio queue
+	        // next 8 bites = free slots in serial queue
+	        btrpkt->command_data_next[2] = call InterceptBaseConfig.getRadioQueueFree();
+	        btrpkt->command_data_next[2] |= (call InterceptBaseConfig.getSerialQueueFree() << 8);
+	        btrpkt->command_data_next[3] = 0;
+	        btrpkt->command_data_next[3] |= (call InterceptBaseConfig.getSerialFailed()<<8);
+	        
+			if(call UartCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
+				serialBusy = TRUE;
+				sendBlink();
+			}
+			else {
+				btrpkt->command_data_next[3]+=1;
+				post sendAlive();
+				dbg("Cannot send identify message");
+			}
 		}
 	}
 	
 	event void UartCmdAMSend.sendDone(message_t *msg, error_t error){
 		serialBusy=FALSE;
+		atomic {
+			// send alive messages, if false - increment problem counter
+			if (msg==&cmdPkt && error!=SUCCESS){
+					CommandMsg * btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
+					btrpkt->command_data_next[3]+=1;
+					post sendAlive();
+			}		
+		}
 	}
 
     /************************ COMMAND RECEIVED ************************/
@@ -748,6 +761,10 @@ module RssiBaseC {
   }
 
 /************************ NOISE FLOOR ************************/
+	void task readNoideTask(){
+		readNoiseFloor();
+	}
+	
 	event void NoiseFloorTimer.fired(){
 		// just trigger reading, answer will be returned in async event
 		readNoiseFloor();
@@ -819,7 +836,7 @@ module RssiBaseC {
 			post sendMultipleEcho();
 		}
 		else {
-			if(multiPingRequest.packets >= multiPingCurPackets) {
+			if(multiPingRequest.packets > multiPingCurPackets) {
 				// still has sent less packets than expected - send
 				post sendMultipleEcho();
 			}
@@ -829,6 +846,8 @@ module RssiBaseC {
 
 				// reset coutner
 				multiPingCurPackets = 0;
+				// freeze next attempts
+				multiPingRequest.delay = 0;
 			}
 		}
 	}
@@ -900,7 +919,7 @@ module RssiBaseC {
 		}
 		
 		// copy current request from packet to local var
-		memcpy(&multiPingRequest, payload, len);
+		memcpy(&multiPingRequest, payload, sizeof(MultiPingMsg));
 		// set curr running to zero, stop timer 
 		call PingTimer.stop();
 		multiPingCurPackets = 0;
@@ -1052,7 +1071,8 @@ module RssiBaseC {
       	noiseData = data;
       	post sendNoiseReading();
 	  } else {
-	  	;
+	  	// noise floor reading failed, start again
+	  	post readNoideTask();
 	  }
   }
 #elif defined(PLATFORM_IRIS)
