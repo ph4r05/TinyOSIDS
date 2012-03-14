@@ -56,7 +56,8 @@ enum {
   AM_MULTIPINGRESPONSEREPORTMSG = 16,
   AM_MULTIPINGRESPONSETINYREPORTMSG = 17,
   
-  AM_NOISEFLOORREADINGMSG = 18
+  AM_NOISEFLOORREADINGMSG = 18,
+  AM_IDENTIFYMSG=40
 };
 
 typedef struct serialqueue_element{
@@ -300,6 +301,30 @@ typedef nx_struct CommandMsg {
 	// may contain another parameters while command_data would tell subtype of protocol
 	nx_uint16_t command_data_next[4];
 } CommandMsg;
+
+
+typedef nx_struct IdentifyMsg {
+	// command
+	nx_uint16_t counter;
+	// my node id - announcement
+	nx_uint16_t nodeId;
+	// reply on some command?
+	nx_uint8_t replyOn;
+	// platform identification
+	nx_uint8_t platformId;
+	// number of identify messages sent after boot yet. If overflow
+	// stops on maximum number.
+	nx_uint8_t identifyAfterBoot;
+	
+	nx_uint8_t radioQueueLen;
+	nx_uint8_t serialQueueLen;
+	nx_uint8_t rssiQueueLen;
+	nx_uint8_t failCount;
+
+	// for future use
+	// may contain another parameters while command_data would tell subtype of protocol
+	nx_uint16_t command_data_next[4];
+} IdentifyMsg;
 
 /**
  * Defining available commands for nodes

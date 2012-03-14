@@ -50,7 +50,7 @@
   
 #endif 
 
-module RssiBaseC {
+module RssiBaseC @safe() {
 	uses {
 		interface Intercept as RssiMsgIntercept;
   		interface Intercept as SimpleRssiMsgIntercept;
@@ -375,6 +375,8 @@ module RssiBaseC {
 						// remove elements from queue - added to send queue OK
 						call RSSIQueue.dequeue();
 					}
+					
+					post sendReport();
 				} else {
 					// message add failed, try again later
 					post sendReport();
@@ -413,7 +415,7 @@ module RssiBaseC {
 		atomic {
 			btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
 			// only one report here, yet
-			btrpkt->command_id = aliveCounter++;
+			btrpkt->command_id = aliveCounter;
 			btrpkt->reply_on_command = COMMAND_IDENTIFY;
 			btrpkt->command_code = COMMAND_ACK;
 			btrpkt->command_version = 1;
@@ -436,15 +438,15 @@ module RssiBaseC {
 	        // next 8 bites = free slots in serial queue
 	        btrpkt->command_data_next[2] = call InterceptBaseConfig.getRadioQueueFree();
 	        btrpkt->command_data_next[2] |= (call InterceptBaseConfig.getSerialQueueFree() << 8);
-	        btrpkt->command_data_next[3] = 0;
+	        btrpkt->command_data_next[3] = call RSSIQueue.size();
 	        btrpkt->command_data_next[3] |= (call InterceptBaseConfig.getSerialFailed()<<8);
 	        
 			if(call UartCmdAMSend.send(TOS_NODE_ID, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
+				aliveCounter+=1;
 				serialBusy = TRUE;
 				sendBlink();
 			}
 			else {
-				btrpkt->command_data_next[3]+=1;
 				post sendAlive();
 				dbg("Cannot send identify message");
 			}
@@ -456,8 +458,6 @@ module RssiBaseC {
 		atomic {
 			// send alive messages, if false - increment problem counter
 			if (msg==&cmdPkt && error!=SUCCESS){
-					CommandMsg * btrpkt = (CommandMsg* ) (call UartCmdAMSend.getPayload(&cmdPkt, sizeof(CommandMsg)));
-					btrpkt->command_data_next[3]+=1;
 					post sendAlive();
 			}		
 		}
@@ -812,6 +812,7 @@ module RssiBaseC {
 	
 	// noise report was sent, process answer
 	event void UartNoiseAMSend.sendDone(message_t *msg, error_t error){
+		noiseBusy=FALSE;
 		if (error!=SUCCESS){
 			// try to re-send
 			post sendNoiseReading();
@@ -819,8 +820,8 @@ module RssiBaseC {
 		}
 		
 		// send OK
-		noiseBusy=FALSE;
 		noiseFresh=FALSE;
+		noiseCounter+=1;
 		// start again if applicable
 		if (noiseTimerInterval>0){
 			call NoiseFloorTimer.startOneShot(noiseTimerInterval);

@@ -6,3 +6,4 @@ mig java -target=telosb -java-classname=MultiPingResponseReportMsg RssiDemoMessa
 mig java -target=telosb -java-classname=NoiseFloorReadingMsg RssiDemoMessages.h NoiseFloorReadingMsg -o NoiseFloorReadingMsg.java
 mig java -target=telosb -java-classname=PingMsg RssiDemoMessages.h PingMsg -o PingMsg.java
 mig java -target=telosb -java-classname=RssiMsg RssiDemoMessages.h RssiMsg -o RssiMsg.java
+mig java -target=telosb -java-classname=IdentifyMsg RssiDemoMessages.h IdentifyMsg -o IdentifyMsg.java
