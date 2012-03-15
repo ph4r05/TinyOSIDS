@@ -377,9 +377,11 @@ module RssiBaseC @safe() {
 					}
 					
 					post sendReport();
+					return;
 				} else {
 					// message add failed, try again later
 					post sendReport();
+					return;
 				}
 			}
 			else {
@@ -410,6 +412,7 @@ module RssiBaseC @safe() {
 		if (serialBusy) {
 			dbg("Cannot send indentify message");
 			post sendAlive();
+			return;
 		}
 		
 		atomic {
@@ -733,6 +736,7 @@ module RssiBaseC @safe() {
   	CommandMsg* btrpkt = NULL;
   	  if (serialBusy){
   	  	post sendCommandACK();
+  	  	return;
   	  }
   	
     btrpkt=(CommandMsg*)(call UartCmdAMSend.getPayload(&cmdPktResponse, 0));
@@ -782,6 +786,7 @@ module RssiBaseC @safe() {
 		// if is busy try another time
 		if (noiseBusy==TRUE){
 			post sendNoiseReading();
+			return;
 		}
 		
 		// construct new command packet with answer
@@ -835,6 +840,7 @@ module RssiBaseC @safe() {
 		// of requested packets to send
 		if(multiPingRequest.packets == 0) {
 			post sendMultipleEcho();
+			return;
 		}
 		else {
 			if(multiPingRequest.packets > multiPingCurPackets) {
