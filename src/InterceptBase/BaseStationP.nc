@@ -213,7 +213,7 @@ implementation
 			inReset = TRUE;
 
 			dropBlink();
-			call Reset.reset();
+			//call Reset.reset();
 
 			// initiate restart. STOP radio, STOP serial, START serial, START radio;
 			//call RadioControl.stop();
@@ -553,15 +553,16 @@ implementation
         	return ret;
         }
         
-        // decision point if message should be forwarded or ignored
-        // in this signal processing function can be packet processed
-        if (!(signal RadioIntercept.forward[id](msg, payload, len))){
-        	// packet is not interesting for me, skip
-            return ret;
-        }
-
+        
         atomic
         {
+	        // decision point if message should be forwarded or ignored
+	        // in this signal processing function can be packet processed
+	        if (!(signal RadioIntercept.forward[id](msg, payload, len))){
+	        	// packet is not interesting for me, skip
+	            return ret;
+	        }
+	                
             // if serial queue is not full, we can put message to it
             // as consequence message received from radio is forwarded to
             // UART queue to be sent over UART to application
@@ -610,6 +611,9 @@ implementation
         // do nothing if in middle of reset process
         if (inReset==TRUE) return;
         
+        //post uartSendTask();
+        //return;
+        
         // timer replaced
         //post uartSendTask();
         if (call UartTimer.isRunning()==FALSE){
@@ -629,6 +633,7 @@ implementation
         // busy uart? already sending something?
         if (uartBusy){
         	post uartSendTask();
+        	return;
         }
         
         // inPointer==outPointer and queue is not full => queue is empty
@@ -664,13 +669,14 @@ implementation
 	        switch(sendError){
 	            case SUCCESS:
 	                //sucBlink();
+	                uartBusy=TRUE;
 	                uartFailCounter=0;
 	                break;
 	                
 	            // was size of packet correct?
 	            case ESIZE:
 	                // size is problem, remove packet from queue to send
-	                ++uartFailCounter;
+	                //++uartFailCounter;
 	                failBlink();
 	                
 	                // remove here not to waste space in queue
@@ -688,7 +694,7 @@ implementation
 	                
 	            case FAIL:
 	                // general fail
-	                ++uartFailCounter;
+	                //++uartFailCounter;
 	                failBlink();
 	                break;
 	        }
@@ -697,7 +703,9 @@ implementation
         // try to send everything again
         // (before this was only as reaction on FAIL, if causes problem, remove
         // it from global case and add only as reaction on FAIL
-        timedUartSendTask();
+        if (sendError!=SUCCESS){
+        	timedUartSendTask();
+        }
     }
 
     // event handler, serial send done
@@ -707,7 +715,7 @@ implementation
             
         if (error != SUCCESS){
             failBlink();
-            ++uartFailCounter;
+            //++uartFailCounter;
         } else {
         	// signalize exernal message sent?
         	bool signalizeExternal=FALSE;
@@ -774,12 +782,13 @@ implementation
 	
 	            if (!radioBusy) {
 	                // timer replaced
-	                //post radioSendTask();
-	                call RadioTimer.startOneShot(RADIO_TIME);
-	                radioBusy = TRUE;
+	                post radioSendTask();
+//	                call RadioTimer.startOneShot(RADIO_TIME);
+//	                radioBusy = TRUE;
 	            }
 	            
 	        } else {
+	        	post radioSendTask();
 	            // dropBlink();
 	        }
         }
@@ -799,6 +808,10 @@ implementation
         am_addr_t addr;
         message_t* msg;
 
+		if (radioBusy){
+			post radioSendTask();
+		}
+
         atomic
         if (radioIn == radioOut && !radioFull) {
             radioBusy = FALSE;
@@ -811,6 +824,7 @@ implementation
         id = call UartAMPacket.type(msg);
         
         if (call RadioSend.send[id](addr, msg, len) == SUCCESS){
+        	radioBusy=TRUE;
             //sucRadioBlink();
         }
         else {
@@ -824,6 +838,8 @@ implementation
 
     // event handler, radio send done, remove from queue if successfull
     event void RadioSend.sendDone[am_id_t id](message_t* msg, error_t error) {
+		radioBusy=FALSE;    	
+   
         if (error != SUCCESS){
             failBlink();
         }
@@ -850,8 +866,8 @@ implementation
         }
 
         // timer replaced
-        //post radioSendTask();
-        call RadioTimer.startOneShot(RADIO_TIME);
+        post radioSendTask();
+        //call RadioTimer.startOneShot(RADIO_TIME);
     }
 
     // decision function, should be current message catched on radio forwarded to serial?
@@ -947,6 +963,8 @@ implementation
                 dropBlink();
                 ++uartFailCounter;
                 
+                timedUartSendTask();
+                
                 return ENOMEM;
             }
         }
@@ -1016,7 +1034,7 @@ implementation
                 failBlink();
                 dropBlink();
                 ++uartFailCounter;
-                
+                timedUartSendTask();
                 return ENOMEM;
         }
 		
@@ -1025,6 +1043,7 @@ implementation
         {
 			// check full again
 			if (uartFull) {
+				timedUartSendTask();
 				return ENOMEM;
 			}
 			// now is guaranted that nothing happened to queue from last check
@@ -1082,11 +1101,11 @@ implementation
 	        if (uartIn == uartOut){
 	            uartFull = TRUE;
 	        }
-	        
-            // timer replaced
-            // start timed message sending - better performance in event driven OS
-            timedUartSendTask();
 	    }
+	    
+	    // timer replaced
+        // start timed message sending - better performance in event driven OS
+        timedUartSendTask();
 
 		return SUCCESS;
 	}
@@ -1134,6 +1153,9 @@ implementation
 
 	command void InterceptBaseConfig.setAddressRecognitionEnabled(bool enabled){
 		//TODO: write functionality here, need to call CC2420 config...
+		
+		
+		
 		addressRecognition=enabled;
 	}
 

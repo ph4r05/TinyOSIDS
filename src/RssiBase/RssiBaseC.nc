@@ -175,6 +175,7 @@ module RssiBaseC @safe() {
 	void task sendCommandACK();
 	void setNoiseInterval(uint16_t interval);
 	void task sendMultipleEcho();
+	void setAddressRecognitionEnabled(bool enabled);
 	
 	/********************** INTERCEPT HANDLERS ********************/
 	// decision function, should be message cathed on radio forwarded to serial on BS?
@@ -710,15 +711,15 @@ module RssiBaseC @safe() {
 			break;
 			
 			// address sniffing?
-			case COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED: 
-				if (btrpkt->command_data>0){
-					call InterceptBaseConfig.setAddressRecognitionEnabled(TRUE);
-				} else {
-					call InterceptBaseConfig.setAddressRecognitionEnabled(FALSE);
-				}
+			case COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED:
+				{
+				bool enabledRecognition = (btrpkt->command_data>0);
+				call InterceptBaseConfig.setAddressRecognitionEnabled(enabledRecognition);
+				setAddressRecognitionEnabled(enabledRecognition);
 				
 				btrpktresponse->command_code = COMMAND_ACK;
 				post sendCommandACK();
+				}
 			break;
 
 			default: 
@@ -1056,6 +1057,11 @@ module RssiBaseC @safe() {
     call CC2420Config.sync();
   }
 
+  void setAddressRecognitionEnabled(bool enabled){
+	call CC2420Config.setAddressRecognition(enabled, enabled);
+	call CC2420Config.sync();
+  }
+
   void setAck(message_t *msg, bool status){
       ;
   }
@@ -1160,6 +1166,10 @@ module RssiBaseC @safe() {
 	
 	void setAck(message_t *msg, bool status){
 		
+	}
+	
+	void setAddressRecognitionEnabled(bool enabled){
+				
 	}
 #endif	
 
