@@ -873,11 +873,23 @@ implementation
     // decision function, should be current message catched on radio forwarded to serial?
     // is usually overriden in component using this interface
     default event bool RadioIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	// by default do not forward messages that are directly for me
+    	if ((call RadioAMPacket.destination(msg)) == TOS_NODE_ID){
+    		return FALSE;
+    	} 
+    	
+    	// next action depends on default settings - can be set from outside
 		return defaultRadioForward;
     }
 
     // shold be message cathed on serial forwarded to radio?
     default event bool SerialIntercept.forward[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	// by default do not forward messages that are directly for me
+    	if ((call UartAMPacket.destination(msg)) == TOS_NODE_ID){
+    		return FALSE;
+    	}
+    	
+    	// next action depends on default settings - can be set from outside
 		return defaultSerialForward;
     }
 
