@@ -755,6 +755,18 @@ module RssiBaseC @safe() {
 				post sendCommandACK();
 				}
 			break;
+			
+			// set CTP is root?
+			case COMMAND_SET_CTP_ROOT:
+				if (btrpkt->command_data>0){
+					btrpktresponse->command_data = call RootControl.setRoot();
+				} else if (call RootControl.isRoot()){
+					btrpktresponse->command_data = call RootControl.unsetRoot();
+				}
+
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
 
 			default: 
 				;

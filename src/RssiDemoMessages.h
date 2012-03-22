@@ -403,7 +403,10 @@ enum {
 	// base station settings - whether forward messages received on snoop interface?
 	COMMAND_RADIO_SNOOPING_ENABLED = 30,
 	// base station settings - address recognition? if false then mote will sniff foreign messages
-	COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED = 31
+	COMMAND_RADIO_ADDRESS_RECOGNITION_ENABLED = 31,
+	
+	// set node as CTP root
+	COMMAND_SET_CTP_ROOT=32
 };
 
 // node ID boudnary for mobile nodes
