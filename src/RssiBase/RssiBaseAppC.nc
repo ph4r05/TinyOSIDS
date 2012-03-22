@@ -36,6 +36,7 @@
 #include "../RssiDemoMessages.h"
 #include "message.h"
 #include "../Reset/Reset.h"
+#include "Ctp.h"
 
 configuration RssiBaseAppC {
 } implementation {
@@ -89,7 +90,6 @@ configuration RssiBaseAppC {
   
 // MultiPingRequest intercept from radio
   App.MultiPingRadioIntercept -> BaseStationC.RadioIntercept[AM_MULTIPINGMSG];
-  
 // MultiPingRequest intercept from serial
   App.MultiPingSerialIntercept -> BaseStationC.SerialIntercept[AM_MULTIPINGMSG];
 // serial interceptors - do not forward messages for myself
@@ -134,4 +134,31 @@ configuration RssiBaseAppC {
   
   /**************** NOISE FLOOR READING ****************/
   App.NoiseFloorTimer -> NoiseFloorTimer;
+  
+  /**************** Collector ****************/   
+    components CollectionC as Collector, new CollectionSenderC(AM_CTPRESPONSEMSG);
+    App.RoutingControl -> Collector;
+    App.CtpSend -> CollectionSenderC;
+    App.RootControl -> Collector;
+  	App.CtpInfo -> Collector;
+//    App.CtpCongestion -> Collector;
+    App.CollectionPacket -> Collector;
+    App.CtpReceive -> Collector.Receive[AM_CTPRESPONSEMSG];
+
+    components RandomC;
+    App.Random -> RandomC;
+    
+    // send timer for repeated sending of CTP messages
+  	components new TimerMilliC() as CtpTimer;
+  	App.CtpTimer -> CtpTimer;
+  	
+  	// intercept requests for CTP sending
+  	App.CtpRequestSerialIntercept -> BaseStationC.SerialIntercept[AM_CTPSENDREQUESTMSG];
+  	
+  	// send collected reports
+    App.UartCtpReportDataAMSend -> BaseStationC.SerialSend[AM_CTPREPORTDATAMSG];
+  	
+  	// tapping interface
+  	App.AMTap -> BaseStationC.AMTap;
+    
 }

@@ -36,12 +36,15 @@
 #ifndef RSSIDEMOMESSAGES_H__
 #define RSSIDEMOMESSAGES_H__
 
+// ctp messages
+#include <Ctp.h>
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
 
 // redefine TOSH_DATA_LENGTH ??
-//#define TOSH_DATA_LENGTH 32
+//#define TOSH_DATA_LENGTH 34
 
 // basic message types
 enum {
@@ -57,7 +60,11 @@ enum {
   AM_MULTIPINGRESPONSETINYREPORTMSG = 17,
   
   AM_NOISEFLOORREADINGMSG = 18,
-  AM_IDENTIFYMSG=40
+  AM_IDENTIFYMSG=40,
+  
+  AM_CTPSENDREQUESTMSG = 0xee,
+  AM_CTPRESPONSEMSG = 0xef,
+  AM_CTPREPORTDATAMSG = 0xed
 };
 
 typedef struct serialqueue_element{
@@ -73,6 +80,20 @@ typedef struct serialqueue_element{
   // if 1=> radio packet, otherwise serial
   bool isRadioMsg;
 } serialqueue_element_t;
+
+typedef struct queueSenderQueue_element{
+  nx_struct message_t * msg;
+  // payload pointer
+  void * payload;
+  // address to send message to
+  uint16_t addr;
+  // length of message to send - parameter to AMSend.send = length of payload
+  uint8_t len;
+  // AM message type
+  uint8_t id;
+  // if 1=> radio packet, otherwise serial
+  bool isRadioMsg;
+} queueSenderQueue_element_t;
 
 // ping response
 // RssiMeassured
@@ -456,6 +477,59 @@ enum {
 	MASK_NUM_ALERT = 0x03FF //1023
 };
 
+typedef nx_struct CtpResponseMsg {
+    nx_uint16_t origin;
+    nx_uint16_t seqno;
+    nx_uint16_t parent;
+    nx_uint16_t metric;
+    nx_uint8_t dataType;
+    nx_uint16_t data;
+    nx_uint8_t hopcount;
+    nx_uint16_t sendCount;
+    nx_uint16_t sendSuccessCount;
+} CtpResponseMsg;
 
+// message to request multiple packets from destination, CTP protocol
+// 1:N packets
+typedef nx_struct CtpSendRequestMsg {
+	// SEQ number ot this request
+	nx_uint16_t counter;
+
+	// number of packets to send
+	nx_uint16_t packets;
+
+	// timer delay between message send in ms
+	nx_uint16_t delay;
+	
+	// desired packet size in bytes
+	nx_uint8_t size;
+	
+	// datasource of CtpMessage - can be random/sensor reading
+	nx_uint8_t dataSource;
+	
+	// target = packets. CurPacket is incremented when:
+	// TRUE => only on succ sent packet => sendDone()==SUCC
+	// FALSE => on every Send()==SUCC
+	nx_bool counterStrategySuccess;
+	
+	// if true then timer is started periodically and at each timer tick
+	// message is sent 
+	// if false new mesage is sent after previous message was successfully sent in 
+	// sendDone()
+	nx_bool timerStrategyPeriodic;
+} CtpSendRequestMsg;
+
+// ctp spoof report message, all collected information available
+typedef nx_struct CtpReportDataMsg {
+	nx_struct CtpResponseMsg response;
+	ctp_data_header_t ctpDataHeader;
+	
+	nx_am_addr_t amSource;
+	
+	// LSB
+	// 1. bit = spoofed boolean
+	// 2. bit = normal CTP reception == TRUE, otherwise was tapped
+	nx_uint8_t flags;
+} CtpReportDataMsg;
 
 #endif //RSSIDEMOMESSAGES_H__

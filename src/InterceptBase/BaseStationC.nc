@@ -109,6 +109,16 @@ configuration BaseStationC {
     	
     	// more complex BS configuration
     	interface InterceptBaseConfig;
+    	
+    	// default implementations for senders
+    	//TODO: queue size depends on number of wired clients...
+    	interface AMSend[am_id_t id];
+    	interface Receive[am_id_t id];
+    	interface Receive as Snoop[am_id_t id];
+    	interface Packet;
+    	interface AMPacket;
+    	
+    	interface AMTap;
 	}
 }
 implementation {
@@ -127,6 +137,13 @@ implementation {
   BSSerialControl = BaseStationP.BSSerialControl;
   InterceptBaseConfig = BaseStationP.InterceptBaseConfig;
   SerialQueue = BaseStationP.SerialQueue;
+  
+  Receive = BaseStationP.Receive;
+  Snoop = BaseStationP.Snoop;
+  AMSend = BaseStationP.AMSend;
+  Packet = Radio.Packet;
+  AMPacket = Radio.AMPacket;
+  AMTap = BaseStationP.AMTap;
   
   MainC.Boot <- BaseStationP;
 

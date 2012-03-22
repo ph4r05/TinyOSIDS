@@ -109,6 +109,12 @@ module BaseStationP @safe() {
     	
     	// more complex BS configuration
     	interface InterceptBaseConfig;
+    	
+    	interface AMSend[am_id_t id];
+    	interface Receive[am_id_t id];
+    	interface Receive as Snoop[am_id_t id];
+    	
+    	interface AMTap;
     }
 }
 
@@ -154,8 +160,17 @@ implementation
     // waiting to be send over radio    
     message_t radioQueueBufs[RADIO_QUEUE_LEN];
     message_t * radioQueue[RADIO_QUEUE_LEN];
+    // queue for external packets. If not null, then packet on specified position is
+    // from external source
+    //  a) keeps message original pointer for messageSent notif
+    //  b) signalization purposes for special handling with external messages
+    message_t * radioQueueExternal[RADIO_QUEUE_LEN];
     uint8_t radioIn, radioOut;
     bool radioBusy, radioFull;
+    // source, destination...
+    uint8_t radioPacketSerial[RADIO_QUEUE_LEN/8+1];
+    // signalizes whether packet is enqueued from queue
+    uint8_t radioPacketExternal[RADIO_QUEUE_LEN/8+1];
 
 	// is TRUE then forward by default
 	bool globalRadioForward=TRUE;
@@ -176,7 +191,7 @@ implementation
     task void uartSendTask();
     task void radioSendTask();
     void timedUartSendTask();
-    message_t * receive(message_t* msg, void* payload, uint8_t len, am_id_t id);
+    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id, bool snoop);
 
     void sucBlink() {
         // no blibking on sucess
@@ -531,17 +546,32 @@ implementation
     		return msg;	
     	}
     	
-        return receive(msg, payload, len, id);
+    	// tapping interface
+    	signal AMTap.snoop(id, msg, payload, len);
+    	
+    	// normal snoop interface
+    	signal Snoop.receive[id](msg, payload, len);
+    	
+    	// forward to default receive
+        return receive(msg, payload, len, id, TRUE);
     }
 
 	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioReceive.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
-        return receive(msg, payload, len, id);
+    	
+    	// tapping interface
+    	signal AMTap.receive(id, msg, payload, len);
+    	
+    	// normal receive interface
+    	signal Receive.receive[id](msg, payload, len);
+    	
+    	// forward to default receive
+        return receive(msg, payload, len, id, FALSE);
     }
 
     // message received from radio here
     // decide whether to forward it to serial port
-    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id) {
+    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id, bool snoop) {
         message_t *ret = msg;
         
         // if in reset do nothing for now
@@ -552,7 +582,6 @@ implementation
         if (globalRadioForward==FALSE){
         	return ret;
         }
-        
         
         atomic
         {
@@ -775,6 +804,12 @@ implementation
 	            reflectToken = TRUE;
 	            ret = radioQueue[radioIn];
 	            radioQueue[radioIn] = msg;
+	            
+	            // signalize that this message is internal
+                radioQueueExternal[radioIn] = NULL;
+                // packet is from serial
+				radioPacketSerial[radioIn/8] |= (1<<(radioIn%8));
+	            
 	            if (++radioIn >= RADIO_QUEUE_LEN)
 	                radioIn = 0;
 	            if (radioIn == radioOut)
@@ -805,7 +840,7 @@ implementation
     task void radioSendTask() {
         uint8_t len;
         am_id_t id;
-        am_addr_t addr;
+        am_addr_t addr, src;
         message_t* msg;
 
 		if (radioBusy){
@@ -819,9 +854,24 @@ implementation
         }
 
         msg = radioQueue[radioOut];
-        len = call UartPacket.payloadLength(msg);
-        addr = call UartAMPacket.destination(msg);
-        id = call UartAMPacket.type(msg);
+        
+        // depending on packet type
+        if ((radioPacketSerial[radioOut/8] & (1<<(radioOut%8)))>0) {
+        	// packet is serial - pushed by amsend or enqueued
+        	tmpLen = len = call UartPacket.payloadLength(msg);
+        	id = call UartAMPacket.type(msg);
+        	addr = call UartAMPacket.destination(msg);
+        	src = call UartAMPacket.source(msg);
+        } else {
+        	// otherwise packet is radio type and came from radio interface
+        	tmpLen = len = call RadioPacket.payloadLength(msg);
+        	id = call RadioAMPacket.type(msg);
+        	addr = call RadioAMPacket.destination(msg);
+        	src = call RadioAMPacket.source(msg);
+        }
+        
+        // set packet source, ok
+	    call RadioAMPacket.setSource(msg, src);
         
         if (call RadioSend.send[id](addr, msg, len) == SUCCESS){
         	radioBusy=TRUE;
@@ -844,24 +894,31 @@ implementation
             failBlink();
         }
         else {
+        	// signalize exernal message sent?
+        	bool signalizeExternal=FALSE;
+        	// pointer
+            uint8_t radioOutPrev = radioOut;
+            
             // blink on success transmission
             sucRadioBlink();
             
-            atomic
-            if (msg == radioQueue[radioOut]) {
-                if (++radioOut >= RADIO_QUEUE_LEN)
-                    radioOut = 0;
-                if (radioFull)
-                    radioFull = FALSE;
-
-/*
-                if (uartFull || radioFull){
-                    call ResetTimer.startOneShot(TIME_TO_RESET);
-                } else {
-                    call ResetTimer.stop(); 
-                }
-*/
-
+            atomic{
+	            if (msg == radioQueue[radioOut]) {
+	            	// can signalize external out
+					signalizeExternal=uartQueueExternal[uartOut]!=NULL;
+						
+	                if (++radioOut >= RADIO_QUEUE_LEN)
+	                    radioOut = 0;
+	                if (radioFull)
+	                    radioFull = FALSE;
+	            }
+	        }
+            
+             // signalize external, outside of atomic block
+            if (signalizeExternal){
+            	// signalize with original message address pointer - for reciever to be able 
+            	// to pair this event with action
+            	signal AMSend.sendDone[id](uartQueueExternal[radioOutPrev], SUCCESS);
             }
         }
 
@@ -1101,8 +1158,8 @@ implementation
 	        	call UartPacket.setPayloadLength(ret, newVal->len);
 	        }
 	        
-	        // store external message pointer - indicates externality, provides binding
-	        // for messageSent event
+	        // store external message pointer - when enqueueing new messages then do not
+	        // signal sendDone, massive sending. 
 	        uartQueueExternal[uartIn] = NULL;
 	        // to current free place in queue is stored actualy received 
 	        // message from radio.
@@ -1206,4 +1263,108 @@ implementation
 	command uint8_t InterceptBaseConfig.getSerialFailed(){
 		return uartFailCounter;
 	}		
+
+    default event message_t* Receive.receive[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	return msg;
+    }
+    
+    default event message_t* Snoop.receive[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	return msg;
+    }    
+
+	command void * AMSend.getPayload[am_id_t id](message_t *msg, uint8_t len){
+		return call RadioPacket.getPayload(msg, len);
+	}
+
+	command uint8_t AMSend.maxPayloadLength[am_id_t id](){
+		return call RadioPacket.maxPayloadLength();
+	}
+
+	command error_t AMSend.cancel[am_id_t id](message_t *msg){
+		// cancelmap here
+		return FAIL;
+	}
+
+	command error_t AMSend.send[am_id_t id](am_addr_t addr, message_t *msg, uint8_t len){
+		message_t * ret;        
+        // if in reset do nothing for now
+        if (inReset==TRUE){
+        	// cannot send anything
+        	return EBUSY;
+        } 
+	
+		// queue manipulation has to be atomic to preserve pointers/counters consistency
+        atomic
+        {
+            // if serial queue is not full, we can put message to it
+            // as consequence message received from radio is forwarded to
+            // radio queue to be sent over radio to application
+            if (!radioFull) {
+            	// pointer to free memory block. copy here message passed for sending
+                ret = radioQueue[radioIn];
+                // copy whole message to defines address, preserve my addresses for 
+                // future - N+1 cycling queue for receive
+                //memcpy(ret, msg, sizeof(message_t));
+                memcpy(call RadioPacket.getPayload(ret, len), 
+		        	   call RadioPacket.getPayload(msg, len), 
+		        	   len);
+                // assumes that packet is from radio
+                radioPacketSerial[radioIn/8] &= ~(1<<(radioIn%8));
+                // set fields as radio packet - BaseStation assumes that radio 
+                // packets are in this queue -> no problem, next calls will
+                // consider message as radio message and puts correct fields
+                call RadioAMPacket.setDestination(ret, addr);
+                call RadioAMPacket.setType(ret, id);
+                call RadioAMPacket.setSource(ret, TOS_NODE_ID);
+                call RadioPacket.setPayloadLength(ret, len);
+                
+                // store external message pointer - indicates externality, provides binding
+                // for messageSent event
+                radioQueueExternal[radioIn] = msg;
+                
+                // to current free place in queue is stored actualy received 
+                // message from radio.
+                radioQueue[radioIn] = ret;
+				// next slot in queue - cyclic buffer, move
+                radioIn = (radioIn + 1) % RADIO_QUEUE_LEN;
+
+				// cyclic queue is full - 1bit signalization
+                if (radioIn == radioOut){
+                    radioFull = TRUE;
+                }
+
+                // timer replaced
+                // start timed message sending - better performance in event driven OS
+                post radioSendTask();
+            } else {
+                // serial queue full       
+                failBlink();
+                dropBlink();
+                
+                post radioSendTask();             
+                return ENOMEM;
+            }
+        }
+
+        return SUCCESS;
+	}
+	
+	default event void AMSend.sendDone[uint8_t id](message_t* msg, error_t err) {
+		return;
+	}
+	
+	/* Packet receive */
+  	default event message_t* AMTap.receive(uint8_t type, message_t* msg, void *payload, uint8_t len){
+  		return msg;
+  	}
+  
+  	/* Snoop */
+  	default event message_t* AMTap.snoop(uint8_t type, message_t* msg, void *payload, uint8_t len){
+ 		return msg;		
+  	}
+ 
+  	/* Send */
+  	default event message_t* AMTap.send(uint8_t type, message_t* msg, uint8_t len){
+  		return msg;
+  	}  	
 }

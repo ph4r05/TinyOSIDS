@@ -36,7 +36,8 @@
 #include "ApplicationDefinitions.h"
 #include "../RssiDemoMessages.h"
 #include "Reset.h"
-#include "message.h"
+#include <message.h>
+#include <AM.h>
 
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
@@ -67,6 +68,26 @@ module RssiBaseC @safe() {
   		interface InterceptBaseConfig;
   		
   		interface Reset as Reset;
+  		
+  		/*************** CTP ****************/
+  		interface Random;
+  		interface StdControl as RoutingControl;
+        
+        interface Send as CtpSend;
+        interface Receive as CtpReceive;
+        interface CollectionPacket;
+        interface RootControl; 
+        interface CtpInfo;
+        interface CollectionDebug;
+        interface Timer<TMilli> as CtpTimer;
+        
+        interface Intercept as CtpRequestSerialIntercept;
+        
+        // send report one by one
+        interface AMSend as UartCtpReportDataAMSend;
+        
+        interface AMTap;
+        
 	}
 
 /*
@@ -145,6 +166,16 @@ module RssiBaseC @safe() {
   	// basic node operation mode
   	// since some protocol are stateful we need to know what are we supposed to do
   	uint8_t operationMode=NODE_REPORTING;
+  	
+  	/**************** CTP ****************/
+  	nx_struct CtpSendRequestMsg ctpSendRequest;
+  	uint16_t ctpCurPackets;
+  	bool ctpBusy=FALSE;
+  	bool ctpWorking=FALSE;
+  	message_t ctpPkt;
+  	message_t ctpReportPkt;
+  	
+  	void task sendCtpMsg();
   	
 	/**************** GENERIC ****************/
 	bool busy = TRUE;
@@ -310,6 +341,9 @@ module RssiBaseC @safe() {
   
   	event void RadioControl.startDone(error_t error){
 		busy=FALSE;
+		
+		// start CTP's routing controll
+		call RoutingControl.start();
 	}
 
 	event void RadioControl.stopDone(error_t error){
@@ -1173,5 +1207,260 @@ module RssiBaseC @safe() {
 	}
 #endif	
 
+/****************************** CTP ***********************************/
+	/**
+	 * Task for sending CTP message, triggered by timer, send random data
+	 */
+	void task sendCtpMsg(){
+		CtpResponseMsg * btrpkt = NULL;
+		uint16_t metric;
+        am_addr_t parent;
+		
 
+		if (ctpBusy){
+			post sendCtpMsg();
+			return;
+		}
+		
+		btrpkt = (CtpResponseMsg*)(call CtpSend.getPayload(&ctpPkt, sizeof(CtpResponseMsg)));
+
+        call CtpInfo.getParent(&parent);
+        call CtpInfo.getEtx(&metric);
+
+        btrpkt->origin = TOS_NODE_ID;
+        btrpkt->seqno = ctpCurPackets;
+        btrpkt->data = call Random.rand16();
+        btrpkt->parent = parent;
+        btrpkt->hopcount = 0;
+        btrpkt->metric = metric;
+        
+        if (call CtpSend.send(&ctpPkt, sizeof(CtpResponseMsg)) == SUCCESS) {
+            ctpBusy=TRUE;
+            dbg("IDS-app","App: sent packet with seqno %d to parent %d", msg->seqno, msg->parent);
+        } else {
+        	post sendCtpMsg();
+        }
+	}
+
+	/**
+	 * CTP message was sent. Start timer again according to properties set
+	 */
+	event void CtpSend.sendDone(message_t *msg, error_t error){
+		if (&ctpPkt == msg) {
+            ctpBusy = FALSE;
+            // packet counter increment based on strategy chosen
+			if (ctpSendRequest.counterStrategySuccess){
+				// increment only on succ
+				if (error==SUCCESS){
+					ctpCurPackets+=1;
+				}
+			} else {
+				// increment everytime
+				ctpCurPackets+=1;
+			}
+			
+			// timer starting based on strategy chosen
+			if (ctpSendRequest.timerStrategyPeriodic==FALSE && ctpSendRequest.delay>0){
+				// here start only one shot timer, if this strategy is prefered
+				call CtpTimer.startOneShot(ctpSendRequest.delay);
+			}
+        }
+	}
+
+	/**
+	 * CTP timer event, when fired, need to send new CtpReading 
+	 */
+	event void CtpTimer.fired(){
+		// if packets = 0 send unlimited number of packets
+		// sending can be stopped by receiving another request with non-null number
+		// of requested packets to send
+		if(ctpSendRequest.packets == 0) {
+			post sendCtpMsg();
+			return;
+		}
+		else {
+			if(ctpSendRequest.packets > ctpCurPackets) {
+				// still has sent less packets than expected - send
+				post sendCtpMsg();
+			}
+			else {
+				// turn timer off iff every packet was already sent
+				call CtpTimer.stop();
+
+				// reset coutner
+				ctpCurPackets = 0;
+				// freeze next attempts
+				ctpSendRequest.delay = 0;
+			}
+		}
+	}
+
+	/**
+	 * if CtpRequest to send is intercepted on serial, then new sending is started
+	 */
+	event bool CtpRequestSerialIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		// if message is destined for me, process it, get destination
+		am_addr_t destination = call UartAMPacket.destination(msg);
+		bool forMe = call UartAMPacket.isForMe(msg);
+		
+		if (forMe){
+			// message is for me, thus need to start sending CtpMessages
+			CtpSendRequestMsg * btrpkt = NULL;
+			if(len != sizeof(CtpSendRequestMsg)) {
+				// invalid length - cannot process
+				return FALSE;
+			}		
+			
+			// get received message
+			btrpkt = (CtpSendRequestMsg * ) payload;			
+			// copy current request from packet to local var
+			memcpy(&ctpSendRequest, payload, sizeof(CtpSendRequestMsg));
+			// set curr running to zero, stop timer 
+			call CtpTimer.stop();
+			ctpCurPackets = 0;
+			// if delay=0 => stop ping send
+			if(btrpkt->delay==0){
+				call CtpTimer.stop();
+				return FALSE;
+			}
+			
+			// depending on timer strategy start timer...
+			if (btrpkt->timerStrategyPeriodic){
+				// periodic timer with defined delay
+				call CtpTimer.startPeriodic(btrpkt->delay);
+			} else {
+				// one-shot timer only
+				call CtpTimer.startOneShot(btrpkt->delay);
+			}
+		}
+			
+		return (AM_BROADCAST_ADDR==destination);
+	}
+
+	event void UartCtpReportDataAMSend.sendDone(message_t *msg, error_t error){
+		// TODO Auto-generated method stub
+	}
+	
+	/**
+	 * CTP message received, dump to serial...
+	 */
+ 	event message_t * CtpReceive.receive(message_t *msg, void *payload, uint8_t len){
+		// size incorrect
+		if (sizeof(CtpResponseMsg)!=len){
+			return msg;
+		}
+		
+		atomic {
+			// queue is full?
+			if(call UartQueue.maxSize() > call UartQueue.size()) {
+				// dequeue from RSSI QUEUE, Build message, add to serial queue
+				serialqueue_element_t tmpElement;
+				CtpReportDataMsg * btrpkt = (CtpReportDataMsg* ) (call UartAMSend.getPayload(&ctpReportPkt, sizeof(CtpReportDataMsg)));
+				
+				// spoof = false, ctp original=1
+				btrpkt->flags = 0x2;
+				btrpkt->amSource = call AMPacket.source(msg);
+				memcpy(&(btrpkt->response), payload, len);						
+	
+				// use queue here to add messages
+				// build queue message
+				tmpElement.addr = TOS_NODE_ID;
+				tmpElement.isRadioMsg = FALSE;
+				tmpElement.msg = &ctpReportPkt;
+				tmpElement.len = sizeof(CtpReportDataMsg);
+				tmpElement.id = AM_CTPREPORTDATAMSG;
+				tmpElement.payload = btrpkt;
+				if (call UartQueue.enqueue(&tmpElement)==SUCCESS){
+					return msg;
+				} else {
+					// message add failed, try again later
+					return msg;
+				}
+			}
+		}
+		
+		return msg;
+	} 
+	
+	/**
+	 * CTP packet received in RAW form from AMTap interface
+	 */
+	void ctpReceived(uint8_t type, message_t *msg, void *payload, uint8_t len, bool spoof){
+		//CTP spoof is interesting for me
+		CtpResponseMsg * response = NULL;
+		ctp_data_header_t  * ctpDataHeader = NULL;
+		
+		// interested only in my collection id
+		ctpDataHeader = (ctp_data_header_t  *) payload;
+		if (ctpDataHeader->type!=AM_CTPRESPONSEMSG){
+			return;
+		}
+		
+		// get correct payload
+		response = (CtpResponseMsg *) (payload + sizeof(ctp_data_header_t));
+		
+		atomic {
+			// queue is full?
+			if(call UartQueue.maxSize() > call UartQueue.size()) {
+				// dequeue from RSSI QUEUE, Build message, add to serial queue
+				CtpReportDataMsg * btrpkt = (CtpReportDataMsg* ) (call UartAMSend.getPayload(&ctpReportPkt, sizeof(CtpReportDataMsg)));
+				serialqueue_element_t tmpElement;		
+				
+				btrpkt->flags = 0x0;
+				btrpkt->flags |= spoof ? 0x1:0x0;
+				btrpkt->amSource = call AMPacket.source(msg);
+				memcpy(&(btrpkt->ctpDataHeader), ctpDataHeader, sizeof(ctp_data_header_t));
+				memcpy(&(btrpkt->response), response, sizeof(CtpResponseMsg));		
+	
+				// use queue here to add messages
+				// build queue message
+				tmpElement.addr = TOS_NODE_ID;
+				tmpElement.isRadioMsg = FALSE;
+				tmpElement.msg = &ctpReportPkt;
+				tmpElement.len = sizeof(CtpReportDataMsg);
+				tmpElement.id = AM_CTPREPORTDATAMSG;
+				tmpElement.payload = btrpkt;
+				if (call UartQueue.enqueue(&tmpElement)==SUCCESS){
+					return;
+				} else {
+					// message add failed, try again later
+					return;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Raw MSG Snooping, interested in CTP data messages, advantage = has complete ctp data
+	 */
+	event message_t * AMTap.snoop(uint8_t type, message_t *msg, void *payload, uint8_t len){
+		//CTP spoof is interesting for me
+		if (type!=AM_CTP_DATA){
+			return msg;
+		}
+		
+		ctpReceived(type, msg, payload, len, TRUE);
+		return msg;
+	}
+
+	/**
+	 * Raw MSG reception, interested in CTP data messages, advantage = has complete ctp data
+	 */
+	event message_t * AMTap.receive(uint8_t type, message_t *msg, void *payload, uint8_t len){
+		//CTP spoof is interesting for me
+		if (type!=AM_CTP_DATA){
+			return msg;
+		}
+		
+		ctpReceived(type, msg, payload, len, FALSE);
+		return msg;
+	}
+
+	/**
+	 * Raw message sending - disable for now, nothing interesting yet
+	 */
+	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
+		
+		return msg;
+	}
 }

@@ -1,8 +1,11 @@
 COMPONENT=RssiBaseAppC
 
-INCLUDES= -I..               \
-          -I../InterceptBase \
-          -I../Reset
+INCLUDES= -I..               		\
+          -I../InterceptBase 		\
+          -I../Reset		 		\
+          -I$(TOSDIR)/lib/net 		\
+          -I$(TOSDIR)/lib/net/le	\
+          -I$(TOSDIR)/lib/net/ctp
 
 CFLAGS += $(INCLUDES)
 
@@ -12,5 +15,8 @@ CFLAGS += $(INCLUDES)
 ifneq ($(filter iris,$(MAKECMDGOALS)),) 
 	CFLAGS += -DRF230_RSSI_ENERGY
 endif
+
+# increase tosh data length
+CFLAGS += -DTOSH_DATA_LENGTH=32
 
 include $(MAKERULES)
