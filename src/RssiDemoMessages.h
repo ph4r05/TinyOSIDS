@@ -82,17 +82,12 @@ typedef struct serialqueue_element{
 } serialqueue_element_t;
 
 typedef struct queueSenderQueue_element{
-  nx_struct message_t * msg;
   // payload pointer
   void * payload;
   // address to send message to
   uint16_t addr;
   // length of message to send - parameter to AMSend.send = length of payload
   uint8_t len;
-  // AM message type
-  uint8_t id;
-  // if 1=> radio packet, otherwise serial
-  bool isRadioMsg;
 } queueSenderQueue_element_t;
 
 // ping response
