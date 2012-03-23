@@ -36,15 +36,22 @@
 #ifndef RSSIDEMOMESSAGES_H__
 #define RSSIDEMOMESSAGES_H__
 
+#ifndef TOSH_DATA_LENGTH
+#define TOSH_DATA_LENGTH 32
+#endif
+
 // ctp messages
-#include <Ctp.h>
+//#include <Ctp.h>
+#include "MIGhlp.h"
+
+
+
+
+
 
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
-
-// redefine TOSH_DATA_LENGTH ??
-//#define TOSH_DATA_LENGTH 34
 
 // basic message types
 enum {
