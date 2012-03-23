@@ -41,13 +41,8 @@
 #endif
 
 // ctp messages
-//#include <Ctp.h>
-#include "MIGhlp.h"
-
-
-
-
-
+#include <Ctp.h>
+//#include "MIGhlp.h"
 
 #ifndef NULL
 #define NULL ((void*)0)

@@ -160,5 +160,9 @@ configuration RssiBaseAppC {
   	
   	// tapping interface
   	App.AMTap -> BaseStationC.AMTap;
-    
+  	
+  	// do not forward CTP messages
+  	App.CtpRoutingIntercept -> BaseStationC.RadioIntercept[AM_CTP_ROUTING];
+  	App.CtpDataIntercept -> BaseStationC.RadioIntercept[AM_CTP_DATA];
+  	App.CtpDebugIntercept -> BaseStationC.RadioIntercept[AM_CTP_DEBUG];
 }

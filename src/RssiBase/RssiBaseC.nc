@@ -87,7 +87,11 @@ module RssiBaseC @safe() {
         interface AMSend as UartCtpReportDataAMSend;
         
         interface AMTap;
-        
+	
+		// do not intercept CTP communication
+		interface Intercept as CtpRoutingIntercept;
+		interface Intercept as CtpDataIntercept;
+		interface Intercept as CtpDebugIntercept;
 	}
 
 /*
@@ -1372,7 +1376,8 @@ module RssiBaseC @safe() {
 				// spoof = false, ctp original=1
 				btrpkt->flags = 0x2;
 				btrpkt->amSource = call AMPacket.source(msg);
-				memcpy(&(btrpkt->response), payload, len);						
+				memcpy(&(btrpkt->response), payload, len);
+				memset(&(btrpkt->ctpDataHeader), 0, sizeof(btrpkt->ctpDataHeader));						
 	
 				// use queue here to add messages
 				// build queue message
@@ -1474,5 +1479,26 @@ module RssiBaseC @safe() {
 	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
 		
 		return msg;
+	}
+
+	/**
+	 * Do not forward CTP raw data
+	 */
+	event bool CtpRoutingIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		return FALSE;
+	}
+
+	/**
+	 * Do not forward CTP raw data
+	 */
+	event bool CtpDebugIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		return FALSE;
+	}
+
+	/**
+	 * Do not forward CTP raw data
+	 */
+	event bool CtpDataIntercept.forward(message_t *msg, void *payload, uint8_t len){
+		return FALSE;
 	}
 }
