@@ -738,10 +738,7 @@ implementation
     }
 
     // event handler, serial send done
-    event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {
-    	// ph4r05 edit, set uartBusy to false
-        uartBusy = FALSE;
-            
+    event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {            
         if (error != SUCCESS){
             failBlink();
             //++uartFailCounter;
@@ -754,10 +751,11 @@ implementation
             uartFailCounter=0;
             sucBlink();
             
-            // CO AK TOTO NIE JE SPRAVA KTORA SA ODOSLALA? NEZAPLNI FRONTU?
-            // 
             atomic {
+            	// if there is any specific parametrized sender, this could be its message
 	            if (msg == uartQueue[uartOut]) {
+	            	uartBusy = FALSE;
+	            	
 	            	// can signalize external out
 					signalizeExternal=uartQueueExternal[uartOut]!=NULL;
 	            	
@@ -888,8 +886,6 @@ implementation
 
     // event handler, radio send done, remove from queue if successfull
     event void RadioSend.sendDone[am_id_t id](message_t* msg, error_t error) {
-		radioBusy=FALSE;    	
-   
         if (error != SUCCESS){
             failBlink();
         }
@@ -903,7 +899,10 @@ implementation
             sucRadioBlink();
             
             atomic{
+            	// here we could receive message from different parametrized sender
 	            if (msg == radioQueue[radioOut]) {
+	            	radioBusy=FALSE;
+	            	
 	            	// can signalize external out
 					signalizeExternal=uartQueueExternal[uartOut]!=NULL;
 						
