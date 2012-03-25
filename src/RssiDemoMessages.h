@@ -66,7 +66,8 @@ enum {
   
   AM_CTPSENDREQUESTMSG = 0xee,
   AM_CTPRESPONSEMSG = 0xef,
-  AM_CTPREPORTDATAMSG = 0xed
+  AM_CTPREPORTDATAMSG = 0xed,
+  AM_COLLECTIONDEBUGMSG = 0x72
 };
 
 typedef struct serialqueue_element{

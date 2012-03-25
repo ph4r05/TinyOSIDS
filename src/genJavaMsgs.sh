@@ -10,3 +10,4 @@ mig java -target=telosb -java-classname=IdentifyMsg RssiDemoMessages.h IdentifyM
 mig java -target=telosb -java-classname=CtpSendRequestMsg RssiDemoMessages.h CtpSendRequestMsg -o CtpSendRequestMsg.java
 mig java -target=telosb -java-classname=CtpResponseMsg RssiDemoMessages.h CtpResponseMsg -o CtpResponseMsg.java
 mig java -target=telosb -java-classname=CtpReportDataMsg RssiDemoMessages.h CtpReportDataMsg -o CtpReportDataMsg.java
+mig java -target=telosb -java-classname=CollectionDebugMsg RssiDemoMessages.h CollectionDebugMsg -o CollectionDebugMsg.java
