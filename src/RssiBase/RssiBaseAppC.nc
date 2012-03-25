@@ -161,8 +161,27 @@ configuration RssiBaseAppC {
   	// tapping interface
   	App.AMTap -> BaseStationC.AMTap;
   	
+  	// tapping interface from forged message
+  	components ForgedActiveMessageC as FAM;
+  	App.AMTapForg -> FAM.AMTap;
+  	
   	// do not forward CTP messages
   	App.CtpRoutingIntercept -> BaseStationC.RadioIntercept[AM_CTP_ROUTING];
   	App.CtpDataIntercept -> BaseStationC.RadioIntercept[AM_CTP_DATA];
   	App.CtpDebugIntercept -> BaseStationC.RadioIntercept[AM_CTP_DEBUG];
+  	
+  	// implement debug to see real CTP behavior
+  	components UARTDebugSenderP as LoggerC;
+	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
+	LoggerC.Boot -> MainC;
+	
+	components new PoolC(message_t, 4) as CTPDbgPool;
+	components new QueueC(message_t*, 4) as CTPDbgQueue;
+	LoggerC.SendQueue -> CTPDbgQueue;
+	LoggerC.MessagePool -> CTPDbgPool;
+	//        interface Pool<message_t> as MessagePool;
+    //    interface Queue<message_t*> as SendQueue;
+  	
+  	Collector.CollectionDebug -> LoggerC;
+  	
 }

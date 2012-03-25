@@ -87,6 +87,7 @@ module RssiBaseC @safe() {
         interface AMSend as UartCtpReportDataAMSend;
         
         interface AMTap;
+        interface AMTap as AMTapForg;
 	
 		// do not intercept CTP communication
 		interface Intercept as CtpRoutingIntercept;
@@ -1500,5 +1501,31 @@ module RssiBaseC @safe() {
 	 */
 	event bool CtpDataIntercept.forward(message_t *msg, void *payload, uint8_t len){
 		return FALSE;
+	}
+
+	/**
+	 * Nothing to do here, tapping is performed at baasestation tap interface, not here
+	 */
+	event message_t * AMTapForg.receive(uint8_t type, message_t *msg, void *payload, uint8_t len){
+		return msg;
+	}
+
+	event message_t * AMTapForg.send(uint8_t type, message_t *msg, uint8_t len){
+		//CTP messages are interesting for me
+		if (type!=AM_CTP_DATA){
+			return msg;
+		}
+		
+		// CTP data message sent here, report it to base station
+		
+		
+		return msg; 
+	}
+
+	/**
+	 * Nothing to do here, tapping is performed at baasestation tap interface, not here
+	 */
+	event message_t * AMTapForg.snoop(uint8_t type, message_t *msg, void *payload, uint8_t len){
+		return msg;
 	}
 }
