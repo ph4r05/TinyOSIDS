@@ -8,15 +8,15 @@
 module ForgedActiveMessageP{
   provides{
 		interface AMSend[uint8_t id];
-		interface Receive[uint8_t id];
-		interface Receive as Snoop[uint8_t id];
+//		interface Receive[uint8_t id];
+//		interface Receive as Snoop[uint8_t id];
 		interface AMTap;
 		
   }
   uses {
     interface AMSend as ExtAMSend[uint8_t];
-    interface Receive as ExtReceive[uint8_t];
-    interface Receive as ExtSnoop[uint8_t];
+//    interface Receive as ExtReceive[uint8_t];
+//    interface Receive as ExtSnoop[uint8_t];
     interface AMPacket;
 
     
@@ -55,32 +55,32 @@ implementation
 	{
 	}
 
-  
-  /********* AM RECEIVE ********************/
-  event message_t* 
-  ExtReceive.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
-		am_id_t type = call AMPacket.type(msg);
-        msg = signal AMTap.receive(type,msg,len,id);
-    return signal Receive.receive[type](msg, payload, len);
-  }
-
-  default event message_t* 
-  Receive.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
-    return msg;
-  }
-  
-  /********* AM SNOOP **********************/
-  event message_t* 
-  ExtSnoop.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
-    uint8_t type = call AMPacket.type(msg);
-    msg = signal AMTap.snoop(type,msg,len,id);
-    return signal Snoop.receive[type](msg, payload, len);
-  }
-
-  default event message_t* 
-  Snoop.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
-    return msg;
-  }
+//  
+//  /********* AM RECEIVE ********************/
+//  event message_t* 
+//  ExtReceive.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
+//		am_id_t type = call AMPacket.type(msg);
+//        msg = signal AMTap.receive(type,msg,payload,len);
+//    return signal Receive.receive[type](msg, payload, len);
+//  }
+//
+//  default event message_t* 
+//  Receive.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
+//    return msg;
+//  }
+//  
+//  /********* AM SNOOP **********************/
+//  event message_t* 
+//  ExtSnoop.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
+//    uint8_t type = call AMPacket.type(msg);
+//    msg = signal AMTap.snoop(type,msg,payload,len);
+//    return signal Snoop.receive[type](msg, payload, len);
+//  }
+//
+//  default event message_t* 
+//  Snoop.receive[am_id_t id](message_t* msg, void* payload, uint8_t len) {
+//    return msg;
+//  }
 
 
   /******************************************/
