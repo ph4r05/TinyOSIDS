@@ -358,7 +358,7 @@ module RssiBaseC @safe() {
 		busy=FALSE;
 		
 		// start CTP's routing controll
-		call RoutingControl.start();
+		call ForwardingControl.start();
 	}
 
 	event void RadioControl.stopDone(error_t error){
