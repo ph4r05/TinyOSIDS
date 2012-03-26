@@ -41,7 +41,7 @@
 
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
-#define CC2420_NO_ACKNOWLEDGEMENTS 1
+//#define CC2420_NO_ACKNOWLEDGEMENTS 1
 	
 #ifdef __CC2420_H__
 
@@ -103,6 +103,7 @@ module RssiBaseC @safe() {
   uses interface Timer<TMilli> as PingTimer;
   
   uses interface AMSend as PingMsgSend;
+  uses interface PacketAcknowledgements as Acks;
   uses interface SplitControl as RadioControl;
   uses interface SplitControl as SerialControl;
   uses interface Packet as UartPacket;
@@ -1032,6 +1033,9 @@ module RssiBaseC @safe() {
 
     	// set transmit power for each packet
     	setPower(&pingPkt, multiPingRequest.txpower);
+    	
+    	// disable ACK by default
+    	setAck(&pingPkt, FALSE);
 
         // ping coutner
         btrpkt->counter = multiPingCurPackets;
@@ -1197,7 +1201,11 @@ module RssiBaseC @safe() {
   }
 
   void setAck(message_t *msg, bool status){
-      ;
+  	if (status){
+      	call Acks.requestAck(msg);
+    } else {
+    	call Acks.noAck(msg);
+    }
   }
 
   /**
@@ -1629,7 +1637,10 @@ module RssiBaseC @safe() {
 		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
-		if (type==AM_CTP_ROUTING && ctpTxRoute<31){
+		if ((type==AM_CTP_ROUTING
+			 || type==AM_LQI_BEACON_MSG
+			 || type==AM_LQI_DATA_MSG
+			) && ctpTxRoute<31){
 			setPower(msg, ctpTxRoute);
 		}
 		

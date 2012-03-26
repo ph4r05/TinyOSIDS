@@ -121,6 +121,7 @@ configuration RssiBaseAppC {
   App.Leds -> LedsC;
   App.Packet -> PingMsgSender;
   App.AMPacket -> PingMsgSender;
+  App.Acks -> PingMsgSender;
   
   App.RadioPacket -> ActiveMessageC;
   App.RadioAMPacket -> ActiveMessageC;

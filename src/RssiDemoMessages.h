@@ -42,6 +42,7 @@
 
 // ctp messages
 #include <Ctp.h>
+#include <MultiHopLqi.h>
 //#include "MIGhlp.h"
 
 #ifndef NULL

@@ -54,7 +54,7 @@
 
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
-#define CC2420_NO_ACKNOWLEDGEMENTS 1
+//#define CC2420_NO_ACKNOWLEDGEMENTS 1
 #include "AM.h"
 #include "Serial.h"
 #include "../RssiDemoMessages.h"

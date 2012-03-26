@@ -5,7 +5,8 @@ INCLUDES= -I..               		\
           -I../Reset		 		\
           -I$(TOSDIR)/lib/net 		\
           -I$(TOSDIR)/lib/net/le	\
-          -I$(TOSDIR)/lib/net/ctp
+          -I$(TOSDIR)/lib/net/ctp	\
+          -I$(TOSDIR)/lib/net/lqi
 
 CFLAGS += $(INCLUDES)
 
@@ -17,6 +18,6 @@ ifneq ($(filter iris,$(MAKECMDGOALS)),)
 endif
 
 # increase tosh data length
-CFLAGS += -DTOSH_DATA_LENGTH=32
+CFLAGS += -DTOSH_DATA_LENGTH=34
 
 include $(MAKERULES)
