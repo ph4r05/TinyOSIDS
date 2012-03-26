@@ -180,6 +180,11 @@ module RssiBaseC @safe() {
   	message_t ctpPkt;
   	message_t ctpReportPkt;
   	
+  	// tx power for CTP data and route messages - CTP tree scaling
+  	// default - set to maximum tx power
+  	uint8_t ctpTxData=31;
+  	uint8_t ctpTxRoute=31; 
+  	
   	void task sendCtpMsg();
   	
 	/**************** GENERIC ****************/
@@ -771,6 +776,79 @@ module RssiBaseC @safe() {
 
 				btrpktresponse->command_code = COMMAND_ACK;
 				post sendCommandACK();
+			break;
+			
+			// call CTP route recomputing command - depending on data, CtpInfo interface is used
+			// data=1 -> CtpInfo.triggerRouteUpdate()
+			// data=2 -> CtpInfo.triggerImmediateRouteUpdate()
+			// data=3 -> CtpInfo.recomputeRoutes()
+			case COMMAND_CTP_ROUTE_UPDATE:
+				if (btrpkt->command_data==1){
+					call CtpInfo.triggerRouteUpdate();
+					btrpktresponse->command_data = 1;
+				} else if (btrpkt->command_data==2){
+					call CtpInfo.triggerImmediateRouteUpdate();
+					btrpktresponse->command_data = 2;
+				} else if (btrpkt->command_data==3){
+					call CtpInfo.recomputeRoutes();
+					btrpktresponse->command_data = 3;
+				}
+		
+				btrpktresponse->command_code = COMMAND_ACK;
+				post sendCommandACK();
+			break;
+			
+			// gets basic CTP info from CtpInfo interface
+			// data=0 -> returns parent, etx, neighbors count in data[0], data[1], data[2]
+			// data=1 -> info about neighbor specified in data[0]. Returned addr, link quality, route
+    		//				quality, congested bit
+			case COMMAND_CTP_GETINFO:
+				if(btrpkt->command_data==0){
+					// provide basic information about my CTP perspective
+					am_addr_t parent=0;
+					uint16_t etx=0;
+					
+					call CtpInfo.getParent(&parent);
+					call CtpInfo.getEtx(&etx);
+					
+					btrpktresponse->command_data_next[0] = parent;
+					btrpktresponse->command_data_next[1] = etx;
+					btrpktresponse->command_data_next[2] = call CtpInfo.numNeighbors();
+					btrpktresponse->command_code = COMMAND_ACK;
+					post sendCommandACK();
+				} else if (btrpkt->command_data==1){
+					// provide information about particular neighbor
+					uint8_t neighNum = (uint8_t) btrpkt->command_data_next[0];
+					
+					btrpktresponse->command_data_next[0] = call CtpInfo.getNeighborAddr(neighNum);
+					btrpktresponse->command_data_next[1] = call CtpInfo.getNeighborLinkQuality(neighNum);
+					btrpktresponse->command_data_next[2] = call CtpInfo.getNeighborRouteQuality(neighNum);
+					btrpktresponse->command_data_next[3] = call CtpInfo.isNeighborCongested(btrpktresponse->command_data_next[0]);
+					btrpktresponse->command_code = COMMAND_ACK;
+					post sendCommandACK();
+				}
+			break;
+			
+			// other CTP controling, can set TX power for packets
+			// data=0 -> set tx power for OUTPUT messages for CTP protocol.
+			// 				if data[0] == 1	-> set TXpower for ROUTE messages on data[1] level
+			//			 	if data[0] == 2 -> set TXpower for DATA messages on data[1] level
+			//				if data[0] == 3 -> set TXpower for both ROUTE, DATA messages on data[1] level
+			case COMMAND_CTP_CONTROL:
+				if (btrpkt->command_data==0){
+					// set tx power for ROUTE messages
+					if (btrpkt->command_data_next[0] & 1){
+						ctpTxRoute = (uint8_t) btrpkt->command_data_next[1];
+					}
+					
+					// set tx power for DATA messages
+					if (btrpkt->command_data_next[0] & 2){
+						ctpTxData = (uint8_t) btrpkt->command_data_next[1];
+					}
+					
+					btrpktresponse->command_code = COMMAND_ACK;
+					post sendCommandACK();
+				}
 			break;
 
 			default: 
@@ -1476,6 +1554,8 @@ module RssiBaseC @safe() {
 
 	/**
 	 * Raw message sending - disable for now, nothing interesting yet
+	 * TODO: write basestation implementation for this correctly, now 
+	 * basestation does not support this send interface
 	 */
 	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
 		
@@ -1483,49 +1563,71 @@ module RssiBaseC @safe() {
 	}
 
 	/**
-	 * Do not forward CTP raw data
+	 * Do not forward CTP raw data, avoid UART congestion
 	 */
 	event bool CtpRoutingIntercept.forward(message_t *msg, void *payload, uint8_t len){
 		return FALSE;
 	}
 
 	/**
-	 * Do not forward CTP raw data
+	 * Do not forward CTP raw data, avoid UART congestion
 	 */
 	event bool CtpDebugIntercept.forward(message_t *msg, void *payload, uint8_t len){
 		return FALSE;
 	}
 
 	/**
-	 * Do not forward CTP raw data
+	 * Do not forward CTP raw data, avoid UART congestion
 	 */
 	event bool CtpDataIntercept.forward(message_t *msg, void *payload, uint8_t len){
 		return FALSE;
 	}
 
 	/**
-	 * Nothing to do here, tapping is performed at baasestation tap interface, not here
+	 * Nothing to do here, tapping is performed at basestation tap interface, not here
+	 * Due to basestation nature (direct wiring to ActiveMessageC) ForgedMessage cannot 
+	 * perform wiring to this as well in order to avoid fan-out warnings and problems
 	 */
 	event message_t * AMTapForg.receive(uint8_t type, message_t *msg, void *payload, uint8_t len){
 		return msg;
 	}
+	
+	/**
+	 * Nothing to do here, tapping is performed at baasestation tap interface, not here
+	 * Due to basestation nature (direct wiring to ActiveMessageC) ForgedMessage cannot 
+	 * perform wiring to this as well in order to avoid fan-out warnings and problems
+	 */
+	event message_t * AMTapForg.snoop(uint8_t type, message_t *msg, void *payload, uint8_t len){
+		return msg;
+	}
 
+	/**
+	 * ForgedMessage component now provides only this send - here we can directly regulate output
+	 * TXpower for some messages, especially for CTP messages.
+	 * Data CTP message could be set before sending to CTP, but ROUTE messages are
+	 * generated inside CTP module unreachable from outside, thus it is unable to modify TXpower for
+	 * ROUTE messages directly. By setting txpower for both ROUTE and DATA CTP tree should scale 
+	 */
 	event message_t * AMTapForg.send(uint8_t type, message_t *msg, uint8_t len){
 		//CTP messages are interesting for me
 		if (type!=AM_CTP_DATA){
 			return msg;
 		}
 		
-		// CTP data message sent here, report it to base station
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if (type==AM_CTP_DATA && ctpTxData<31){
+			setPower(msg, ctpTxData);
+		}
 		
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if (type==AM_CTP_ROUTING && ctpTxData<31){
+			setPower(msg, ctpTxRoute);
+		}
 		
 		return msg; 
 	}
 
-	/**
-	 * Nothing to do here, tapping is performed at baasestation tap interface, not here
-	 */
-	event message_t * AMTapForg.snoop(uint8_t type, message_t *msg, void *payload, uint8_t len){
-		return msg;
-	}
+
 }
