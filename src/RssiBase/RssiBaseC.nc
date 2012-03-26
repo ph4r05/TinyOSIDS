@@ -836,14 +836,19 @@ module RssiBaseC @safe() {
 			//				if data[0] == 3 -> set TXpower for both ROUTE, DATA messages on data[1] level
 			case COMMAND_CTP_CONTROL:
 				if (btrpkt->command_data==0){
+					btrpktresponse->command_data_next[0] = 0;
+					btrpktresponse->command_data_next[1] = 0;
+						
 					// set tx power for ROUTE messages
-					if (btrpkt->command_data_next[0] & 1){
+					if ((btrpkt->command_data_next[0] & 1)>0){
 						ctpTxRoute = (uint8_t) btrpkt->command_data_next[1];
+						btrpktresponse->command_data_next[0] = ctpTxRoute;
 					}
 					
 					// set tx power for DATA messages
-					if (btrpkt->command_data_next[0] & 2){
+					if ((btrpkt->command_data_next[0] & 2)>0){
 						ctpTxData = (uint8_t) btrpkt->command_data_next[1];
+						btrpktresponse->command_data_next[1] = ctpTxData; 
 					}
 					
 					btrpktresponse->command_code = COMMAND_ACK;
@@ -1455,6 +1460,7 @@ module RssiBaseC @safe() {
 				// spoof = false, ctp original=1
 				btrpkt->flags = 0x2;
 				btrpkt->amSource = call AMPacket.source(msg);
+				btrpkt->rssi = getRssi(msg);
 				memcpy(&(btrpkt->response), payload, len);
 				memset(&(btrpkt->ctpDataHeader), 0, sizeof(btrpkt->ctpDataHeader));						
 	
@@ -1505,6 +1511,7 @@ module RssiBaseC @safe() {
 				btrpkt->flags = 0x0;
 				btrpkt->flags |= spoof ? 0x1:0x0;
 				btrpkt->amSource = call AMPacket.source(msg);
+				btrpkt->rssi = getRssi(msg);
 				memcpy(&(btrpkt->ctpDataHeader), ctpDataHeader, sizeof(ctp_data_header_t));
 				memcpy(&(btrpkt->response), response, sizeof(CtpResponseMsg));		
 	
@@ -1622,7 +1629,7 @@ module RssiBaseC @safe() {
 		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
-		if (type==AM_CTP_ROUTING && ctpTxData<31){
+		if (type==AM_CTP_ROUTING && ctpTxRoute<31){
 			setPower(msg, ctpTxRoute);
 		}
 		

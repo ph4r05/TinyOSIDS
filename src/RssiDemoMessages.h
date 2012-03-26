@@ -544,7 +544,11 @@ typedef nx_struct CtpReportDataMsg {
 	nx_struct CtpResponseMsg response;
 	ctp_data_header_t ctpDataHeader;
 	
+	// source of message
 	nx_am_addr_t amSource;
+	
+	// rssi of received packet
+	nx_uint16_t rssi;
 	
 	// LSB
 	// 1. bit = spoofed boolean
