@@ -5,8 +5,9 @@ INCLUDES= -I..               		\
           -I../Reset		 		\
           -I$(TOSDIR)/lib/net 		\
           -I$(TOSDIR)/lib/net/le	\
-          -I$(TOSDIR)/lib/net/ctp	\
-          -I$(TOSDIR)/lib/net/lqi
+          -I$(TOSDIR)/lib/net/ctp	
+#          \
+#          -I$(TOSDIR)/lib/net/lqi
 
 CFLAGS += $(INCLUDES)
 

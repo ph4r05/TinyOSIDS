@@ -138,7 +138,13 @@ configuration RssiBaseAppC {
   
   /**************** Collector ****************/   
     components CollectionC as Collector, new CollectionSenderC(AM_CTPRESPONSEMSG);
-    App.RoutingControl -> Collector;
+    
+    App.ForwardingControl -> Collector.StdControl;
+    App.RoutingControl -> Collector.RoutingControl;
+    App.LinkEstimatorControl -> Collector.LinkEstimatorControl;
+    App.RoutingInit -> Collector.RoutingInit;
+    App.LinkEstimatorInit -> Collector.LinkEstimatorInit;
+    
     App.CtpSend -> CollectionSenderC;
     App.RootControl -> Collector;
   	App.CtpInfo -> Collector;

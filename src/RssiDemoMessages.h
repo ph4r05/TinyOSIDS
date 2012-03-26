@@ -42,7 +42,7 @@
 
 // ctp messages
 #include <Ctp.h>
-#include <MultiHopLqi.h>
+//#include <MultiHopLqi.h>
 //#include "MIGhlp.h"
 
 #ifndef NULL
@@ -411,6 +411,8 @@ enum {
 	// data=1 -> CtpInfo.triggerRouteUpdate()
 	// data=2 -> CtpInfo.triggerImmediateRouteUpdate()
 	// data=3 -> CtpInfo.recomputeRoutes()
+	// data=4 -> RouterReinit re-init neighbour table
+	// data=5 -> LinkEstimator re-init neighbour table
 	COMMAND_CTP_ROUTE_UPDATE=33,
 	
 	// gets basic CTP info from CtpInfo interface

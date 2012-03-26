@@ -72,6 +72,10 @@ module RssiBaseC @safe() {
   		/*************** CTP ****************/
   		interface Random;
   		interface StdControl as RoutingControl;
+  		interface StdControl as ForwardingControl;
+  		interface StdControl as LinkEstimatorControl;
+  		interface Init as RoutingInit;
+  		interface Init as LinkEstimatorInit;
         
         interface Send as CtpSend;
         interface Receive as CtpReceive;
@@ -783,6 +787,7 @@ module RssiBaseC @safe() {
 			// data=1 -> CtpInfo.triggerRouteUpdate()
 			// data=2 -> CtpInfo.triggerImmediateRouteUpdate()
 			// data=3 -> CtpInfo.recomputeRoutes()
+			// data=4 -> complete routing reinit
 			case COMMAND_CTP_ROUTE_UPDATE:
 				if (btrpkt->command_data==1){
 					call CtpInfo.triggerRouteUpdate();
@@ -793,6 +798,16 @@ module RssiBaseC @safe() {
 				} else if (btrpkt->command_data==3){
 					call CtpInfo.recomputeRoutes();
 					btrpktresponse->command_data = 3;
+				} else if (btrpkt->command_data==4){
+					call LinkEstimatorInit.init();
+					call LinkEstimatorControl.start();
+					
+					call RoutingInit.init();
+					call RoutingControl.start();
+					
+					btrpktresponse->command_data = 4;
+				} else {
+					btrpktresponse->command_data = 0xffff;
 				}
 		
 				btrpktresponse->command_code = COMMAND_ACK;
@@ -1638,8 +1653,8 @@ module RssiBaseC @safe() {
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
 		if ((type==AM_CTP_ROUTING
-			 || type==AM_LQI_BEACON_MSG
-			 || type==AM_LQI_DATA_MSG
+//			 || type==AM_LQI_BEACON_MSG
+//			 || type==AM_LQI_DATA_MSG
 			) && ctpTxRoute<31){
 			setPower(msg, ctpTxRoute);
 		}
