@@ -162,26 +162,31 @@ configuration RssiBaseAppC {
   	App.AMTap -> BaseStationC.AMTap;
   	
   	// tapping interface from forged message
+  	// Since BaseStation does not support radioSending correctly now, we need
+  	// to hook send() calls by this way. Needed to set TX power for some messages
   	components ForgedActiveMessageC as FAM;
   	App.AMTapForg -> FAM.AMTap;
   	
-  	// do not forward CTP messages
+  	// do not forward CTP messages, save UART bandwidth
   	App.CtpRoutingIntercept -> BaseStationC.RadioIntercept[AM_CTP_ROUTING];
   	App.CtpDataIntercept -> BaseStationC.RadioIntercept[AM_CTP_DATA];
   	App.CtpDebugIntercept -> BaseStationC.RadioIntercept[AM_CTP_DEBUG];
   	
-  	// implement debug to see real CTP behavior
-  	components UARTDebugSenderP as LoggerC;
-	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
-	LoggerC.Boot -> MainC;
-	
-	components new PoolC(message_t, 4) as CTPDbgPool;
-	components new QueueC(message_t*, 4) as CTPDbgQueue;
-	LoggerC.SendQueue -> CTPDbgQueue;
-	LoggerC.MessagePool -> CTPDbgPool;
-	//        interface Pool<message_t> as MessagePool;
-    //    interface Queue<message_t*> as SendQueue;
+  	// LOGGER DISABLED TEMPORARILY
+  	// Logger produces intensive data streams, if everybody is set to listen to 
+  	// everything (snooping, addressDetection=false), it can cause UART queues to 
+  	// overflow very quickly, since debug message can be send plenty times for 
+  	// only 1 CTP message from 1 node (approx. each routing decision) 
   	
-  	Collector.CollectionDebug -> LoggerC;
-  	
+  	// implement debug to see real CTP behavior and routing decisions
+//  components UARTDebugSenderP as LoggerC;
+//	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
+//	LoggerC.Boot -> MainC;
+//	
+//	components new PoolC(message_t, 4) as CTPDbgPool;
+//	components new QueueC(message_t*, 4) as CTPDbgQueue;
+//	LoggerC.SendQueue -> CTPDbgQueue;
+//	LoggerC.MessagePool -> CTPDbgPool;  	
+//  Collector.CollectionDebug -> LoggerC;
+//  	
 }
