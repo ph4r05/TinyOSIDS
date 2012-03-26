@@ -29,9 +29,9 @@ implementation
   /********** AMSend ************************/
   command error_t 
   AMSend.send[am_id_t id](am_addr_t addr, message_t* msg, uint8_t len) {
-    uint8_t packet_type = call AMPacket.type(msg);
+    //uint8_t packet_type = call AMPacket.type(msg);
     msg = signal AMTap.send(id,msg,len);
-    return call ExtAMSend.send[packet_type](addr,msg,len);
+    return call ExtAMSend.send[id](addr,msg,len);
   }
 
   command error_t AMSend.cancel[uint8_t id](message_t* msg) {
@@ -43,12 +43,14 @@ implementation
   }
 
   command void* AMSend.getPayload[uint8_t id](message_t* msg, uint8_t len) {
-    return call AMSend.getPayload[call AMPacket.type(msg)](msg,len);
+  	return call AMSend.getPayload[id](msg,len);
+    //return call AMSend.getPayload[call AMPacket.type(msg)](msg,len);
   }
   
   event void ExtAMSend.sendDone[uint8_t id](message_t* msg, error_t error)
 	{
-		signal AMSend.sendDone[call AMPacket.type(msg)](msg, error);
+		signal AMSend.sendDone[id](msg, error);
+		//signal AMSend.sendDone[call AMPacket.type(msg)](msg, error);
 	}
 
   default event void AMSend.sendDone[am_id_t id](message_t* msg, error_t error)
