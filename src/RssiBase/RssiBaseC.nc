@@ -1588,8 +1588,22 @@ module RssiBaseC @safe() {
 	 * basestation does not support this send interface
 	 */
 	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if (type==AM_CTP_DATA && ctpTxData<31){
+			setPower(msg, ctpTxData);
+		}
 		
-		return msg;
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if ((type==AM_CTP_ROUTING
+//			 || type==AM_LQI_BEACON_MSG
+//			 || type==AM_LQI_DATA_MSG
+			) && ctpTxRoute<31){
+			setPower(msg, ctpTxRoute);
+		}
+		
+		return msg; 
 	}
 
 	/**
@@ -1638,12 +1652,7 @@ module RssiBaseC @safe() {
 	 * generated inside CTP module unreachable from outside, thus it is unable to modify TXpower for
 	 * ROUTE messages directly. By setting txpower for both ROUTE and DATA CTP tree should scale 
 	 */
-	event message_t * AMTapForg.send(uint8_t type, message_t *msg, uint8_t len){
-		//CTP messages are interesting for me
-		if (type!=AM_CTP_DATA){
-			return msg;
-		}
-		
+	event message_t * AMTapForg.send(uint8_t type, message_t *msg, uint8_t len){		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
 		if (type==AM_CTP_DATA && ctpTxData<31){
