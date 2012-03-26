@@ -542,12 +542,17 @@ implementation
 
 	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioSnoop.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
+    	message_t * retMsg;
     	if (radioSnooping==FALSE){
     		return msg;	
     	}
     	
     	// tapping interface
-    	signal AMTap.snoop(id, msg, payload, len);
+    	retMsg = signal AMTap.snoop(id, msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
     	
     	// normal snoop interface
     	signal Snoop.receive[id](msg, payload, len);
@@ -558,9 +563,14 @@ implementation
 
 	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioReceive.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
+    	message_t * retMsg;
     	
     	// tapping interface
-    	signal AMTap.receive(id, msg, payload, len);
+    	retMsg = signal AMTap.receive(id, msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
     	
     	// normal receive interface
     	signal Receive.receive[id](msg, payload, len);
@@ -748,12 +758,12 @@ implementation
         	// pointer
             uint8_t uartOutPrev = uartOut;
         	
-            uartFailCounter=0;
-            sucBlink();
-            
             atomic {
             	// if there is any specific parametrized sender, this could be its message
 	            if (msg == uartQueue[uartOut]) {
+	            	uartFailCounter=0;
+		            sucBlink();
+            
 	            	uartBusy = FALSE;
 	            	
 	            	// can signalize external out
@@ -840,6 +850,7 @@ implementation
         am_id_t id;
         am_addr_t addr, src;
         message_t* msg;
+        bool signalizeExternal=FALSE;
 
 		if (radioBusy){
 			post radioSendTask();
@@ -870,6 +881,14 @@ implementation
         
         // set packet source, ok
 	    call RadioAMPacket.setSource(msg, src);
+	    
+	    // tap message if external -> added via amsend interface
+	    // does not allow to tap forwarded messages from serial
+	    signalizeExternal=radioQueueExternal[radioOut]!=NULL;
+	    if (signalizeExternal){
+	    	signal AMTap.send(id, msg, len);
+	    }
+	    
         
         if (call RadioSend.send[id](addr, msg, len) == SUCCESS){
         	radioBusy=TRUE;
@@ -894,14 +913,14 @@ implementation
         	bool signalizeExternal=FALSE;
         	// pointer
             uint8_t radioOutPrev = radioOut;
-            
-            // blink on success transmission
-            sucRadioBlink();
-            
+
             atomic{
             	// here we could receive message from different parametrized sender
 	            if (msg == radioQueue[radioOut]) {
 	            	radioBusy=FALSE;
+	            	
+	            	// blink on success transmission
+            		sucRadioBlink();
 	            	
 	            	// can signalize external out
 					signalizeExternal=uartQueueExternal[uartOut]!=NULL;

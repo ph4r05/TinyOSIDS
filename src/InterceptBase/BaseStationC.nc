@@ -118,6 +118,10 @@ configuration BaseStationC {
     	interface Packet;
     	interface AMPacket;
     	
+    	// AMTap interface for Radio system. Is called before other functions
+    	// reacting on message receive or snoop event. 
+    	// If NULL is returned, message is ignored - hidden
+    	// warning, AMTap works correctly only for Receive, Snoop calls 
     	interface AMTap;
 	}
 }
