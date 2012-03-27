@@ -71,10 +71,9 @@ module RssiBaseC @safe() {
   		
   		/*************** CTP ****************/
   		interface Random;
-  		interface StdControl as RoutingControl;
   		interface StdControl as ForwardingControl;
-  		interface StdControl as LinkEstimatorControl;
   		interface Init as RoutingInit;
+  		interface Init as ForwardingInit;
   		interface Init as LinkEstimatorInit;
         
         interface Send as CtpSend;
@@ -799,11 +798,13 @@ module RssiBaseC @safe() {
 					call CtpInfo.recomputeRoutes();
 					btrpktresponse->command_data = 3;
 				} else if (btrpkt->command_data==4){
-					call LinkEstimatorInit.init();
-					call LinkEstimatorControl.start();
+					call ForwardingControl.stop();
 					
+					call LinkEstimatorInit.init();
 					call RoutingInit.init();
-					call RoutingControl.start();
+					call ForwardingInit.init();
+					
+					call ForwardingControl.start();
 					
 					btrpktresponse->command_data = 4;
 				} else {
@@ -1588,21 +1589,6 @@ module RssiBaseC @safe() {
 	 * basestation does not support this send interface
 	 */
 	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
-		// CTP ROUTE message sent here, set wanted tx power
-		// maximum power is default, thus ignore maximum power level
-		if (type==AM_CTP_DATA && ctpTxData<31){
-			setPower(msg, ctpTxData);
-		}
-		
-		// CTP ROUTE message sent here, set wanted tx power
-		// maximum power is default, thus ignore maximum power level
-		if ((type==AM_CTP_ROUTING
-//			 || type==AM_LQI_BEACON_MSG
-//			 || type==AM_LQI_DATA_MSG
-			) && ctpTxRoute<31){
-			setPower(msg, ctpTxRoute);
-		}
-		
 		return msg; 
 	}
 
@@ -1661,10 +1647,7 @@ module RssiBaseC @safe() {
 		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
-		if ((type==AM_CTP_ROUTING
-//			 || type==AM_LQI_BEACON_MSG
-//			 || type==AM_LQI_DATA_MSG
-			) && ctpTxRoute<31){
+		if (type==AM_CTP_ROUTING && ctpTxRoute<31){
 			setPower(msg, ctpTxRoute);
 		}
 		

@@ -61,10 +61,9 @@ configuration CollectionC {
     /**
      * PH4r05 edit: provide interface for CTP restart/reinit
      */
-     interface StdControl as RoutingControl;
-     interface StdControl as LinkEstimatorControl;
      interface Init as RoutingInit;
      interface Init as LinkEstimatorInit;
+     interface Init as ForwardingInit;
   }
 
   uses {
@@ -92,10 +91,9 @@ implementation {
 
   CollectionId = CtpP;
   CollectionDebug = CtpP;
-  
-  RoutingControl = CtpP.RoutingControl;
-  LinkEstimatorControl = CtpP.LinkEstimatorControl;
+
   RoutingInit = CtpP.RoutingInit;
+  ForwardingInit = CtpP.ForwardingInit;
   LinkEstimatorInit = CtpP.LinkEstimatorInit;
 }
 

@@ -83,9 +83,8 @@ configuration CtpP {
     /**
      * PH4r05 edit: provide interface for CTP restart/reinit
      */
-    interface StdControl as RoutingControl;
-    interface StdControl as LinkEstimatorControl;
     interface Init as RoutingInit;
+    interface Init as ForwardingInit;
     interface Init as LinkEstimatorInit;
   }
 
@@ -144,7 +143,7 @@ implementation {
   StdControl = Router;
   StdControl = Estimator;
   RootControl = Router;
-  MainC.SoftwareInit -> Router;
+  MainC.SoftwareInit -> Router.Init;
   Router.BeaconSend -> Estimator.Send;
   Router.BeaconReceive -> Estimator.Receive;
   Router.LinkEstimator -> Estimator.LinkEstimator;
@@ -215,8 +214,7 @@ implementation {
   MainC.SoftwareInit -> Estimator;
   
   
-  RoutingControl = Router.StdControl;
-  LinkEstimatorControl = Estimator.StdControl;
-  RoutingInit = Router.Init;
+  RoutingInit = Router.Reinit;
+  ForwardingInit = Forwarder.Init;
   LinkEstimatorInit = Estimator.Init;
 }
