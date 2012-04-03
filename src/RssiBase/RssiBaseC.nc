@@ -190,6 +190,7 @@ module RssiBaseC @safe() {
   	uint8_t ctpTxRoute=31; 
   	
   	void task sendCtpMsg();
+  	void ctpMessageSend(message_t *msg, void *payload);
   	
 	/**************** GENERIC ****************/
 	bool busy = TRUE;
@@ -1361,6 +1362,9 @@ module RssiBaseC @safe() {
         if (call CtpSend.send(&ctpPkt, sizeof(CtpResponseMsg)) == SUCCESS) {
             ctpBusy=TRUE;
             dbg("IDS-app","App: sent packet with seqno %d to parent %d", msg->seqno, msg->parent);
+            
+            // report sending 
+            ctpMessageSend(&ctpPkt, btrpkt);
         } else {
         	post sendCtpMsg();
         }
@@ -1517,6 +1521,44 @@ module RssiBaseC @safe() {
 	} 
 	
 	/**
+	 * Called when CTP message was sent - report it to base station
+	 */
+	void ctpMessageSend(message_t *msg, void *payload){
+		//CTP spoof is interesting for me
+		CtpResponseMsg * response = payload;
+				
+		atomic {
+			// queue is full?
+			if(call UartQueue.maxSize() > call UartQueue.size()) {
+				// dequeue from RSSI QUEUE, Build message, add to serial queue
+				CtpReportDataMsg * btrpkt = (CtpReportDataMsg* ) (call UartAMSend.getPayload(&ctpReportPkt, sizeof(CtpReportDataMsg)));
+				serialqueue_element_t tmpElement;		
+				
+				btrpkt->flags = 0x4;
+				btrpkt->amSource = TOS_NODE_ID;
+				btrpkt->rssi = 0;
+				memset(&(btrpkt->ctpDataHeader), 0, sizeof(ctp_data_header_t));
+				memcpy(&(btrpkt->response), response, sizeof(CtpResponseMsg));		
+	
+				// use queue here to add messages
+				// build queue message
+				tmpElement.addr = TOS_NODE_ID;
+				tmpElement.isRadioMsg = FALSE;
+				tmpElement.msg = &ctpReportPkt;
+				tmpElement.len = sizeof(CtpReportDataMsg);
+				tmpElement.id = AM_CTPREPORTDATAMSG;
+				tmpElement.payload = btrpkt;
+				if (call UartQueue.enqueue(&tmpElement)==SUCCESS){
+					return;
+				} else {
+					// message add failed, try again later
+					return;
+				}
+			}
+		}
+	}
+	
+	/**
 	 * CTP packet received in RAW form from AMTap interface
 	 */
 	void ctpReceived(uint8_t type, message_t *msg, void *payload, uint8_t len, bool spoof){
@@ -1641,7 +1683,7 @@ module RssiBaseC @safe() {
 
 	/**
 	 * ForgedMessage component now provides only this send - here we can directly regulate output
-	 * TXpower for some messages, especially for CTP messages.
+	 * TXpower for some messages, especially for CTP messages - CTP tree scaling.
 	 * Data CTP message could be set before sending to CTP, but ROUTE messages are
 	 * generated inside CTP module unreachable from outside, thus it is unable to modify TXpower for
 	 * ROUTE messages directly. By setting txpower for both ROUTE and DATA CTP tree should scale 

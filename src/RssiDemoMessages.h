@@ -568,8 +568,10 @@ typedef nx_struct CtpReportDataMsg {
 	nx_uint16_t rssi;
 	
 	// LSB
-	// 1. bit = spoofed boolean
-	// 2. bit = normal CTP reception == TRUE, otherwise was tapped
+	// 1. bit 0x1 = spoofed boolean
+	// 2. bit 0x2 = normal CTP reception == TRUE, otherwise was tapped
+	// 3. bit 0x4 = message was sent from node - reporting of sending by same node
+	//			in this case rssi, ctpDataHeader has no meaning, thus must be nulled 
 	nx_uint8_t flags;
 } CtpReportDataMsg;
 
