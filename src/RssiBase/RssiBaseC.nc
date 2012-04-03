@@ -1373,7 +1373,7 @@ module RssiBaseC @safe() {
 		if (&ctpPkt == msg) {
             ctpBusy = FALSE;
             // packet counter increment based on strategy chosen
-			if (ctpSendRequest.counterStrategySuccess){
+			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_COUNTER_STRATEGY_SUCCESS) > 0){
 				// increment only on succ
 				if (error==SUCCESS){
 					ctpCurPackets+=1;
@@ -1384,9 +1384,16 @@ module RssiBaseC @safe() {
 			}
 			
 			// timer starting based on strategy chosen
-			if (ctpSendRequest.timerStrategyPeriodic==FALSE && ctpSendRequest.delay>0){
+			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC)==0 && ctpSendRequest.delay>0){
 				// here start only one shot timer, if this strategy is prefered
-				call CtpTimer.startOneShot(ctpSendRequest.delay);
+				// generate new delay based on variability
+				uint16_t newDelay = ctpSendRequest.delay;
+				if (ctpSendRequest.delayVariability>0){
+					uint16_t variability = ceil(ctpSendRequest.delay * ctpSendRequest.delayVariability);
+					newDelay = ctpSendRequest.delay + ((call Random.rand16() % (2 * variability)) - variability);
+				}
+				
+				call CtpTimer.startOneShot(newDelay);
 			}
         }
 	}
@@ -1407,8 +1414,9 @@ module RssiBaseC @safe() {
 				// still has sent less packets than expected - send
 				post sendCtpMsg();
 			}
-			else {
-				// turn timer off iff every packet was already sent
+			else if((ctpSendRequest.flags & CTP_SEND_REQUEST_PACKETS_UNLIMITED) == 0) {
+				// Turn timer off iff every packet was already sent
+				// But if PACKETS_UNLIMITED flag is set, do not stop this process			
 				call CtpTimer.stop();
 
 				// reset coutner
@@ -1449,7 +1457,7 @@ module RssiBaseC @safe() {
 			}
 			
 			// depending on timer strategy start timer...
-			if (btrpkt->timerStrategyPeriodic){
+			if ((btrpkt->flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC) > 0){
 				// periodic timer with defined delay
 				call CtpTimer.startPeriodic(btrpkt->delay);
 			} else {

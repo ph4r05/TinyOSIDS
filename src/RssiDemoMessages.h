@@ -514,8 +514,14 @@ typedef nx_struct CtpResponseMsg {
 
 // message to request multiple packets from destination, CTP protocol
 // 1:N packets
+enum {
+	CTP_SEND_REQUEST_COUNTER_STRATEGY_SUCCESS = 0x1,
+	CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC = 0x2,
+	CTP_SEND_REQUEST_PACKETS_UNLIMITED = 0x1,
+};
+
 typedef nx_struct CtpSendRequestMsg {
-	// SEQ number ot this request
+	// SEQ number ot this request, identifier
 	nx_uint16_t counter;
 
 	// number of packets to send
@@ -524,22 +530,30 @@ typedef nx_struct CtpSendRequestMsg {
 	// timer delay between message send in ms
 	nx_uint16_t delay;
 	
+	// percentage of delay +- variability, if 0 no variability is used
+	nx_float delayVariability;
+	
 	// desired packet size in bytes
 	nx_uint8_t size;
 	
 	// datasource of CtpMessage - can be random/sensor reading
 	nx_uint8_t dataSource;
 	
-	// target = packets. CurPacket is incremented when:
-	// TRUE => only on succ sent packet => sendDone()==SUCC
-	// FALSE => on every Send()==SUCC
-	nx_bool counterStrategySuccess;
+	// flags field
+	// 0x1 		counterStrategySuccess
+	//				CurPacket is incremented when:
+	// 				TRUE => only on succ sent packet => sendDone()==SUCC
+	// 				FALSE => on every Send()==SUCC
+	//
+	// 0x2 		timerStrategyPeriodic
+	//				 if true then timer is started periodically and at each timer tick
+	// 				 message is sent 
+	// 				 if false new mesage is sent after previous message was successfully sent in 
+	// 				 sendDone()
+	//
+	// 0x4		unlimited packet count
 	
-	// if true then timer is started periodically and at each timer tick
-	// message is sent 
-	// if false new mesage is sent after previous message was successfully sent in 
-	// sendDone()
-	nx_bool timerStrategyPeriodic;
+	nx_uint16_t flags;
 } CtpSendRequestMsg;
 
 // ctp spoof report message, all collected information available
