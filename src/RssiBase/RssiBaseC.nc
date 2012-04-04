@@ -1393,7 +1393,7 @@ module RssiBaseC @safe() {
 				// generate new delay based on variability
 				uint16_t newDelay = ctpSendRequest.delay;
 				if (ctpSendRequest.delayVariability>0){
-					uint16_t variability = ceil(ctpSendRequest.delay * ctpSendRequest.delayVariability);
+					uint16_t variability = ctpSendRequest.delay * ctpSendRequest.delayVariability;
 					newDelay = ctpSendRequest.delay + ((call Random.rand16() % (2 * variability)) - variability);
 				}
 				
@@ -1414,7 +1414,7 @@ module RssiBaseC @safe() {
 			return;
 		}
 		else {
-			if(ctpSendRequest.packets > ctpCurPackets) {
+			if(ctpSendRequest.packets > ctpCurPackets || (ctpSendRequest.flags & CTP_SEND_REQUEST_PACKETS_UNLIMITED) > 0) {
 				// still has sent less packets than expected - send
 				post sendCtpMsg();
 			}
