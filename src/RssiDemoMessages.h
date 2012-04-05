@@ -565,7 +565,7 @@ typedef nx_struct CtpReportDataMsg {
 	nx_am_addr_t amSource;
 	
 	// rssi of received packet
-	nx_uint16_t rssi;
+	nx_int16_t rssi;
 	
 	// LSB
 	// 1. bit 0x1 = spoofed boolean
