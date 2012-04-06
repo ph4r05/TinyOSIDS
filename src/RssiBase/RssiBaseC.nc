@@ -1322,6 +1322,8 @@ module RssiBaseC @safe() {
 		uint16_t metric;
         am_addr_t parent;
 		
+		// send status report message
+		sendCtpInfoMsg(0,0);
 
 		if (ctpBusy){
 			ctpBusyCount+=1;
