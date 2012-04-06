@@ -11,3 +11,4 @@ mig java -target=telosb -java-classname=CtpSendRequestMsg RssiDemoMessages.h Ctp
 mig java -target=telosb -java-classname=CtpResponseMsg RssiDemoMessages.h CtpResponseMsg -o CtpResponseMsg.java
 mig java -target=telosb -java-classname=CtpReportDataMsg RssiDemoMessages.h CtpReportDataMsg -o CtpReportDataMsg.java
 mig java -target=telosb -java-classname=CollectionDebugMsg RssiDemoMessages.h CollectionDebugMsg -o CollectionDebugMsg.java
+mig java -target=telosb -java-classname=CtpInfoMsg RssiDemoMessages.h CtpInfoMsg -o CtpInfoMsg.java

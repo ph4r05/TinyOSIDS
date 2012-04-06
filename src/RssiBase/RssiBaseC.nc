@@ -826,7 +826,7 @@ module RssiBaseC @safe() {
 			// data=1 -> info about neighbor specified in data[0]. Returned addr, link quality, route
     		//				quality, congested bit
 			case COMMAND_CTP_GETINFO:
-				sendCtpInfoMsg((uint8_t) btrpkt->command_data, (uint8_t) btrpkt->command_data_next[0]);
+				sendCtpInfoMsg(btrpkt->command_data, btrpkt->command_data_next[0]);
 			break;
 			
 			// other CTP controling, can set TX power for packets
@@ -1545,16 +1545,13 @@ module RssiBaseC @safe() {
 	 * Send CTP info message - global status / particular neigh info
 	 */
 	void sendCtpInfoMsg(uint8_t type, uint8_t arg){
-		
+		atomic {
 			// queue is full?
 			if(call UartQueue.maxSize() > call UartQueue.size()) {
 				// dequeue from RSSI QUEUE, Build message, add to serial queue
 				CtpInfoMsg * btrpkt = (CtpInfoMsg* ) (call UartAMSend.getPayload(&ctpInfoPkt, sizeof(CtpInfoMsg)));
 				serialqueue_element_t tmpElement;		
-				
-				//reset info packet
-				memset(&(btrpkt), 0, sizeof(CtpInfoMsg));
-				
+
 				btrpkt->type = type;
 				if(type==0){
 					am_addr_t parent = 0;
@@ -1563,7 +1560,7 @@ module RssiBaseC @safe() {
 					// provide basic information about my CTP perspective					
 					call CtpInfo.getParent(&parent);
 					call CtpInfo.getEtx(&etx);
-					btrpkt->data.status.parent = parent;
+					(btrpkt->data).status.parent = parent;
 					btrpkt->data.status.etx = etx;
 					btrpkt->data.status.neighbors = call CtpInfo.numNeighbors();
 					btrpkt->data.status.serialQueueSize = call UartQueue.size();
@@ -1579,6 +1576,8 @@ module RssiBaseC @safe() {
 					btrpkt->data.neighInfo.routeQuality = call CtpInfo.getNeighborRouteQuality(arg);
 					btrpkt->data.neighInfo.flags = 0;
 					btrpkt->data.neighInfo.flags |= call CtpInfo.isNeighborCongested(btrpkt->data.neighInfo.addr) ? 1 : 0;
+				} else {
+					return;
 				}
 	
 				// use queue here to add messages
@@ -1596,7 +1595,7 @@ module RssiBaseC @safe() {
 					return;
 				}
 			}
-		
+		}
 	}
 	
 	/**
