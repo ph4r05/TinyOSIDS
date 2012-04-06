@@ -65,6 +65,7 @@ enum {
   AM_NOISEFLOORREADINGMSG = 18,
   AM_IDENTIFYMSG=40,
   
+  AM_CTPINFOMSG = 0xec,
   AM_CTPSENDREQUESTMSG = 0xee,
   AM_CTPRESPONSEMSG = 0xef,
   AM_CTPREPORTDATAMSG = 0xed,
@@ -574,5 +575,35 @@ typedef nx_struct CtpReportDataMsg {
 	//			in this case rssi, ctpDataHeader has no meaning, thus must be nulled 
 	nx_uint8_t flags;
 } CtpReportDataMsg;
+
+
+typedef nx_struct CtpInfoMsg {
+    nx_uint8_t type;
+    nx_union {        
+        nx_struct {
+        	nx_uint16_t data[6];
+       	} data;
+        
+        nx_struct {
+        	nx_uint16_t parent;
+        	nx_uint16_t etx;
+        	nx_uint8_t neighbors;
+        	nx_uint8_t serialQueueSize;
+        	nx_uint16_t ctpSeqNo;
+        	nx_uint8_t ctpBusyCount;
+        	nx_uint16_t flags;
+        } status;
+        
+        nx_struct {
+        	nx_uint8_t num;
+        	nx_uint16_t addr;
+        	nx_uint16_t linkQuality;
+        	nx_uint16_t routeQuality;		
+        	nx_uint16_t flags;
+        } neighInfo;
+
+    } data;
+} CtpInfoMsg;
+
 
 #endif //RSSIDEMOMESSAGES_H__

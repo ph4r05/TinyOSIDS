@@ -166,7 +166,7 @@ module RssiBaseC @safe() {
   	
   	/**************** PINGS ****************/
   	nx_struct MultiPingMsg multiPingRequest;
-  	uint16_t multiPingCurPackets;
+  	uint16_t multiPingCurPackets=0;
   	bool multiPingWorking=FALSE;
   	bool multiPingBusy=FALSE;
   	message_t pingPkt;
@@ -178,11 +178,13 @@ module RssiBaseC @safe() {
   	
   	/**************** CTP ****************/
   	nx_struct CtpSendRequestMsg ctpSendRequest;
-  	uint16_t ctpCurPackets;
+  	uint16_t ctpCurPackets=0;
+  	uint8_t ctpBusyCount=0;
   	bool ctpBusy=FALSE;
   	bool ctpWorking=FALSE;
   	message_t ctpPkt;
   	message_t ctpReportPkt;
+  	message_t ctpInfoPkt;
   	
   	// tx power for CTP data and route messages - CTP tree scaling
   	// default - set to maximum tx power
@@ -191,6 +193,7 @@ module RssiBaseC @safe() {
   	
   	void task sendCtpMsg();
   	void ctpMessageSend(message_t *msg, void *payload);
+  	void sendCtpInfoMsg(uint8_t type, uint8_t arg);
   	
 	/**************** GENERIC ****************/
 	bool busy = TRUE;
@@ -806,6 +809,8 @@ module RssiBaseC @safe() {
 					call ForwardingInit.init();
 					
 					call ForwardingControl.start();
+					ctpBusy=FALSE;
+					ctpBusyCount=0;
 					
 					btrpktresponse->command_data = 4;
 				} else {
@@ -821,30 +826,7 @@ module RssiBaseC @safe() {
 			// data=1 -> info about neighbor specified in data[0]. Returned addr, link quality, route
     		//				quality, congested bit
 			case COMMAND_CTP_GETINFO:
-				if(btrpkt->command_data==0){
-					// provide basic information about my CTP perspective
-					am_addr_t parent=0;
-					uint16_t etx=0;
-					
-					call CtpInfo.getParent(&parent);
-					call CtpInfo.getEtx(&etx);
-					
-					btrpktresponse->command_data_next[0] = parent;
-					btrpktresponse->command_data_next[1] = etx;
-					btrpktresponse->command_data_next[2] = call CtpInfo.numNeighbors();
-					btrpktresponse->command_code = COMMAND_ACK;
-					post sendCommandACK();
-				} else if (btrpkt->command_data==1){
-					// provide information about particular neighbor
-					uint8_t neighNum = (uint8_t) btrpkt->command_data_next[0];
-					
-					btrpktresponse->command_data_next[0] = call CtpInfo.getNeighborAddr(neighNum);
-					btrpktresponse->command_data_next[1] = call CtpInfo.getNeighborLinkQuality(neighNum);
-					btrpktresponse->command_data_next[2] = call CtpInfo.getNeighborRouteQuality(neighNum);
-					btrpktresponse->command_data_next[3] = call CtpInfo.isNeighborCongested(btrpktresponse->command_data_next[0]);
-					btrpktresponse->command_code = COMMAND_ACK;
-					post sendCommandACK();
-				}
+				sendCtpInfoMsg((uint8_t) btrpkt->command_data, (uint8_t) btrpkt->command_data_next[0]);
 			break;
 			
 			// other CTP controling, can set TX power for packets
@@ -1179,9 +1161,8 @@ module RssiBaseC @safe() {
 #ifdef __CC2420_H__
   void setPower(message_t *msg, uint8_t power){
   	if (power >= 1 && power <=31){
-  		multiPingRequest.txpower = power;
-                call CC2420Packet.setPower(msg, power);
-        }
+			call CC2420Packet.setPower(msg, power);
+    }
   }
   
   // set channel
@@ -1343,6 +1324,7 @@ module RssiBaseC @safe() {
 		
 
 		if (ctpBusy){
+			ctpBusyCount+=1;
 			post sendCtpMsg();
 			return;
 		}
@@ -1375,6 +1357,7 @@ module RssiBaseC @safe() {
 	 */
 	event void CtpSend.sendDone(message_t *msg, error_t error){
 		if (&ctpPkt == msg) {
+			ctpBusyCount=0;
             ctpBusy = FALSE;
             // packet counter increment based on strategy chosen
 			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_COUNTER_STRATEGY_SUCCESS) > 0){
@@ -1559,6 +1542,64 @@ module RssiBaseC @safe() {
 	}
 	
 	/**
+	 * Send CTP info message - global status / particular neigh info
+	 */
+	void sendCtpInfoMsg(uint8_t type, uint8_t arg){
+		
+			// queue is full?
+			if(call UartQueue.maxSize() > call UartQueue.size()) {
+				// dequeue from RSSI QUEUE, Build message, add to serial queue
+				CtpInfoMsg * btrpkt = (CtpInfoMsg* ) (call UartAMSend.getPayload(&ctpInfoPkt, sizeof(CtpInfoMsg)));
+				serialqueue_element_t tmpElement;		
+				
+				//reset info packet
+				memset(&(btrpkt), 0, sizeof(CtpInfoMsg));
+				
+				btrpkt->type = type;
+				if(type==0){
+					am_addr_t parent = 0;
+					uint16_t etx=0;
+					
+					// provide basic information about my CTP perspective					
+					call CtpInfo.getParent(&parent);
+					call CtpInfo.getEtx(&etx);
+					btrpkt->data.status.parent = parent;
+					btrpkt->data.status.etx = etx;
+					btrpkt->data.status.neighbors = call CtpInfo.numNeighbors();
+					btrpkt->data.status.serialQueueSize = call UartQueue.size();
+					btrpkt->data.status.ctpSeqNo = ctpCurPackets;
+					btrpkt->data.status.ctpBusyCount = ctpBusyCount;
+					btrpkt->data.status.flags = 0;
+					btrpkt->data.status.flags |= ctpBusy ? 1 : 0;
+				} else if (type==1){
+					// provide information about particular neighbor
+					btrpkt->data.neighInfo.num = arg;
+					btrpkt->data.neighInfo.addr = call CtpInfo.getNeighborAddr(arg);
+					btrpkt->data.neighInfo.linkQuality = call CtpInfo.getNeighborLinkQuality(arg);
+					btrpkt->data.neighInfo.routeQuality = call CtpInfo.getNeighborRouteQuality(arg);
+					btrpkt->data.neighInfo.flags = 0;
+					btrpkt->data.neighInfo.flags |= call CtpInfo.isNeighborCongested(btrpkt->data.neighInfo.addr) ? 1 : 0;
+				}
+	
+				// use queue here to add messages
+				// build queue message
+				tmpElement.addr = TOS_NODE_ID;
+				tmpElement.isRadioMsg = FALSE;
+				tmpElement.msg = &ctpInfoPkt;
+				tmpElement.len = sizeof(CtpInfoMsg);
+				tmpElement.id = AM_CTPINFOMSG;
+				tmpElement.payload = btrpkt;
+				if (call UartQueue.enqueue(&tmpElement)==SUCCESS){
+					return;
+				} else {
+					// message add failed, try again later
+					return;
+				}
+			}
+		
+	}
+	
+	/**
 	 * CTP packet received in RAW form from AMTap interface
 	 */
 	void ctpReceived(uint8_t type, message_t *msg, void *payload, uint8_t len, bool spoof){
@@ -1691,13 +1732,13 @@ module RssiBaseC @safe() {
 	event message_t * AMTapForg.send(uint8_t type, message_t *msg, uint8_t len){		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
-		if (type==AM_CTP_DATA && ctpTxData<31){
+		if (type==AM_CTP_DATA && ctpTxData<=31){
 			setPower(msg, ctpTxData);
 		}
 		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
-		if (type==AM_CTP_ROUTING && ctpTxRoute<31){
+		if (type==AM_CTP_ROUTING && ctpTxRoute<=31){
 			setPower(msg, ctpTxRoute);
 		}
 		
