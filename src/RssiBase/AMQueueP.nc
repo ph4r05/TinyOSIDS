@@ -47,11 +47,18 @@ implementation {
   
   components new AMQueueImplP(NUM_CLIENTS), ActiveMessageC, 
              ForgedActiveMessageC;
+             
+  components BaseStationC;         
+   
 
   Send = AMQueueImplP;
-  AMQueueImplP.AMSend -> ForgedActiveMessageC;
+//  AMQueueImplP.AMSend -> BaseStationC.AMSend;
   AMQueueImplP.AMPacket -> ForgedActiveMessageC;
   AMQueueImplP.Packet -> ForgedActiveMessageC;
+  
+  AMQueueImplP.AMSend -> ForgedActiveMessageC;
+//  AMQueueImplP.AMPacket -> ForgedActiveMessageC;
+//  AMQueueImplP.Packet -> ForgedActiveMessageC;
   
 }
 

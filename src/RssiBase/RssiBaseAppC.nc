@@ -184,15 +184,19 @@ configuration RssiBaseAppC {
   	// overflow very quickly, since debug message can be send plenty times for 
   	// only 1 CTP message from 1 node (approx. each routing decision) 
   	
+  	App.ForwardControl -> Collector.ForwardControl;
+  	
   	// implement debug to see real CTP behavior and routing decisions
-//  components UARTDebugSenderP as LoggerC;
-//	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
-//	LoggerC.Boot -> MainC;
-//	
-//	components new PoolC(message_t, 4) as CTPDbgPool;
-//	components new QueueC(message_t*, 4) as CTPDbgQueue;
-//	LoggerC.SendQueue -> CTPDbgQueue;
-//	LoggerC.MessagePool -> CTPDbgPool;  	
-//  Collector.CollectionDebug -> LoggerC;
+  components UARTDebugSenderP as LoggerC;
+	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
+	LoggerC.Boot -> MainC;
+	
+	components new PoolC(message_t, 5) as CTPDbgPool;
+	components new QueueC(message_t*, 5) as CTPDbgQueue;
+	LoggerC.SendQueue -> CTPDbgQueue;
+	LoggerC.MessagePool -> CTPDbgPool;  	
+    Collector.CollectionDebug -> LoggerC;
+    App.CtpLoggerControl -> LoggerC.StdControl;
+    App.CtpLogger -> LoggerC.CollectionDebug;
 //  	
 }

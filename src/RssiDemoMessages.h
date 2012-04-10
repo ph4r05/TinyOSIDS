@@ -40,9 +40,16 @@
 #define TOSH_DATA_LENGTH 32
 #endif
 
-// ctp messages
+/**
+ * Warning!
+ * If you want to generate Java Messages by MIG (genJavaMsgs.sh) you need to comment line
+ * #include <Ctp.h>
+ * and uncomment line
+ * #include <Ctp.h>
+ * 
+ * MIG has trouble to include some needed header files, so they are included in MUGhlp.h.
+ */
 #include <Ctp.h>
-//#include <MultiHopLqi.h>
 //#include "MIGhlp.h"
 
 #ifndef NULL
@@ -508,9 +515,6 @@ typedef nx_struct CtpResponseMsg {
     nx_uint16_t metric;
     nx_uint8_t dataType;
     nx_uint16_t data;
-    nx_uint8_t hopcount;
-    nx_uint16_t sendCount;
-    nx_uint16_t sendSuccessCount;
 } CtpResponseMsg;
 
 // message to request multiple packets from destination, CTP protocol
@@ -532,7 +536,7 @@ typedef nx_struct CtpSendRequestMsg {
 	nx_uint16_t delay;
 	
 	// percentage of delay +- variability, if 0 no variability is used
-	nx_float delayVariability;
+	nx_uint16_t delayVariability;
 	
 	// desired packet size in bytes
 	nx_uint8_t size;

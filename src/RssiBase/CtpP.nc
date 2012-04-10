@@ -86,6 +86,7 @@ configuration CtpP {
     interface Init as RoutingInit;
     interface Init as ForwardingInit;
     interface Init as LinkEstimatorInit;
+    interface ForwardControl;
   }
 
   uses {
@@ -217,4 +218,6 @@ implementation {
   RoutingInit = Router.Reinit;
   ForwardingInit = Forwarder.Init;
   LinkEstimatorInit = Estimator.Init;
+  
+  ForwardControl = Forwarder;
 }

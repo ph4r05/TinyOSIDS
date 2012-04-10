@@ -64,6 +64,7 @@ configuration CollectionC {
      interface Init as RoutingInit;
      interface Init as LinkEstimatorInit;
      interface Init as ForwardingInit;
+     interface ForwardControl;
   }
 
   uses {
@@ -95,5 +96,6 @@ implementation {
   RoutingInit = CtpP.RoutingInit;
   ForwardingInit = CtpP.ForwardingInit;
   LinkEstimatorInit = CtpP.LinkEstimatorInit;
+  ForwardControl = CtpP;
 }
 

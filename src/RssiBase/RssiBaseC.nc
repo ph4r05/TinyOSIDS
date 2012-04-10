@@ -72,6 +72,7 @@ module RssiBaseC @safe() {
   		/*************** CTP ****************/
   		interface Random;
   		interface StdControl as ForwardingControl;
+  		interface StdControl as CtpLoggerControl;
   		interface Init as RoutingInit;
   		interface Init as ForwardingInit;
   		interface Init as LinkEstimatorInit;
@@ -96,6 +97,9 @@ module RssiBaseC @safe() {
 		interface Intercept as CtpRoutingIntercept;
 		interface Intercept as CtpDataIntercept;
 		interface Intercept as CtpDebugIntercept;
+		
+		interface CollectionDebug as CtpLogger;
+		interface ForwardControl;
 	}
 
 /*
@@ -179,7 +183,7 @@ module RssiBaseC @safe() {
   	/**************** CTP ****************/
   	nx_struct CtpSendRequestMsg ctpSendRequest;
   	uint16_t ctpCurPackets=0;
-  	uint8_t ctpBusyCount=0;
+  	uint16_t ctpBusyCount=0;
   	bool ctpBusy=FALSE;
   	bool ctpWorking=FALSE;
   	message_t ctpPkt;
@@ -191,6 +195,15 @@ module RssiBaseC @safe() {
   	uint8_t ctpTxData=31;
   	uint8_t ctpTxRoute=31; 
   	
+  	enum {
+  		CTP_RETX_TIME=10,
+  		DBG_CTP_SEND_FAIL=0x60,
+  		DBG_CTP_SEND_RETRY_FAIL=0x61,
+  		DBG_CTP_FINISHED=0x62,
+  		DBG_CTP_NEWDELAY=0x63,
+  	};
+  	
+  	uint16_t ctpGetNewDelay();
   	void task sendCtpMsg();
   	void ctpMessageSend(message_t *msg, void *payload);
   	void sendCtpInfoMsg(uint8_t type, uint8_t arg);
@@ -802,17 +815,23 @@ module RssiBaseC @safe() {
 					call CtpInfo.recomputeRoutes();
 					btrpktresponse->command_data = 3;
 				} else if (btrpkt->command_data==4){
-					call ForwardingControl.stop();
-					
-					call LinkEstimatorInit.init();
-					call RoutingInit.init();
-					call ForwardingInit.init();
-					
-					call ForwardingControl.start();
+					call CtpTimer.stop();
 					ctpBusy=FALSE;
 					ctpBusyCount=0;
 					
+					call ForwardingControl.stop();
+					call LinkEstimatorInit.init();
+					call RoutingInit.init();
+					call ForwardingInit.init();
+					call ForwardingControl.start();
+					
 					btrpktresponse->command_data = 4;
+				} else if (btrpkt->command_data==5){
+					call ForwardingInit.init();
+				} else if (btrpkt->command_data==6){
+					call ForwardControl.postTask();
+				} else if (btrpkt->command_data==7){
+					call ForwardControl.flushQueue();
 				} else {
 					btrpktresponse->command_data = 0xffff;
 				}
@@ -834,8 +853,12 @@ module RssiBaseC @safe() {
 			// 				if data[0] == 1	-> set TXpower for ROUTE messages on data[1] level
 			//			 	if data[0] == 2 -> set TXpower for DATA messages on data[1] level
 			//				if data[0] == 3 -> set TXpower for both ROUTE, DATA messages on data[1] level
+			//
+			// data=1 -> enable/disable CTP debug 
+			//
 			case COMMAND_CTP_CONTROL:
 				if (btrpkt->command_data==0){
+					// output CTP TX power
 					btrpktresponse->command_data_next[0] = 0;
 					btrpktresponse->command_data_next[1] = 0;
 						
@@ -853,7 +876,19 @@ module RssiBaseC @safe() {
 					
 					btrpktresponse->command_code = COMMAND_ACK;
 					post sendCommandACK();
-				}
+					
+				} else if (btrpkt->command_data==1) {
+					// CTP debug
+					if (btrpkt->command_data_next[0]>0){
+						call CtpLoggerControl.start();
+					} else {
+						call CtpLoggerControl.stop();
+					}
+					
+					btrpktresponse->command_data_next[0] = btrpkt->command_data_next[0];
+					btrpktresponse->command_code = COMMAND_ACK;
+					post sendCommandACK();
+				} 
 			break;
 
 			default: 
@@ -1064,7 +1099,7 @@ module RssiBaseC @safe() {
 		}
 		
 		// copy current request from packet to local var
-		memcpy(&multiPingRequest, payload, sizeof(MultiPingMsg));
+		memcpy((void*)&multiPingRequest, payload, sizeof(MultiPingMsg));
 		// set curr running to zero, stop timer 
 		call PingTimer.stop();
 		multiPingCurPackets = 0;
@@ -1321,13 +1356,26 @@ module RssiBaseC @safe() {
 		CtpResponseMsg * btrpkt = NULL;
 		uint16_t metric;
         am_addr_t parent;
+        error_t sendResult=SUCCESS;
 		
-		// send status report message
-		sendCtpInfoMsg(0,0);
-
+		// CTP didn't returned a response
 		if (ctpBusy){
 			ctpBusyCount+=1;
-			post sendCtpMsg();
+			
+			// logg fail
+        	call CtpLogger.logEventSimple(DBG_CTP_SEND_RETRY_FAIL, ctpBusyCount);
+        	
+			//if ((ctpBusyCount % 25) == 0){
+				// send status report message
+				sendCtpInfoMsg(0,0);
+			//}
+			
+			// start re-tx timer, if aperiodic timer is choosen
+			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC)==0){
+				call CtpTimer.startOneShot(CTP_RETX_TIME + (ctpBusyCount % 50));
+			} else {
+				post sendCtpMsg();
+			}
 			return;
 		}
 		
@@ -1340,17 +1388,28 @@ module RssiBaseC @safe() {
         btrpkt->seqno = ctpCurPackets;
         btrpkt->data = call Random.rand16();
         btrpkt->parent = parent;
-        btrpkt->hopcount = 0;
         btrpkt->metric = metric;
         
-        if (call CtpSend.send(&ctpPkt, sizeof(CtpResponseMsg)) == SUCCESS) {
+        sendResult = call CtpSend.send(&ctpPkt, sizeof(CtpResponseMsg));
+        if (sendResult == SUCCESS) {
             ctpBusy=TRUE;
             dbg("IDS-app","App: sent packet with seqno %d to parent %d", msg->seqno, msg->parent);
+            
+            // send status report message
+			sendCtpInfoMsg(0,0);
             
             // report sending 
             ctpMessageSend(&ctpPkt, btrpkt);
         } else {
-        	post sendCtpMsg();
+        	// logg fail
+        	call CtpLogger.logEventSimple(DBG_CTP_SEND_FAIL, sendResult);
+        	
+        	// start re-tx timer, if aperiodic timer is choosen
+			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC)==0){
+				call CtpTimer.startOneShot(CTP_RETX_TIME);
+			} else {
+				post sendCtpMsg();
+			}
         }
 	}
 
@@ -1358,7 +1417,7 @@ module RssiBaseC @safe() {
 	 * CTP message was sent. Start timer again according to properties set
 	 */
 	event void CtpSend.sendDone(message_t *msg, error_t error){
-		if (&ctpPkt == msg) {
+		//if (&ctpPkt == msg) {
 			ctpBusyCount=0;
             ctpBusy = FALSE;
             // packet counter increment based on strategy chosen
@@ -1376,15 +1435,9 @@ module RssiBaseC @safe() {
 			if ((ctpSendRequest.flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC)==0 && ctpSendRequest.delay>0){
 				// here start only one shot timer, if this strategy is prefered
 				// generate new delay based on variability
-				uint16_t newDelay = ctpSendRequest.delay;
-				if (ctpSendRequest.delayVariability>0){
-					uint16_t variability = ctpSendRequest.delay * ctpSendRequest.delayVariability;
-					newDelay = ctpSendRequest.delay + ((call Random.rand16() % (2 * variability)) - variability);
-				}
-				
-				call CtpTimer.startOneShot(newDelay);
+				call CtpTimer.startOneShot(ctpGetNewDelay());
 			}
-        }
+        //}
 	}
 
 	/**
@@ -1412,8 +1465,24 @@ module RssiBaseC @safe() {
 				ctpCurPackets = 0;
 				// freeze next attempts
 				ctpSendRequest.delay = 0;
+				
+				// log finish
+        		call CtpLogger.logEventSimple(DBG_CTP_FINISHED, 0);
 			}
 		}
+	}
+	
+	/**
+	 * Generates new delay for CTP timer, using variability
+	 */
+	uint16_t ctpGetNewDelay(){
+		uint16_t newDelay = ctpSendRequest.delay;
+		if (ctpSendRequest.delayVariability>0){
+			newDelay = ctpSendRequest.delay + ((call Random.rand16() % (2 * ctpSendRequest.delayVariability)) - ctpSendRequest.delayVariability);
+		}
+		
+		call CtpLogger.logEventSimple(DBG_CTP_NEWDELAY, newDelay);
+		return newDelay;
 	}
 
 	/**
@@ -1430,29 +1499,35 @@ module RssiBaseC @safe() {
 			if(len != sizeof(CtpSendRequestMsg)) {
 				// invalid length - cannot process
 				return FALSE;
-			}		
+			}	
+			
+			// set curr running to zero, stop timer 
+			call CtpTimer.stop();
+			ctpCurPackets = 0;
+			ctpBusyCount=0;
+            ctpBusy = FALSE;	
 			
 			// get received message
 			btrpkt = (CtpSendRequestMsg * ) payload;			
 			// copy current request from packet to local var
-			memcpy(&ctpSendRequest, payload, sizeof(CtpSendRequestMsg));
-			// set curr running to zero, stop timer 
-			call CtpTimer.stop();
-			ctpCurPackets = 0;
+			memcpy((void*) (&ctpSendRequest), payload, sizeof(CtpSendRequestMsg));
+            
 			// if delay=0 => stop ping send
 			if(btrpkt->delay==0){
-				call CtpTimer.stop();
 				return FALSE;
 			}
 			
 			// depending on timer strategy start timer...
 			if ((btrpkt->flags & CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC) > 0){
 				// periodic timer with defined delay
-				call CtpTimer.startPeriodic(btrpkt->delay);
+				call CtpTimer.startPeriodic(ctpGetNewDelay());
 			} else {
 				// one-shot timer only
-				call CtpTimer.startOneShot(btrpkt->delay);
+				call CtpTimer.startOneShot(ctpGetNewDelay());
 			}
+			
+			// send report about sending
+			sendCtpInfoMsg(0, 0);
 		}
 			
 		return (AM_BROADCAST_ADDR==destination);
@@ -1482,8 +1557,8 @@ module RssiBaseC @safe() {
 				btrpkt->flags = 0x2;
 				btrpkt->amSource = call AMPacket.source(msg);
 				btrpkt->rssi = getRssi(msg);
-				memcpy(&(btrpkt->response), payload, len);
-				memset(&(btrpkt->ctpDataHeader), 0, sizeof(btrpkt->ctpDataHeader));						
+				memcpy((void*)(&(btrpkt->response)), payload, len);
+				memset((void*)(&(btrpkt->ctpDataHeader)), 0, sizeof(btrpkt->ctpDataHeader));						
 	
 				// use queue here to add messages
 				// build queue message
@@ -1522,8 +1597,8 @@ module RssiBaseC @safe() {
 				btrpkt->flags = 0x4;
 				btrpkt->amSource = TOS_NODE_ID;
 				btrpkt->rssi = 0;
-				memset(&(btrpkt->ctpDataHeader), 0, sizeof(ctp_data_header_t));
-				memcpy(&(btrpkt->response), response, sizeof(CtpResponseMsg));		
+				memset((void*)&(btrpkt->ctpDataHeader), 0, sizeof(ctp_data_header_t));
+				memcpy((void*)&(btrpkt->response), (void*)response, sizeof(CtpResponseMsg));		
 	
 				// use queue here to add messages
 				// build queue message
@@ -1628,8 +1703,8 @@ module RssiBaseC @safe() {
 				btrpkt->flags |= spoof ? 0x1:0x0;
 				btrpkt->amSource = call AMPacket.source(msg);
 				btrpkt->rssi = getRssi(msg);
-				memcpy(&(btrpkt->ctpDataHeader), ctpDataHeader, sizeof(ctp_data_header_t));
-				memcpy(&(btrpkt->response), response, sizeof(CtpResponseMsg));		
+				memcpy((void*)&(btrpkt->ctpDataHeader), (void*)ctpDataHeader, sizeof(ctp_data_header_t));
+				memcpy((void*)&(btrpkt->response), (void*)response, sizeof(CtpResponseMsg));		
 	
 				// use queue here to add messages
 				// build queue message
@@ -1681,6 +1756,18 @@ module RssiBaseC @safe() {
 	 * basestation does not support this send interface
 	 */
 	event message_t * AMTap.send(uint8_t type, message_t *msg, uint8_t len){
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if (type==AM_CTP_DATA && ctpTxData<=31){
+			setPower(msg, ctpTxData);
+		}
+		
+		// CTP ROUTE message sent here, set wanted tx power
+		// maximum power is default, thus ignore maximum power level
+		if (type==AM_CTP_ROUTING && ctpTxRoute<=31){
+			setPower(msg, ctpTxRoute);
+		}
+		
 		return msg; 
 	}
 
