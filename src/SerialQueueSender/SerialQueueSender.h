@@ -68,6 +68,15 @@ typedef nx_struct SerialSendHeader {
 	nx_am_id_t type;
 } SerialSendHeader;
 
+/**
+ * Metadata for sending 
+ */
+typedef struct senderMetadata {
+	uint8_t len;
+	uint8_t retries;
+	am_addr_t addr;
+	void * payload;
+} senderMetadata_t;
 
 enum {
   AM_PRINTF_MSG = 128,

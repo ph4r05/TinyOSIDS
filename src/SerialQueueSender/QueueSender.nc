@@ -9,8 +9,7 @@ interface QueueSender {
 	command bool full();
 	command uint8_t size();
 	command uint8_t maxSize();
-	command error_t enqueueRaw(am_id_t id, am_addr_t addr, message_t *msg, void * payload, uint8_t len, bool radioPacket);
-	command error_t enqueue(queueSenderQueue_element_t * newVal);
-	command queueSenderQueue_element_t * head();
-	command queueSenderQueue_element_t * element(uint8_t idx);
+	command error_t enqueueData(void * payload, uint8_t len);
+	command senderMetadata_t * head();
+	command senderMetadata_t * element(uint8_t idx);
 }

@@ -79,9 +79,17 @@ generic module SerialQueueSenderP(typedef queue_t, uint8_t QUEUE_SIZE, am_id_t a
     interface QueueSender;
   }
   uses {
+    interface Boot;
+    interface Queue<senderMetadata_t*> as SendQueue;
+    interface Pool<queue_t> as MessagePool;
+    interface Pool<senderMetadata_t> as MessageMetaPool;
+    
+    interface Timer<TMilli> as RetxmitTimer;
     interface AMSend;
     interface Packet;
     interface AMPacket;
+    
+    interface Random;
   }
 }
 implementation {
@@ -90,205 +98,221 @@ implementation {
     S_STOPPED,
     S_STARTED,
     S_FLUSHING,
-  };
-
-   // serial queue & management
-   // uartQueue = queue of received radio packets 
-   // waiting to be send over UART.
-   // Real messages are stored in bufs. Pointers to this
-   // queue is given as return value of Packet.receive 
-   // -> where to store next message.
-   queue_t uartQueueBufs[SERIALSENDER_BUFFER_SIZE];
-   queueSenderQueue_element_t uartQueueMeta[SERIALSENDER_BUFFER_SIZE];
-    // array of pointers to messages in queue. Messages are really stored 
-    // in buffs or in 1 message queue in receive buffer.
-//    message_t * uartQueue[SERIALSENDER_BUFFER_SIZE];
-    // queue for external packets. If not null, then packet on specified position is
-    // from external source
-    //  a) keeps message original pointer for messageSent notif
-    //  b) signalization purposes for special handling with external messages
-//    message_t * uartQueueExternal[SERIALSENDER_BUFFER_SIZE];
-    uint8_t uartIn, uartOut;
-    bool uartBusy, uartFull;
-//    // signalizes whether packet is enqueued from queue
-//    uint8_t uartPacketExternal[SERIALSENDER_BUFFER_SIZE/8+1];
     
+    MAX_RETRIES=30,
+    
+    SENDFAIL_WINDOW=3,
+    SENDFAIL_OFFSET=2,
+    
+    SENDDONEFAIL_WINDOW=3,
+    SENDDONEFAIL_OFFSET=2,
+  };
   
-  
-  message_t tmpMsg;
-  uint8_t state = S_STOPPED;
-
-
-//  task void retrySend() {
-//    if(call AMSend.send(AM_BROADCAST_ADDR, &printfMsg, sizeof(printf_msg_t)) != SUCCESS)
-//      post retrySend();
-//  }
-//  
-//  void sendNext() {
-//    int i;
-//    printf_msg_t* m = (printf_msg_t*)call Packet.getPayload(&printfMsg, sizeof(printf_msg_t));
-//    uint16_t length_to_send = (call Queue.size() < sizeof(printf_msg_t)) ? call Queue.size() : sizeof(printf_msg_t);
-//    memset(m->buffer, 0, sizeof(printf_msg_t));
-//    for(i=0; i<length_to_send; i++)
-//      m->buffer[i] = call Queue.dequeue();
-//    if(call AMSend.send(AM_BROADCAST_ADDR, &printfMsg, sizeof(printf_msg_t)) != SUCCESS)
-//      post retrySend();  
-//  }
-//  
-//  event void AMSend.sendDone(message_t* msg, error_t error) {    
-//    if(error == SUCCESS) {
-//      if(call Queue.size() > 0)
-//        sendNext();
-//      else state = S_STARTED;
-//    }
-//    else post retrySend();
-//  }
-//  
-
-
-	command queueSenderQueue_element_t * QueueSender.element(uint8_t idx){
-		// TODO Auto-generated method stub
-		
-		return NULL;
-	}
-
-	command error_t QueueSender.enqueue(queueSenderQueue_element_t *newVal){
-		// TODO Auto-generated method stub
-		
-		return FAIL;
-	}
+    message_t uartPacket;
+    bool sending;
+    uint8_t blen;
+    uint16_t statLogReceived = 0;
+    uint16_t statEnqueueFail = 0;
+    uint16_t statSendFail = 0;
+    uint16_t statSendDoneFail = 0;
+    uint16_t statSendDoneOk = 0;
+    uint16_t statSendDoneBug = 0;
+	bool enabled=FALSE;
+	uint8_t state = S_STOPPED;
 	
-//	command error_t QueueSender.enqueueRaw(am_id_t id, am_addr_t addr, message_t *msg, void * payload, uint8_t len, bool radioPacket){
-//		return FAIL;
-//	}
+	// Forward declarations
+	task void sendTask();
+	void messageDequeue(senderMetadata_t * metaPtr);
+	static void startRetxmitTimer(uint16_t window, uint16_t offset);
+	
+	event void Boot.booted(){
+		sending = FALSE;
+        blen = (uint8_t) sizeof(queue_t);
+        statSendFail = 0;
+        statLogReceived = 0;
+        statEnqueueFail = 0;
+        statSendDoneOk = 0;
+        statSendDoneFail = 0;
+        statSendDoneBug = 0;
+	}
 
-	command queueSenderQueue_element_t * QueueSender.head(){
-		queueSenderQueue_element_t elem;
-		message_t * curElem;
-		if (call QueueSender.empty()){
-			return NULL;
-		}
-		
-		curElem = &(uartQueueBufs[uartIn-1]);
-		call Packet.getPayload(curElem, 1);
-		//elem.payload = call ;
-//  // address to send message to
-//  uint16_t addr;
-//  // length of message to send - parameter to AMSend.send = length of payload
-//  uint8_t len;
-//  // AM message type
-//  uint8_t id;
-		
-		
-		
-		return NULL;
-		//return call Queue.head();
+	command senderMetadata_t * QueueSender.element(uint8_t idx){
+		return call SendQueue.element(idx);
+	}
+
+	command senderMetadata_t * QueueSender.head(){
+		return call SendQueue.head();
 	}
 
 	command uint8_t QueueSender.size(){
-		return (uartOut > uartIn) ? SERIALSENDER_BUFFER_SIZE - uartOut + uartIn : uartIn - uartOut;
+		return call SendQueue.size();
 	}
 
 	command uint8_t QueueSender.maxSize(){
-		return SERIALSENDER_BUFFER_SIZE;
+		return call SendQueue.maxSize();
 	}
 
 	command bool QueueSender.empty(){
-		return ((uartFull==FALSE) && (uartIn==uartOut));
+		return call SendQueue.empty();
 	}
 
 	command bool QueueSender.full(){
-		return uartFull;
+		return ((call SendQueue.size()) == (call SendQueue.maxSize()));
 	}
-	
-	
-//	command error_t SerialQueue.enqueue(serialqueue_element_t * newVal){
-//		message_t * ret; 
-//
-//		// if queue is full, cannot add new
-//		if (uartFull) {
-//                // serial queue full       
-//                failBlink();
-//                dropBlink();
-//                ++uartFailCounter;
-//                timedUartSendTask();
-//                return ENOMEM;
-//        }
-//		
-//		// queue manipulation has to be atomic to preserve pointers/counters consistency
-//        atomic
-//        {
-//			// check full again
-//			if (uartFull) {
-//				timedUartSendTask();
-//				return ENOMEM;
-//			}
-//			// now is guaranted that nothing happened to queue from last check
-//			
-//	    	// pointer to free memory block. copy here message passed for sending
-//	        ret = uartQueue[uartIn];
-//
-//	        // ser proper packet-type flag
-//	        if (newVal->isRadioMsg){
-//	        	uartPacketSerial[uartIn/8] &= ~(1<<(uartIn%8));
-//	        } else {
-//	        	uartPacketSerial[uartIn/8] |= (1<<(uartIn%8));
-//	        }
-//	        
-//	        // set always to 1 here
-//	        uartPacketExternal[uartIn/8] |= (1<<uartIn%8);
-//	        
-//	        //memcpy(ret, newVal->msg, sizeof(message_t));
-//	        
-//	        // set fields as radio packet - BaseStation assumes that radio 
-//	        // packets are in this queue -> no problem, next calls will
-//	        // consider message as radio message and puts correct fields
-//	        if (newVal->isRadioMsg){
-//	        	// copy whole message to defines address, preserve my addresses for 
-//	        	// future - N+1 cycling queue for receive
-//		        memcpy(call RadioPacket.getPayload(ret, newVal->len), 
-//		        	newVal->payload, newVal->len);
-//		        
-//	        	
-//	        	call RadioAMPacket.setDestination(ret, newVal->addr);
-//	        	call RadioAMPacket.setType(ret, newVal->id);
-//	        	call RadioAMPacket.setSource(ret, TOS_NODE_ID);
-//	        	call RadioPacket.setPayloadLength(ret, newVal->len);
-//	        } else {
-//	        	// copy whole message to defines address, preserve my addresses for 
-//		        // future - N+1 cycling queue for receive
-//	        	memcpy(call UartPacket.getPayload(ret, newVal->len), 
-//	        		newVal->payload, newVal->len);
-//	        	
-//	        	call UartAMPacket.setDestination(ret, newVal->addr);
-//	        	call UartAMPacket.setType(ret, newVal->id);
-//	        	call UartAMPacket.setSource(ret, TOS_NODE_ID);
-//	        	call UartPacket.setPayloadLength(ret, newVal->len);
-//	        }
-//	        
-//	        // store external message pointer - when enqueueing new messages then do not
-//	        // signal sendDone, massive sending. 
-//	        uartQueueExternal[uartIn] = NULL;
-//	        // to current free place in queue is stored actualy received 
-//	        // message from radio.
-//	        uartQueue[uartIn] = ret;
-//			// next slot in queue - cyclic buffer, move
-//	        uartIn = (uartIn + 1) % UART_QUEUE_LEN;
-//			// cyclic queue is full - 1bit signalization
-//	        if (uartIn == uartOut){
-//	            uartFull = TRUE;
-//	        }
-//	    }
-//	    
-//	    // timer replaced
-//        // start timed message sending - better performance in event driven OS
-//        timedUartSendTask();
-//
-//		return SUCCESS;
-//	}
-	
 
 	event void AMSend.sendDone(message_t *msg, error_t error){
-		// TODO Auto-generated method stub
+		senderMetadata_t * metaPtr = call SendQueue.head();
+        if (metaPtr == NULL || (&uartPacket) != msg) {
+            //bad mojo - sendqueue contains empty elem, sent message is not right one
+            statSendDoneBug++;
+        } else {
+        	if (error == SUCCESS){
+        		// send successfully, can dequeue entry, return data to pool, start sending again
+        		statSendDoneOk++;
+				messageDequeue(metaPtr);
+				
+            	post sendTask();        		
+        	} else {
+        		// error occurred - decrement retrycount and react upon 
+        		// decrement retry counter
+        		statSendDoneFail+=1;
+            	metaPtr->retries -= 1;
+            	if (metaPtr->retries==0){
+            		// message expired, move ahead
+            		statSendDoneFail += 1;
+            		messageDequeue(metaPtr);
+            	}
+                
+                // start retxmit timer - kind of backoff
+                startRetxmitTimer(SENDDONEFAIL_WINDOW, SENDFAIL_OFFSET);
+        	}
+        	
+        	// not sending - sentDone
+        	sending=FALSE;
+        }
+	}
+
+	/**
+	 * Handles message expired event - retrycount reached 0
+	 */
+	void messageDequeue(senderMetadata_t * metaPtr){
+		atomic {
+        	call SendQueue.dequeue();
+        	call MessagePool.put((queue_t *)metaPtr->payload);
+        	call MessageMetaPool.put(metaPtr);
+        }
+	}
+	
+	/**
+	 * Starts retransmit timer. Window - size of interval to wait.
+	 */
+	static void startRetxmitTimer(uint16_t window, uint16_t offset) {
+		// if already running - leave alone.
+		// can be problem otherwise - every new start request cancel previous started
+		// => timer could never fire provided there are subsequent start requests 
+		if (call RetxmitTimer.isRunning()){
+			return;
+		} else {
+	    	uint16_t r = call Random.rand16();
+	    	r %= window;
+	    	r += offset;
+	    	call RetxmitTimer.startOneShot(r);
+	    	dbg("SerialQueueSender", "Rexmit timer will fire in %hu ms\n", r);
+	    }
+	}
+	
+	event void RetxmitTimer.fired(){
+		post sendTask();
+	}
+	
+	task void sendTask() {
+        if (sending) {
+        	// already sending something, do not interfere, exit
+            return;
+        } else if (call SendQueue.empty()) {
+        	// nothing to send, send queue empty, exit
+            return;
+        } else {
+            senderMetadata_t * metaPtr = call SendQueue.head();
+            queue_t * smsg = (queue_t *) metaPtr->payload;
+            queue_t * msgPayload = (queue_t *) call AMSend.getPayload(&uartPacket, metaPtr->len);
+            // copy data to payload
+            memcpy((void*)msgPayload, (void*)smsg, metaPtr->len);
+            // try so send message
+            error_t eval = call AMSend.send(AM_BROADCAST_ADDR, &uartPacket, metaPtr->len);
+            if (eval == SUCCESS) {
+                sending = TRUE;
+                return;
+            } else {
+            	// decrement retry counter
+            	metaPtr->retries -= 1;
+            	if (metaPtr->retries==0){
+            		// message expired, move ahead
+            		statSendFail+=1;
+            		messageDequeue(metaPtr);
+            	}
+                
+                // try to send next packet
+                post sendTask();
+            }
+        }
+    }
+
+	command error_t QueueSender.enqueueData(void *payload, uint8_t len){
+		if (enabled==FALSE) return EOFF;
+    	
+        statLogReceived++;
+        if (call MessagePool.empty()) {
+        	// no space in message pool, cannot store new data
+            return ESIZE;
+        } else if (len > blen) {
+        	// cannot accept payload longer that defined
+        	return ESIZE;
+        } else {
+        	queue_t * payloadTyped = (queue_t *)NULL;
+            queue_t * msg = (queue_t *)NULL;
+            senderMetadata_t * metaPtr = NULL;
+        
+        	// pools need to be consistent
+        	atomic {
+	        	// re-type payload as queue_t
+	        	payloadTyped = (queue_t *) payload;
+	        	// obtain space from pool
+	            msg = call MessagePool.get();
+	            metaPtr = call MessageMetaPool.get();
+            }
+            
+		    if (msg==NULL || metaPtr==NULL) {
+		    	// cannot obtain space for data
+		        return FAIL;
+		    }
+		    
+		    // copy obtained payload to obtained one from pool 
+	    	memcpy((void*)msg, (void*)payload, len);
+	    	// init meta
+	    	metaPtr->addr = AM_BROADCAST_ADDR;
+			metaPtr->len = len;
+			metaPtr->retries = MAX_RETRIES;
+			metaPtr->payload = (void*) msg;
+			
+			// enqueue new data to send queue
+            if (call SendQueue.enqueue(metaPtr) == SUCCESS) {
+                post sendTask();
+                return SUCCESS;
+            } else {
+                statEnqueueFail++;
+                atomic {
+                	call MessagePool.put(msg);
+                	call MessageMetaPool.put(metaPtr);
+                }
+                return FAIL;
+            }
+        }
+		
+		return SUCCESS;
+	}
+
+	command error_t QueueSender.sendState(bool start){
+		return FAIL;
 	}
 }
