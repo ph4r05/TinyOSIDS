@@ -78,8 +78,47 @@ typedef struct senderMetadata {
 	void * payload;
 } senderMetadata_t;
 
+/**
+ * Global report structure
+ */
+ typedef nx_struct globalReportMsg {
+ 	// type determining contents of message
+ 	nx_uint8_t type;
+ 	// another multiplex - subtype
+ 	nx_uint8_t subtype;
+ 	// counter, prefer having it
+ 	nx_uint16_t counter;
+	// message content 	
+ 	union {
+ 		uint16_t a;
+ 		uint16_t b;
+ 		uint16_t c;
+ 		uint16_t d;
+ 		uint16_t e;
+ 		uint16_t f;
+ 	} data;
+} globalReportMsg_t;
+
+
+/**
+ * variable length message
+ * Length of sub-payload is determined as packet length - 4B (type, subtype, counter) 
+ */
+typedef nx_struct globalSizedReportMsg {
+ 	// type determining contents of message
+ 	nx_uint8_t type;
+ 	// another multiplex - subtype
+ 	nx_uint8_t subtype;
+ 	// counter, prefer having it
+ 	nx_uint16_t counter;
+	// message content, prefer 16bit single unit - 	
+	nx_uint16_t data[0];
+} globalSizedReportMsg_t;
+
+
 enum {
-  AM_PRINTF_MSG = 128,
+  AM_GLOBALREPORT_MSG = 0xdd,
+  AM_GLOBALSIZEDREPORT_MSG = 0xde,
 };
 
 #endif //PRINTF_H
