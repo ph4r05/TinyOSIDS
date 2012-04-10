@@ -1478,10 +1478,16 @@ module RssiBaseC @safe() {
 	uint16_t ctpGetNewDelay(){
 		uint16_t newDelay = ctpSendRequest.delay;
 		if (ctpSendRequest.delayVariability>0){
-			newDelay = ctpSendRequest.delay + ((call Random.rand16() % (2 * ctpSendRequest.delayVariability)) - ctpSendRequest.delayVariability);
+			uint16_t r = call Random.rand16();
+	    	r %= (2 * ctpSendRequest.delayVariability);
+	    	r -= ctpSendRequest.delayVariability;
+	    	newDelay = ctpSendRequest.delay + r;
+	    	
+	    	call CtpLogger.logEventDbg(DBG_CTP_NEWDELAY, newDelay, r, 1);
+		} else {
+			call CtpLogger.logEventSimple(DBG_CTP_NEWDELAY, newDelay);
 		}
 		
-		call CtpLogger.logEventSimple(DBG_CTP_NEWDELAY, newDelay);
 		return newDelay;
 	}
 
