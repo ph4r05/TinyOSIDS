@@ -125,8 +125,8 @@ module BaseStationP @safe() {
 implementation
 {  
     enum {
-        UART_QUEUE_LEN = 32,
-        RADIO_QUEUE_LEN = 16,
+        UART_QUEUE_LEN = 24,
+        RADIO_QUEUE_LEN = 8,
         TIME_TO_RESET=10000,
         UART_TIME=3,
         RADIO_TIME=3,
@@ -145,12 +145,12 @@ implementation
     message_t uartQueueBufs[UART_QUEUE_LEN];
     // array of pointers to messages in queue. Messages are really stored 
     // in buffs or in 1 message queue in receive buffer.
-    message_t * uartQueue[UART_QUEUE_LEN];
+    message_t * ONE uartQueue[UART_QUEUE_LEN];
     // queue for external packets. If not null, then packet on specified position is
     // from external source
     //  a) keeps message original pointer for messageSent notif
     //  b) signalization purposes for special handling with external messages
-    message_t * uartQueueExternal[UART_QUEUE_LEN];
+    message_t * ONE_NOK uartQueueExternal[UART_QUEUE_LEN];
     uint8_t uartIn, uartOut;
     bool uartBusy, uartFull;
     // indicator - if 1 then packet in uart queue 
@@ -164,12 +164,12 @@ implementation
     // radioQueue = queue of received uart packets 
     // waiting to be send over radio    
     message_t radioQueueBufs[RADIO_QUEUE_LEN];
-    message_t * radioQueue[RADIO_QUEUE_LEN];
+    message_t * ONE radioQueue[RADIO_QUEUE_LEN];
     // queue for external packets. If not null, then packet on specified position is
     // from external source
     //  a) keeps message original pointer for messageSent notif
     //  b) signalization purposes for special handling with external messages
-    message_t * radioQueueExternal[RADIO_QUEUE_LEN];
+    message_t * ONE_NOK radioQueueExternal[RADIO_QUEUE_LEN];
     uint8_t radioIn, radioOut;
     bool radioBusy, radioFull;
     // source, destination...
@@ -416,11 +416,16 @@ implementation
     // perform init tasks
     // prepare queues, starts interfaces
     event void Boot.booted() {
-        uint8_t i;
+        uint8_t i=0;
+        
+        // always 0, workaround for wsn430v14 compile bug:
+        // Internal compiler error in gen_lowpart, at emit-rtl.c:1197
+        // without [i+j] does not work... stupid
+        uint8_t j=0;
 
         // serial queue init
         for (i = 0; i < UART_QUEUE_LEN; i++) {
-            uartQueue[i] = &uartQueueBufs[i];
+            uartQueue[i] = &uartQueueBufs[i+j];
             uartQueueExternal[i] = NULL;
             uartPacketExternal[i/8] = 0;
             uartPacketSerial[i/8] = 0xff;
@@ -431,7 +436,7 @@ implementation
 
         // radio queue init
         for (i = 0; i < RADIO_QUEUE_LEN; i++) {
-            radioQueue[i] = &radioQueueBufs[i];
+            radioQueue[i] = &radioQueueBufs[i+j];
             radioPacketExternal[i/8] = 0x0;
             radioPacketSerial[i/8] = 0x0;
             radioPacketCancelMap[i/8] = 0x0;
@@ -455,14 +460,15 @@ implementation
 
     // event handler, radio start done
     event void RadioControl.startDone(error_t error) {
-        uint8_t i;
+        uint8_t i=0;
+        uint8_t j=0;
         
         // sucessfull starting
         if (error == SUCCESS || error == EALREADY) {
             sucBlink();
             atomic {
                 for (i = 0; i < RADIO_QUEUE_LEN; i++) {
-                    radioQueue[i] = &radioQueueBufs[i];
+                    radioQueue[i] = &radioQueueBufs[i+j];
                 }
                 radioIn = radioOut = 0;
                 radioBusy = FALSE;
@@ -470,8 +476,9 @@ implementation
                 
                 // sucessfull reset, move to next phase
                 ++resetPhase;
-                call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            call ResetTimer.startOneShot(RESET_TIME);
             
             // signalize 
             signal BSRadioControl.startDone(error);
@@ -486,13 +493,14 @@ implementation
 
     // event handler, serial start done
     event void SerialControl.startDone(error_t error) {
-        uint8_t i;
+        uint8_t i=0;
+        uint8_t j=0;
         if (error == SUCCESS || error == EALREADY) {
             sucBlink();
-            atomic {
+            atomic {	
                 // serial queue init
                 for (i = 0; i < UART_QUEUE_LEN; i++) {
-                    uartQueue[i] = &uartQueueBufs[i];
+                    uartQueue[i] = &(uartQueueBufs[i+j]);
                     uartQueueExternal[i] = NULL;
                 }
                 uartIn = uartOut = 0;
@@ -501,8 +509,9 @@ implementation
                 
                 // sucessfull reset, move to next phase
                 ++resetPhase;
-                call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            call ResetTimer.startOneShot(RESET_TIME);
             
             // signalize 
             signal BSSerialControl.startDone(error);
@@ -686,7 +695,8 @@ implementation
             }
         }
 
-        return ret;
+		// return another buffer - suggested by call parent
+        return (scndMsg == msg) ? ret : scndMsg;
     }
 
 	// starts timer for UART message sending if applicable
