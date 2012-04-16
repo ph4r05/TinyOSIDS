@@ -28,10 +28,7 @@ implementation
 			return FALSE;
 		}
 #endif
-	}
-	
-
-	
+	}		
 
 	/**
 	 * Real function providing this info
@@ -65,17 +62,9 @@ implementation
 #endif
 	}
 
-	command bool MACAuth.isUsingMac(message_t * ONE msg){
-		return isUsingMac(msg);
-	}
-
-	command uint8_t MACAuth.getMICLength(message_t *msg){
-		return getMICLength(msg);
-	}
-
-	command bool MACAuth.isMICPresent(message_t *msg, void *payload, uint8_t length){
+	void * ONE_NOK getLastMICByte(message_t * ONE msg, void * ONE payload, uint8_t length){
 #ifndef CC2420_HW_SECURITY
-		return FALSE;
+		return 0;
 #else
 	// obtain security header
 	security_header_t secHdr = (call CC2420PacketBody.getHeader(msg))->secHdr;
@@ -83,7 +72,7 @@ implementation
 	cc2420_metadata_t * metaPtr = NULL;
 	
 	if (micLength==0){
-		return FALSE;
+		return 0;
 	}
 	
 	// get address of metadata
@@ -91,14 +80,40 @@ implementation
 	
 	// this assertion should hold -> MIC is between payload and metadata
 	if (payload+length+micLength <= ((void*)metaPtr)){
-		return TRUE;
+		return (payload+length+micLength-1);
 	} else {
-		return FALSE;
+		return 0;
 	}
 #endif
 	}
 
+	command bool MACAuth.isUsingMac(message_t * ONE msg){
+		return isUsingMac(msg);
+	}
+
+	command uint8_t MACAuth.getMICLength(message_t * ONE msg){
+		return getMICLength(msg);
+	}
+
+	command bool MACAuth.isMICPresent(message_t * ONE msg, void * ONE payload, uint8_t length){
+#ifndef CC2420_HW_SECURITY
+		return FALSE;
+#else
+		void * micByte = getLastMICByte(msg, payload, length);
+		return micByte != 0;
+#endif
+	}
+
 	command bool MACAuth.isAuthentic(message_t *msg, void *payload, uint8_t length){
-		// TODO Auto-generated method stub
+#ifndef CC2420_HW_SECURITY
+		return TRUE;
+#else
+		if (isUsingMac(msg) && getMICLength(msg)>0){
+			void * micByte = getLastMICByte(msg, payload, length);
+			return (*((uint8_t * )micByte)) == 0x0;
+		} else {
+			return TRUE;
+		}
+#endif
 	}
 }
