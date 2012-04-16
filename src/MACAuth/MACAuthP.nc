@@ -104,7 +104,7 @@ implementation
 #endif
 	}
 
-	command bool MACAuth.isAuthentic(message_t *msg, void *payload, uint8_t length){
+	command bool MACAuth.isAuthentic(message_t * ONE msg, void * ONE payload, uint8_t length){
 #ifndef CC2420_HW_SECURITY
 		return TRUE;
 #else
@@ -115,5 +115,21 @@ implementation
 			return TRUE;
 		}
 #endif
+	}
+
+	command bool MACAuth.isAuthenticUsingFlag(message_t * ONE msg, void * ONE_NOK payload, uint8_t length){
+#ifndef CC2420_HW_SECURITY
+		return TRUE;
+#elif defined(CC2420_METADATA_EXTENDED) && defined(CC2420_HW_SECURITY) 
+		// we have our extra "authentic" boolean defined here
+		// get metadata and return flag directly
+		return (call CC2420PacketBody.getMetadata(msg))->authentic;
+#elif defined(CC2420_HW_SECURITY) && !defined(CC2420_METADATA_EXTENDED)
+		if(payload!=NULL){
+			return call MACAuth.isAuthentic(msg, payload, length);
+		} else {
+		 	return FALSE;
+		}
+#endif		
 	}
 }

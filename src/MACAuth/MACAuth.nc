@@ -49,5 +49,18 @@ interface MACAuth {
    * @param length 	payload length as returned from receive() function
    */
   command bool isAuthentic(message_t * ONE msg, void * ONE payload, uint8_t length);
+  
+  /**
+   * Returns FALSE IF: 
+   * message is using MAC, MIC is not present OR Auth failed according to CC2420 datasheet.
+   * WORKS only if cc2420_metadata_t is changed to contain new field:
+   * bool authenticated
+   * 
+   * Is better since another layer down the hierarchy could wrap our payload inside another thus
+   * there is not inevitably MIC right after payload (may be another footer of down layer)
+   * 
+   * @param msg NON-NULL pointer to message
+   */
+  command bool isAuthenticUsingFlag(message_t * ONE msg, void * ONE_NOK payload, uint8_t length);
 
 }
