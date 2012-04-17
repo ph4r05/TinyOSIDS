@@ -752,10 +752,16 @@ typedef nx_struct cc2420_metadata_t {
   nx_bool timesync;
 #define CC2420_METADATA_EXTENDED
 #ifdef CC2420_HW_SECURITY
+	// whether message was correctly authentized when using MAC
+	// has meaning only for received messages
 	nx_bool authentic;
 #endif
-	// timestamp when first CCA was sampled 
-	nx_uint32_t firstCCATimestamp;
+	// timestamp when first CCA was sampled
+	// has meaning only for SENT messages
+	nx_uint16_t ccaWaitTime;
+	// number of CCA checks needed to send message
+	// has meaning only for SENT messages
+	nx_uint8_t ccaWaitRounds;
 
   nx_uint32_t timestamp;
   nx_uint16_t rxInterval;

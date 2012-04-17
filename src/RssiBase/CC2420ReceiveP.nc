@@ -38,6 +38,7 @@
  * @version $Revision: 1.22 $ $Date: 2009/10/28 21:09:52 $
  */
 
+#include "../RssiDemoMessages.h"
 #include "IEEE802154.h"
 #include "message.h"
 #include "AM.h"
@@ -686,6 +687,11 @@ implementation {
 	  m_missed_packets --;
 	}
 	if(authentication){
+		// read result of auth to extended metadata attribute
+#ifdef CC2420_METADATA_EXTENDED
+		uint8_t * authResult = ((uint8_t * )m_p_rx_buff->data) + length - CC2420_SIZE - 1;
+		metadata->authentic = *authResult==0;
+#endif		
 	  length -= micLength;
 	}
       }

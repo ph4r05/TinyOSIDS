@@ -38,6 +38,7 @@
  * @version $Revision: 1.16 $ $Date: 2009/10/28 21:09:52 $
  */
 
+#include "../RssiDemoMessages.h"
 #include "CC2420.h"
 #include "CC2420TimeSyncMessage.h"
 #include "crc.h"
@@ -143,8 +144,18 @@ implementation {
   
   /** The congestion backoff period */
   norace uint16_t myCongestionBackoff;
-  
-
+ 
+#ifdef CC2420_METADATA_EXTENDED  
+  /**
+   * Number of CCA checks needed during last packet send
+   */
+  norace uint8_t lastCcaChecks;
+	
+  /**
+   * Time when was the first CCA check performed - used to compute CCA wait time
+   */
+  uint32_t ccaStartTime;
+#endif  
   /***************** Prototypes ****************/
   error_t send( message_t * ONE p_msg, bool cca );
   error_t resend( bool cca );
@@ -290,6 +301,18 @@ implementation {
         m_receiving = FALSE;
         call CaptureSFD.captureFallingEdge();
         call PacketTimeStamp.set(m_msg, time32);
+
+#ifdef CC2420_METADATA_EXTENDED
+		// addon infromation about sending        
+        {
+        	cc2420_metadata_t * metaPtr = call CC2420PacketBody.getMetadata();  
+        	// set cca checks
+        	metaPtr->ccaWaitRounds = lastCcaChecks;
+        	// set cca wait time
+        	metaPtr->ccaWaitTime = call BackoffTimer.getNow() - ccaStartTime;
+        }
+#endif
+        
         if (call PacketTimeSyncOffset.isSet(m_msg)) {
            uint8_t absOffset = sizeof(message_header_t)-sizeof(cc2420_header_t)+call PacketTimeSyncOffset.get(m_msg);
            timesync_radio_t *timesync = (timesync_radio_t *)((nx_uint8_t*)m_msg+absOffset);
@@ -500,6 +523,13 @@ implementation {
       case S_SAMPLE_CCA : 
         // sample CCA and wait a little longer if free, just in case we
         // sampled during the ack turn-around window
+#ifdef CC2420_METADATA_EXTENDED        
+        if (lastCcaChecks==0){
+        	 ccaStartTime = call BackoffTimer.getNow();
+        }
+        lastCcaChecks+=1;
+#endif        
+        
         if ( call CCA.get() ) {
           m_state = S_BEGIN_TRANSMIT;
           call BackoffTimer.start( CC2420_TIME_ACK_TURNAROUND );
@@ -559,6 +589,9 @@ implementation {
       m_cca = cca;
       m_msg = p_msg;
       totalCcaChecks = 0;
+#ifdef CC2420_METADATA_EXTENDED      
+      lastCcaChecks = 0;
+#endif      
     }
     
     if ( acquireSpiResource() == SUCCESS ) {
@@ -587,6 +620,9 @@ implementation {
       m_cca = cca;
       m_state = cca ? S_SAMPLE_CCA : S_BEGIN_TRANSMIT;
       totalCcaChecks = 0;
+#ifdef CC2420_METADATA_EXTENDED      
+      lastCcaChecks = 0;
+#endif      
     }
     
     if(m_cca) {
