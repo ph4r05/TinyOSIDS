@@ -305,7 +305,7 @@ implementation {
 #ifdef CC2420_METADATA_EXTENDED
 		// addon infromation about sending        
         {
-        	cc2420_metadata_t * metaPtr = call CC2420PacketBody.getMetadata();  
+        	cc2420_metadata_t * metaPtr = call CC2420PacketBody.getMetadata(m_msg);  
         	// set cca checks
         	metaPtr->ccaWaitRounds = lastCcaChecks;
         	// set cca wait time

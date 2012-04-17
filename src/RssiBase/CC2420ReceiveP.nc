@@ -689,7 +689,7 @@ implementation {
 	if(authentication){
 		// read result of auth to extended metadata attribute
 #ifdef CC2420_METADATA_EXTENDED
-		uint8_t * authResult = ((uint8_t * )m_p_rx_buff->data) + length - CC2420_SIZE - 1;
+		uint8_t * authResult = ((uint8_t * )(m_p_rx_buf->data)) + length - CC2420_SIZE - 1;
 		metadata->authentic = *authResult==0;
 #endif		
 	  length -= micLength;
