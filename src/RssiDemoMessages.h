@@ -53,6 +53,7 @@
  * MIG has trouble to include some needed header files, so they are included in MUGhlp.h.
  */
 #include <Ctp.h>
+#include "printf.h"
 //#include "MIGhlp.h"
 
 #ifndef NULL
@@ -773,7 +774,6 @@ typedef nx_struct cc2420_metadata_t {
   nx_uint16_t retryDelay;
 #endif
 } cc2420_metadata_t;
-
 
 typedef nx_struct cc2420_packet_t {
   cc2420_header_t packet;
