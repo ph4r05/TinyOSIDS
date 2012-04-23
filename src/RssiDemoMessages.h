@@ -37,7 +37,7 @@
 #define RSSIDEMOMESSAGES_H__
 
 // CC2420 security enabled - HW security is fast
-#define CC2420_HW_SECURITY 1
+//#define CC2420_HW_SECURITY 1
 
 #ifndef TOSH_DATA_LENGTH
 #define TOSH_DATA_LENGTH 34
@@ -75,7 +75,8 @@ enum {
   
   AM_NOISEFLOORREADINGMSG = 18,
   AM_IDENTIFYMSG=40,
-  
+ 
+  AM_TIMESYNCMSG = 0xea,
   AM_CTPINFOMSG = 0xec,
   AM_CTPSENDREQUESTMSG = 0xee,
   AM_CTPRESPONSEMSG = 0xef,
@@ -105,6 +106,17 @@ typedef struct queueSenderQueue_element{
   // length of message to send - parameter to AMSend.send = length of payload
   uint8_t len;
 } queueSenderQueue_element_t;
+
+
+// serial timesync
+// timesync messages are sent over serial to sycnhronize global time according to 
+// application
+typedef nx_struct TimeSyncMsg{
+	nx_uint8_t counter;
+	nx_uint32_t high;
+	nx_uint32_t low;
+	nx_uint8_t flags;
+}  TimeSyncMsg;
 
 // ping response
 // RssiMeassured
@@ -438,7 +450,10 @@ enum {
 	// 				if data[0] == 1	-> set TXpower for ROUTE messages on data[1] level
 	//			 	if data[0] == 2 -> set TXpower for DATA messages on data[1] level
 	//				if data[0] == 3 -> set TXpower for both ROUTE, DATA messages on data[1] level
-	COMMAND_CTP_CONTROL=35
+	COMMAND_CTP_CONTROL=35,
+
+	// invokes request on global time for every node which heard this request
+	COMMAND_TIMESYNC_GETGLOBAL=36
 };
 
 // node ID boudnary for mobile nodes
@@ -759,7 +774,7 @@ typedef nx_struct cc2420_metadata_t {
 #endif
 	// timestamp when first CCA was sampled
 	// has meaning only for SENT messages
-	nx_uint16_t ccaWaitTime;
+	nx_uint32_t ccaWaitTime;
 	// number of CCA checks needed to send message
 	// has meaning only for SENT messages
 	nx_uint8_t ccaWaitRounds;
