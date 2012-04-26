@@ -453,7 +453,13 @@ enum {
 	COMMAND_CTP_CONTROL=35,
 
 	// invokes request on global time for every node which heard this request
-	COMMAND_TIMESYNC_GETGLOBAL=36
+	COMMAND_TIMESYNC_GETGLOBAL=36, 
+	
+	// request response protocol to meassure RTT of channel, should be as fast as possible
+	COMMAND_PING=37,
+	
+	// send timesync get_global command to radio broadcast
+	COMMAND_TIMESYNC_GETGLOBAL_BCAST=38, 
 };
 
 // node ID boudnary for mobile nodes
