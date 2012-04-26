@@ -67,8 +67,15 @@ configuration TimeTestC {
   components new SerialAMSenderC(AM_COMMANDMSG) as UartCmdAMSend;  
   components ResetC;
 
+  // keep alive send timer
+  components new TimerMilliC() as AliveTimer;
+  App.AliveTimer -> AliveTimer;
 
   App.UartCmdAMSend -> UartCmdAMSend;
   App.RadioCmdAMSend -> RadioCmdAMSend;
+
+  App.UartCmdRecv -> UartCmdRecv;
+  App.RadioCmdRecv -> RadioCmdRecv;
+
   App.Reset -> ResetC;
 }
