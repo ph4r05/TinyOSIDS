@@ -60,6 +60,8 @@ interface MACAuth {
    * there is not inevitably MIC right after payload (may be another footer of down layer)
    * 
    * @param msg NON-NULL pointer to message
+   * @param payload pointer to payload
+   * @param length 	payload length as returned from receive() function* 
    */
   command bool isAuthenticUsingFlag(message_t * ONE msg, void * ONE_NOK payload, uint8_t length);
 
