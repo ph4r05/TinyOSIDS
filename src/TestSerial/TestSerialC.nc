@@ -52,6 +52,8 @@ module TestSerialC {
     interface AMSend;
     interface Timer<TMilli> as MilliTimer;
     interface Packet;
+    
+    interface SplitControl as ControlRadio;
   }
 }
 implementation {
@@ -61,7 +63,10 @@ implementation {
   bool locked = FALSE;
   uint16_t counter = 0;
   uint16_t recv = 0;
-  
+
+  bool radioOn=FALSE;  
+  uint16_t radioCn=0;
+
   event void Boot.booted() {
     call Control.start();
   }
@@ -80,9 +85,12 @@ implementation {
 
       rcm->counter = counter;
       rcm->received = recv;
+      rcm->radioCn=radioCn;
+      rcm->radioOn=radioOn;
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(test_serial_msg_t)) == SUCCESS) {
 	locked = TRUE;
       }
+	
     }
   }
 
@@ -115,9 +123,29 @@ implementation {
     }
   }
 
+  void task startRadio(){
+	call ControlRadio.start();
+  }
+
+  void task stopRadio(){
+	call ControlRadio.stop();
+  }
+
   event void AMSend.sendDone(message_t* bufPtr, error_t error) {
     if (&packet == bufPtr) {
       locked = FALSE;
+
+	// radio enable/disable
+	if ((counter-radioCn) > 30){
+		radioCn = counter;
+		radioOn = !radioOn;
+		if (radioOn){
+			post startRadio();
+		} else {
+			post stopRadio();
+		}
+	}
+
     }
   }
 
@@ -127,6 +155,12 @@ implementation {
     }
   }
   event void Control.stopDone(error_t err) {}
+
+  event void ControlRadio.startDone(error_t err) {
+    if (err == SUCCESS) {
+    }
+  }
+  event void ControlRadio.stopDone(error_t err) {}
 }
 
 

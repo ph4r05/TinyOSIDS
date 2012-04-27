@@ -33,7 +33,7 @@
  * @author Dimas Abreu Dutra
  */
 
-#include "../RssiDemoMessages.h"
+#include "RssiDemoMessages.h"
 #include "message.h"
 #include "../Reset/Reset.h"
 #include "Ctp.h"
@@ -47,11 +47,12 @@ configuration TimeTestC {
   components new TimerMilliC();
 
   components new SerialAMSenderC(AM_TEST_SERIAL_MSG) as SerialTestSend;
+  components new SerialAMReceiverC(AM_TEST_SERIAL_MSG) as SerialTestRecv;
 
   App.Boot -> MainC.Boot;
   App.Control -> AM;
-  App.ControlRadio -> AMR;
 //  App.Receive -> AM.Receive[AM_TEST_SERIAL_MSG];
+  App.Receive -> SerialTestRecv;
 //  App.AMSend -> AM.AMSend[AM_TEST_SERIAL_MSG];
   App.AMSend -> SerialTestSend;
   App.Leds -> LedsC;
@@ -60,6 +61,8 @@ configuration TimeTestC {
 
 // my extension
   components ActiveMessageC as AMR;
+  App.ControlRadio -> AMR;
+
   components new AMReceiverC(AM_COMMANDMSG) as RadioCmdRecv;
   components new AMSenderC(AM_COMMANDMSG) as RadioCmdAMSend;
 
@@ -70,6 +73,9 @@ configuration TimeTestC {
   // keep alive send timer
   components new TimerMilliC() as AliveTimer;
   App.AliveTimer -> AliveTimer;
+
+  components new TimerMilliC() as InitTimer;
+  App.InitTimer -> InitTimer;
 
   App.UartCmdAMSend -> UartCmdAMSend;
   App.RadioCmdAMSend -> RadioCmdAMSend;

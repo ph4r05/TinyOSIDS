@@ -18,7 +18,7 @@ module TimeTestP {
     interface SplitControl as ControlRadio;
     interface Leds;
     interface Boot;
-//    interface Receive;
+    interface Receive;
     interface AMSend;
     interface Timer<TMilli> as MilliTimer;
     interface Packet;
@@ -34,6 +34,8 @@ module TimeTestP {
     interface Reset as Reset;
 
     interface Timer<TMilli> as AliveTimer;
+    
+    interface Timer<TMilli> as InitTimer;
   }
 }
 implementation {
@@ -42,6 +44,13 @@ implementation {
 
   bool locked = FALSE;
   uint16_t counter = 0;
+  uint16_t recv = 0;
+  uint16_t radioRecv = 0;
+  uint16_t radioSent = 0;
+
+  bool radioOn=FALSE;  
+  uint16_t radioCn=0;
+  uint16_t radioInitCn=0;
 
   /**************** COMMANDS ****************/
   message_t cmdPkt;
@@ -68,7 +77,6 @@ implementation {
   void task sendAlive();
 
 
-
   /************** MAIN CODE BELOW ***********/
   event void Boot.booted() {
     call Control.start();
@@ -87,9 +95,44 @@ implementation {
       }
 
       rcm->counter = counter;
+      rcm->received = recv;
+      rcm->radioCn = radioOn;
+      rcm->radioOn = radioInitCn;
+      rcm->radioSent = radioSent;
+      rcm->radioRecv = radioRecv;
+
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(test_serial_msg_t)) == SUCCESS) {
 	locked = TRUE;
       }
+    }
+  }
+
+  event message_t* Receive.receive(message_t* bufPtr, 
+				   void* payload, uint8_t len) {
+	recv+=1;
+
+    if (len != sizeof(test_serial_msg_t)) {return bufPtr;}
+    else {
+      test_serial_msg_t* rcm = (test_serial_msg_t*)payload;
+      if (rcm->counter & 0x1) {
+	call Leds.led0On();
+      }
+      else {
+	call Leds.led0Off();
+      }
+      if (rcm->counter & 0x2) {
+	call Leds.led1On();
+      }
+      else {
+	call Leds.led1Off();
+      }
+      if (rcm->counter & 0x4) {
+	call Leds.led2On();
+      }
+      else {
+	call Leds.led2Off();
+      }
+      return bufPtr;
     }
   }
 
@@ -112,6 +155,7 @@ implementation {
 		//}		
 	
 		cmdReceived+=1;
+		recv+=1;
 
 		// get received message
 		btrpkt = (CommandMsg * ) payload;
@@ -322,6 +366,10 @@ implementation {
 		if(call UartCmdAMSend.send(TOS_NODE_ID, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
 			aliveCounter+=1;
 			cmdUartBusy = TRUE;
+
+			if (aliveCounter==15){
+				call ControlRadio.stop();
+			}
 		}
 		else {
 			post sendAlive();
@@ -333,19 +381,39 @@ implementation {
 //////////////////////////////////////////////////////
 // Radio & serial initialization
 //////////////////////////////////////////////////////
+  void task startRadio(){
+	call ControlRadio.start();
+  }
+
+  void task stopRadio(){
+	call ControlRadio.stop();
+  }
+
+  event void InitTimer.fired(){
+        radioOn=!radioOn;
+        radioInitCn+=1;
+	
+	if (radioInitCn<5){
+		call InitTimer.startOneShot(2000);
+	}
+ 	
+	if (radioOn){
+		post startRadio();
+	} else {
+		post stopRadio();
+	}
+  }
 
   /** 
    * Serial initialized event
    */ 
   event void Control.startDone(error_t err) {
     if (err == SUCCESS) {
-//      call MilliTimer.startPeriodic(1000);
+      call MilliTimer.startPeriodic(1000);
 
 	// initialize radio communication now
-	call AliveTimer.startPeriodic(500);
-
-	// initialize radio communication now
-//	call ControlRadio.start();
+	call AliveTimer.startPeriodic(2000);
+	call InitTimer.startOneShot(2000);
     }
   }
   event void Control.stopDone(error_t err) {}
@@ -356,7 +424,7 @@ implementation {
   event void ControlRadio.startDone(error_t err) {
     if (err == SUCCESS) {
         // radio initialized  
-//	call AliveTimer.startPeriodic(500);
+	//call InitTimer.startOneShot(1000);
     }
   }
   event void ControlRadio.stopDone(error_t err) {}

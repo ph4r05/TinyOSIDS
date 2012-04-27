@@ -62,6 +62,10 @@ implementation {
   App.Leds -> LedsC;
   App.MilliTimer -> TimerMilliC;
   App.Packet -> AM;
+
+  components ActiveMessageC as AMR;
+  App.ControlRadio -> AMR;
+
 }
 
 
