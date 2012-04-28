@@ -7,9 +7,13 @@ typedef nx_struct test_serial_msg {
   nx_uint16_t received;
   nx_uint8_t radioCn;
   nx_uint8_t radioOn;
+
+  nx_uint8_t radioErr;
+  nx_uint8_t radioErrCn;
   nx_uint16_t radioRecv;
   nx_uint16_t radioSent;
-
+  
+  
 
 } test_serial_msg_t;
 

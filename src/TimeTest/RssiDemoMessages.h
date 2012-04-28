@@ -38,6 +38,7 @@
 
 // CC2420 security enabled - HW security is fast
 //#define CC2420_HW_SECURITY 1
+#define CC2420_CHANNEL 17
 
 /**
  * Warning!

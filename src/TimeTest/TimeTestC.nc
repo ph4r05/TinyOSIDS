@@ -79,6 +79,7 @@ configuration TimeTestC {
 
   App.UartCmdAMSend -> UartCmdAMSend;
   App.RadioCmdAMSend -> RadioCmdAMSend;
+  App.Acks -> RadioCmdAMSend;
 
   App.UartCmdRecv -> UartCmdRecv;
   App.RadioCmdRecv -> RadioCmdRecv;

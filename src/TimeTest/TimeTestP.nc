@@ -36,6 +36,8 @@ module TimeTestP {
     interface Timer<TMilli> as AliveTimer;
     
     interface Timer<TMilli> as InitTimer;
+
+    interface PacketAcknowledgements as Acks;
   }
 }
 implementation {
@@ -48,13 +50,19 @@ implementation {
   uint16_t radioRecv = 0;
   uint16_t radioSent = 0;
 
+  bool sendIt=FALSE;
+
   bool radioOn=FALSE;  
+  bool radioRealOn=FALSE;  
   uint16_t radioCn=0;
   uint16_t radioInitCn=0;
 
+  uint8_t radioErrCn;
+  uint8_t radioErr;			
   /**************** COMMANDS ****************/
   message_t cmdPkt;
   message_t cmdPktResponse;
+  message_t cmdPktResponseRadio;
   uint16_t commandCounter=0;
   am_addr_t commandDest=0;
   bool commandRadio=FALSE;
@@ -75,9 +83,18 @@ implementation {
   void task sendCommandRadio();
   void task sendCommandACK();
   void task sendAlive();
-
+  void task startRadio();
+  void task stopRadio();
 
   /************** MAIN CODE BELOW ***********/
+  void setAck(message_t *msg, bool status){
+        if (status){
+        call Acks.requestAck(msg);                                                                                                                                                                                              
+    } else {
+        call Acks.noAck(msg);
+    }
+  }
+
   event void Boot.booted() {
     call Control.start();
   }
@@ -96,10 +113,17 @@ implementation {
 
       rcm->counter = counter;
       rcm->received = recv;
-      rcm->radioCn = radioOn;
-      rcm->radioOn = radioInitCn;
+      rcm->radioOn = radioOn;
+      rcm->radioCn = radioInitCn;
+      rcm->radioOn |= radioRealOn << 1;
       rcm->radioSent = radioSent;
       rcm->radioRecv = radioRecv;
+      rcm->radioErr = radioErr;
+      rcm->radioErrCn = radioErrCn;
+
+if (sendIt && (counter % 5) == 0){
+	post sendCommandRadio();
+}
 
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(test_serial_msg_t)) == SUCCESS) {
 	locked = TRUE;
@@ -175,8 +199,26 @@ implementation {
 			case COMMAND_IDENTIFY : // send my identification. Perform as task
 				call AliveTimer.startOneShot(10);
 				break;
-
+			case 30:
+				sendIt=TRUE;
+				post sendCommandACK();
+			break;
 			
+			case 31:
+				sendIt=FALSE;
+				post sendCommandACK();
+			break;
+
+			case 33:
+				post stopRadio();	
+//				post sendCommandACK();
+			break;
+			
+			case 34:
+				post startRadio();
+//				post sendCommandACK();
+			break;
+				
 			case COMMAND_RESET : // perform hard HW reset with watchdog to be sure that node is clean
 				btrpktresponse->command_code = COMMAND_ACK;
 				// should trigger HW restart - by watchdog freeze
@@ -224,19 +266,24 @@ implementation {
 		return;
 	 }
 
-	btrpkt=(CommandMsg*)(call RadioCmdAMSend.getPayload(&cmdPktResponse, 0));
+	btrpkt=(CommandMsg*)(call RadioCmdAMSend.getPayload(&cmdPktResponseRadio, 0));
 
 	// copy data from command msg payload stored
-	memcpy((void *)btrpkt, (void *)&cmdMsgPayload, sizeof(CommandMsg));
+	//memcpy((void *)btrpkt, (void *)&cmdMsgPayload, sizeof(CommandMsg));
 
 	// setup message with data
 	btrpkt->command_id = counter;
+	btrpkt->command_code = COMMAND_PING;
+
+	// disable ACKs
+	setAck(&cmdPktResponseRadio, FALSE);
 
 	// send to base directly
 	// sometimes node refuses to send too large packet. it will always end with fail
 	// depends of buffers size.
-	if (call RadioCmdAMSend.send(commandDest, &cmdPktResponse, sizeof(CommandMsg)) == SUCCESS) {
+	if (call RadioCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPktResponseRadio, sizeof(CommandMsg)) == SUCCESS) {
 	    cmdRadioBusy=TRUE;
+	    radioSent+=1;
 	}
 	else {
 		dbg("Cannot send message");
@@ -289,6 +336,7 @@ implementation {
    * Command received on radio
    */ 
   event message_t* RadioCmdRecv.receive(message_t* bufPtr, void* payload, uint8_t len) {
+	radioRecv+=1;
 	CommandReceived(bufPtr, payload, len);
 
 	return bufPtr;
@@ -298,10 +346,13 @@ implementation {
    * Radio command send done
    */
   event void RadioCmdAMSend.sendDone(message_t *msg, error_t error){
-	if (&cmdPktResponse==msg || &cmdPkt == msg){
-		cmdRadioBusy=FALSE;
+	cmdRadioBusy=FALSE;
+	radioSent+=1;
+	radioErr = (uint16_t) error;
+	if (&cmdPktResponseRadio==msg){
 		if (error!=SUCCESS){
-			post sendCommandRadio();
+			radioErrCn+=1;
+//			post sendCommandRadio();
 		}
 	}
   }
@@ -310,8 +361,8 @@ implementation {
    * Uart command send done
    */
   event void UartCmdAMSend.sendDone(message_t* bufPtr, error_t error) {
-	if (&cmdPktResponse==bufPtr || &cmdPkt==bufPtr){
 		cmdUartBusy=FALSE;
+	if (&cmdPktResponse==bufPtr || &cmdPkt==bufPtr){
 		if (error!=SUCCESS){
 			post sendCommandACK();
 		}
@@ -321,7 +372,7 @@ implementation {
   event void AliveTimer.fired(){
 	// first 10 messages are sent quickly
 	if (aliveCounter>10){
-		call AliveTimer.startPeriodic(2000);
+		call AliveTimer.startPeriodic(10000);
 	}
 	
 	post sendAlive();
@@ -394,7 +445,7 @@ implementation {
         radioInitCn+=1;
 	
 	if (radioInitCn<5){
-		call InitTimer.startOneShot(2000);
+		call InitTimer.startOneShot(5000);
 	}
  	
 	if (radioOn){
@@ -404,6 +455,10 @@ implementation {
 	}
   }
 
+///////////////////////////////////////////////////////////////////////
+//// RADIO INITIALIZATION /////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
   /** 
    * Serial initialized event
    */ 
@@ -412,8 +467,8 @@ implementation {
       call MilliTimer.startPeriodic(1000);
 
 	// initialize radio communication now
-	call AliveTimer.startPeriodic(2000);
-	call InitTimer.startOneShot(2000);
+//	call AliveTimer.startPeriodic(10000);
+//	call InitTimer.startOneShot(5000);
     }
   }
   event void Control.stopDone(error_t err) {}
@@ -422,12 +477,18 @@ implementation {
    * Radio initialized event
    */
   event void ControlRadio.startDone(error_t err) {
-    if (err == SUCCESS) {
+    if (err == SUCCESS || err==EALREADY) {
+        radioRealOn=TRUE;
         // radio initialized  
 	//call InitTimer.startOneShot(1000);
+    } else {
+	radioRealOn=FALSE;
     }
   }
-  event void ControlRadio.stopDone(error_t err) {}
+
+  event void ControlRadio.stopDone(error_t err) {
+	radioRealOn=FALSE;
+	}
 
 }
 
