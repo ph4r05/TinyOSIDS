@@ -105,11 +105,12 @@ implementation {
   }
  
   // status sending 
+  // should be fired every second
   event void MilliTimer.fired() {
     counter++;
  
-    // try to send message over radio
-    if (sendIt && (counter % 5) == 0){
+    // try to send message over radio, 10 seconds delay
+    if (sendIt && (counter % 10) == 0){
     	post sendCommandRadio();
     }
 
