@@ -368,6 +368,9 @@ implementation {
     }
 
     if(header.length+1 > RXFIFO_SIZE || !(crc << 7)){
+    	// message is too long or CRC failed -> flush message (ignored)
+    	// WARNING: CRC should be stored as most significant bit in lasy byte of
+    	// each frame (according to cc2420), this is weird... (checking least significant -> corr value)
       atomic flush_flag = 1;
       m_state = S_RX_LENGTH;
       call SpiResource.release();
@@ -375,8 +378,15 @@ implementation {
       return;
     }
     if( (header.fcf & (1 << IEEE154_FCF_SECURITY_ENABLED)) && (crc << 7) ){
+    	// we have HWSECURITY=1 here, perform security operations ONLY if
+    	// it is requested in message FCF header AND CRC is valid
+    	// if this condition is not met => skip crypto operations and directly receive message
+    	// - see else branch.	
+    
       if(call CC2420Config.isAddressRecognitionEnabled()){
 	if(!(header.dest==call CC2420Config.getShortAddr() || header.dest==AM_BROADCAST_ADDR)){
+		// message recognition is enabled and message is not for me
+		// no decryption is performed (or auth), just receive message
 	  packetLength = header.length + 1;
 	  m_state = S_RX_LENGTH;
 	  call SpiResource.release();
@@ -385,10 +395,14 @@ implementation {
 	}
       }
       if(SECURITYLOCK == 1){
+      	// security locked, wait to release
 	call SpiResource.release();
 	post waitTask();
 	return;
       }else{
+      	// security is not locked, load message and go to decrypt message
+      	// => set security registers and call decrypt
+      	
 	//We are going to decrypt so lock the registers
 	atomic SECURITYLOCK = 1;
 
@@ -406,6 +420,8 @@ implementation {
 	  call CSN.set();
 	}
 
+	// key index to use for cryptography determined by message header
+	// using first key, 8bit value.. But we can have only 2 keys in cc2420 keys register
 	key = secHdr.keyID[0];
 
 	if (secHdr.secLevel == NO_SEC){
@@ -639,6 +655,7 @@ implementation {
 
       // We may have received an ack that should be processed by Transmit
       // buf[rxFrameLength] >> 7 checks the CRC
+      // since 
       if ( ( buf[ rxFrameLength ] >> 7 ) && rx_buf ) {
         uint8_t type = ( header->fcf >> IEEE154_FCF_FRAME_TYPE ) & 7;
         signal CC2420Receive.receive( type, m_p_rx_buf );
