@@ -367,17 +367,17 @@ implementation {
       call CSN.set();
     }
 
-    if(header.length+1 > RXFIFO_SIZE || !(crc << 7)){
+    if(header.length+1 > RXFIFO_SIZE || !(crc >> 7)){
     	// message is too long or CRC failed -> flush message (ignored)
-    	// WARNING: CRC should be stored as most significant bit in lasy byte of
-    	// each frame (according to cc2420), this is weird... (checking least significant -> corr value)
+    	// WARNING: CRC should be stored as most significant bit in last byte of
+    	// each frame (according to cc2420), there was an error in original tinyos file!
       atomic flush_flag = 1;
       m_state = S_RX_LENGTH;
       call SpiResource.release();
       beginReceive();
       return;
     }
-    if( (header.fcf & (1 << IEEE154_FCF_SECURITY_ENABLED)) && (crc << 7) ){
+    if( (header.fcf & (1 << IEEE154_FCF_SECURITY_ENABLED)) && (crc >> 7) ){
     	// we have HWSECURITY=1 here, perform security operations ONLY if
     	// it is requested in message FCF header AND CRC is valid
     	// if this condition is not met => skip crypto operations and directly receive message
