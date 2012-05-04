@@ -40,7 +40,7 @@
  * @date   June 6 2005
  */
  
- #include "printf.h"
+#include "printf.h"
 
 configuration RadioCountToLedsAppC {}
 implementation {
