@@ -33,10 +33,9 @@
  * @author Dimas Abreu Dutra
  */
 
-#include "RssiDemoMessages.h"
+#include "TestSerial.h"
 #include "message.h"
 #include "../Reset/Reset.h"
-#include "Ctp.h"
 
 configuration TimeTestC {
 } implementation {

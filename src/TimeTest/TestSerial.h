@@ -2,6 +2,9 @@
 #ifndef TEST_SERIAL_H
 #define TEST_SERIAL_H
 
+#define CC2420_CHANNEL 17
+
+
 typedef nx_struct test_serial_msg {
   nx_uint16_t counter;
   nx_uint16_t received;
@@ -17,8 +20,35 @@ typedef nx_struct test_serial_msg {
 
 } test_serial_msg_t;
 
+typedef nx_struct CommandMsg {
+	nx_uint8_t command_code;
+	nx_uint8_t command_version;
+	nx_uint16_t command_id;
+	nx_uint8_t reply_on_command;
+	nx_uint16_t reply_on_command_id;
+	nx_uint16_t command_data;
+	nx_uint16_t command_data_next[4];
+} CommandMsg;
+
+
 enum {
   AM_TEST_SERIAL_MSG = 0x89,
+  AM_COMMANDMSG = 14,
+};
+
+enum {
+	COMMAND_IDENTIFY = 2,
+	COMMAND_RESET = 3,
+	COMMAND_ACK = 6,
+
+	// invokes request on global time for every node which heard this request
+	COMMAND_TIMESYNC_GETGLOBAL=36, 
+	
+	// request response protocol to meassure RTT of channel, should be as fast as possible
+	COMMAND_PING=37,
+	
+	// send timesync get_global command to radio broadcast
+	COMMAND_TIMESYNC_GETGLOBAL_BCAST=38, 
 };
 
 #endif
