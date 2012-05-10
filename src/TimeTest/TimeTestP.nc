@@ -229,7 +229,16 @@ implementation {
 				btrpktresponse->command_code = COMMAND_TIMESYNC_GETGLOBAL;
 				post sendCommandRadio();
 				break;
-
+			
+			// start/stop status sending	
+			case 40:
+				// start or stop?
+				if (btrpkt->command_data > 0){
+					call MilliTimer.startPeriodic(btrpkt->command_data_next[0]);
+				} else {
+					call MilliTimer.stop();
+				}			
+			break;
 		}
 
 		return;
