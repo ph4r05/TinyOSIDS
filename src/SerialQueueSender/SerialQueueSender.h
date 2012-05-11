@@ -97,11 +97,25 @@ typedef struct senderMetadata {
 	 		nx_uint16_t d;
 	 		nx_uint16_t e;
 	 		nx_uint16_t f;
-	 	} single;
+	 		nx_uint16_t g;
+	 		nx_uint16_t h;
+	 	} single16;
 	 	
 	 	nx_struct {
-	 		nx_uint16_t a[6];
-	 	} arr;
+	 		nx_uint8_t a[16];
+	 	} arr8;
+	 	
+	 	nx_struct {
+	 		nx_uint16_t a[8];
+	 	} arr16;
+	 	
+	 	nx_struct {
+	 		nx_uint32_t a[4];
+	 	} arr32;
+	 	
+	 	nx_struct {
+	 		nx_uint64_t a[2];
+	 	} arr64;
  	} data;
 } globalReportMsg_t;
 
