@@ -74,6 +74,10 @@
 
 #include "SerialQueueSender.h"
 
+#ifdef SQDEBUG
+#include "printf.h"
+#endif
+
 generic module SerialQueueSenderP(typedef queue_t, uint8_t QUEUE_SIZE, am_id_t amtype) @safe() {
   provides {
     interface QueueSender;
@@ -165,13 +169,19 @@ implementation {
         if (metaPtr == NULL || (&uartPacket) != msg) {
             //bad mojo - sendqueue contains empty elem, sent message is not right one
             statSendDoneBug++;
+#ifdef SQDEBUG            
+			printf("badMojo\n");
+#endif            
         } else {
         	if (error == SUCCESS){
         		// send successfully, can dequeue entry, return data to pool, start sending again
         		statSendDoneOk++;
 				messageDequeue(metaPtr);
 				
-            	post sendTask();        		
+            	post sendTask(); 
+#ifdef SQDEBUG            	
+				printf("sentDoneSucc\n");
+#endif				            	       		
         	} else {
         		// error occurred - decrement retrycount and react upon 
         		// decrement retry counter
@@ -182,7 +192,9 @@ implementation {
             		statSendDoneFail += 1;
             		messageDequeue(metaPtr);
             	}
-                
+#ifdef SQDEBUG            	
+				printf("sentDoneReTX\n");
+#endif				                
                 // start retxmit timer - kind of backoff
                 startRetxmitTimer(SENDDONEFAIL_WINDOW, SENDFAIL_OFFSET);
         	}
@@ -222,6 +234,9 @@ implementation {
 	}
 	
 	event void RetxmitTimer.fired(){
+#ifdef SQDEBUG
+		printf("retxmit\n");
+#endif			
 		post sendTask();
 	}
 	
@@ -236,15 +251,22 @@ implementation {
             senderMetadata_t * metaPtr = call SendQueue.head();
             queue_t * smsg = (queue_t *) metaPtr->payload;
             queue_t * msgPayload = (queue_t *) call AMSend.getPayload(&uartPacket, metaPtr->len);
+            error_t eval = SUCCESS;
             // copy data to payload
             memcpy((void*)msgPayload, (void*)smsg, metaPtr->len);
             // try so send message
-            error_t eval = call AMSend.send(AM_BROADCAST_ADDR, &uartPacket, metaPtr->len);
+            eval = call AMSend.send(AM_BROADCAST_ADDR, &uartPacket, metaPtr->len);
             if (eval == SUCCESS) {
                 sending = TRUE;
+#ifdef SQDEBUG                
+				printf("sentOK\n");
+#endif				                
                 return;
             } else {
             	// decrement retry counter
+#ifdef SQDEBUG            	
+				printf("sentErr: %d; Rtr: %d\n", eval, metaPtr->retries);
+#endif				            	
             	metaPtr->retries -= 1;
             	if (metaPtr->retries==0){
             		// message expired, move ahead
@@ -259,14 +281,25 @@ implementation {
     }
 
 	command error_t QueueSender.enqueueData(void *payload, uint8_t len){
-		if (enabled==FALSE) return EOFF;
+		if (enabled==FALSE){
+#ifdef SQDEBUG			
+			printf("OFF\n");
+#endif			
+			return EOFF;
+		} 
     	
         statLogReceived++;
         if (call MessagePool.empty()) {
         	// no space in message pool, cannot store new data
+#ifdef SQDEBUG
+			printf("esize1\n");
+#endif			        	
             return ESIZE;
         } else if (len > blen) {
         	// cannot accept payload longer that defined
+#ifdef SQDEBUG        	
+			printf("esize2: yl: %d ; bl: %d\n", len, blen);
+#endif			        	
         	return ESIZE;
         } else {
         	queue_t * payloadTyped = (queue_t *)NULL;
@@ -297,9 +330,15 @@ implementation {
 			
 			// enqueue new data to send queue
             if (call SendQueue.enqueue(metaPtr) == SUCCESS) {
+#ifdef SQDEBUG            	
+				printf("enqueueOK\n");
+#endif					            	
                 post sendTask();
                 return SUCCESS;
             } else {
+#ifdef SQDEBUG            	
+				printf("enqueueFAIL\n");
+#endif				            	
                 statEnqueueFail++;
                 atomic {
                 	call MessagePool.put(msg);
@@ -313,6 +352,7 @@ implementation {
 	}
 
 	command error_t QueueSender.sendState(bool start){
-		return FAIL;
+		enabled = start;
+		return SUCCESS;
 	}
 }

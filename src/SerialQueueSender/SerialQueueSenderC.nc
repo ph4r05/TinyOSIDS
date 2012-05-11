@@ -15,6 +15,7 @@ implementation {
   components new PoolC(senderMetadata_t, QUEUE_SIZE) as MessageMetaPool;
   components RandomC;
   components new TimerMilliC() as RetxmitTimer;
+  components MainC;
   
   QueueSender = SQ.QueueSender; 
   SQ.AMSend -> SerialAMSenderC;
@@ -25,4 +26,5 @@ implementation {
   SQ.SendQueue -> SendQueue;
   SQ.Random -> RandomC;
   SQ.RetxmitTimer-> RetxmitTimer;
+  SQ.Boot -> MainC;
 }

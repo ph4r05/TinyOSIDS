@@ -89,13 +89,19 @@ typedef struct senderMetadata {
  	// counter, prefer having it
  	nx_uint16_t counter;
 	// message content 	
- 	union {
- 		uint16_t a;
- 		uint16_t b;
- 		uint16_t c;
- 		uint16_t d;
- 		uint16_t e;
- 		uint16_t f;
+ 	nx_union {
+ 		nx_struct {
+	 		nx_uint16_t a;
+	 		nx_uint16_t b;
+	 		nx_uint16_t c;
+	 		nx_uint16_t d;
+	 		nx_uint16_t e;
+	 		nx_uint16_t f;
+	 	} single;
+	 	
+	 	nx_struct {
+	 		nx_uint16_t a[6];
+	 	} arr;
  	} data;
 } globalReportMsg_t;
 

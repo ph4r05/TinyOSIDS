@@ -1,4 +1,3 @@
-#include "../RssiDemoMessages.h"
 #include "SerialQueueSender.h"
 
 interface QueueSender {
