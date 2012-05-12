@@ -63,6 +63,7 @@ module RssiBaseC @safe() {
   		interface AMSend as UartAMSend;
   		interface AMSend as UartCmdAMSend;
   		interface AMSend as UartNoiseAMSend;
+		interface AMSend as RadioCmdAMSend;
   		interface Queue<serialqueue_element_t *> as UartQueue;
   		
   		interface InterceptBaseConfig;
@@ -126,10 +127,19 @@ module RssiBaseC @safe() {
   uses interface Queue<MultiPingResponseReportStruct_t> as RSSIQueue;
 
 	/**************** RADIO DEPENDENT INTERFACES ****************/
+
+	  
+	 
 #ifdef __CC2420_H__
   uses interface CC2420Packet;
+//  uses interface CC2420PacketBody;
   // set channel
   uses interface CC2420Config;
+#ifdef CC2420_HW_SECURITY 
+	uses interface CC2420SecurityMode as CC2420Security;
+	uses interface CC2420Keys;
+#endif
+
 #elif  defined(PLATFORM_IRIS)  
   uses interface PacketField<uint8_t> as PacketRSSI;
   uses interface PacketField<uint8_t> as PacketTransmitPower;
@@ -155,7 +165,8 @@ module RssiBaseC @safe() {
 	bool commandRadio=FALSE;
 	// base station address
   	am_addr_t baseid = 1;
-  
+ 
+ 	bool cmdRadioBusy=FALSE;
 	/**************** NOISE FLOOR READING ****************/
   	message_t noisePkt;
   	uint16_t noiseData=0;
@@ -208,6 +219,10 @@ module RssiBaseC @safe() {
   	void ctpMessageSend(message_t *msg, void *payload);
   	void sendCtpInfoMsg(uint8_t type, uint8_t arg);
   	
+  	/**************** SECURITY ***************/
+  	// message auth key 0x98
+ 	uint8_t cryptokey[16] = {0x88,0x67,0x7F,0xAF,0xD6,0xAD,0xB7,0x0C,0x59,0xE8,0xD9,0x47,0xC9,0x71,0x15,0x0F};
+  	
 	/**************** GENERIC ****************/
 	bool busy = TRUE;
 	bool serialBusy = TRUE;
@@ -235,18 +250,36 @@ module RssiBaseC @safe() {
 	void setAck(message_t *msg, bool status);
 	void CommandReceived(message_t * msg, void * payload, uint8_t len);
 	void task sendCommandACK();
+	void task sendCommandRadio();
 	void setNoiseInterval(uint16_t interval);
 	void task sendMultipleEcho();
 	void setAddressRecognitionEnabled(bool enabled);
 	
+	void RssiMsgReceived(message_t ONE * msg, void ONE * payload, uint8_t len);
+	void SimpleRssiMsgReceived(message_t ONE * msg, void ONE * payload, uint8_t len);
 	/********************** INTERCEPT HANDLERS ********************/
 	// decision function, should be message cathed on radio forwarded to serial on BS?
 	// we can change some fields in given message
 	// todo: report against given message type ID
-	event bool RssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
+	event bool RssiMsgIntercept.forward(message_t ONE * msg, void ONE * payload, uint8_t len) {
+		RssiMsgReceived(msg, payload, len);
+
+		// do not waste bandwidth with this useless message
+		// important information is extracted here, for PC app
+		// it has no meaning
+		return FALSE;
+	}
+	
+	// rssi message received -> handler
+	void RssiMsgReceived(message_t ONE * msg, void ONE * payload, uint8_t len) {
 		// store RSSI to local buffer
 		MultiPingResponseReportStruct_t struct2save;
 		MultiPingResponseMsg * btrpkt = (MultiPingResponseMsg * ) payload;
+		
+		// try to obtain AUTH status of this message
+		// TODO: test
+		uint8_t * authState =  ((uint8_t *)payload) + len + 3;
+		call CtpLogger.logEventDbg(0x88, call RadioAMPacket.source(msg), btrpkt->counter, *authState); 
 		
 		// if full?
 		if ((call RSSIQueue.maxSize() - call RSSIQueue.size())==0){
@@ -255,7 +288,7 @@ module RssiBaseC @safe() {
 			// do not waste bandwidth with this useless message
 			// important information is extracted here, for PC app
 			// it has no meaning
-			return FALSE;
+			return;
 		}
 		
 		atomic {
@@ -270,14 +303,18 @@ module RssiBaseC @safe() {
 		
 		sendBlink();
 		post sendReport();
+	}
 
+	event bool SimpleRssiMsgIntercept.forward(message_t ONE * msg, void ONE * payload, uint8_t len) {
+		SimpleRssiMsgReceived(msg, payload, len);
+		
 		// do not waste bandwidth with this useless message
 		// important information is extracted here, for PC app
 		// it has no meaning
 		return FALSE;
 	}
-
-	event bool SimpleRssiMsgIntercept.forward(message_t * msg, void * payload, uint8_t len) {
+	
+	void SimpleRssiMsgReceived(message_t ONE * msg, void ONE * payload, uint8_t len) {
 		// store RSSI to local buffer
 		MultiPingResponseReportStruct_t struct2save;
 		RssiMsg * btrpkt = (RssiMsg * ) payload;
@@ -289,7 +326,7 @@ module RssiBaseC @safe() {
 			// do not waste bandwidth with this useless message
 			// important information is extracted here, for PC app
 			// it has no meaning			
-			return FALSE;
+			return;
 		}
 		
 		atomic {
@@ -304,11 +341,6 @@ module RssiBaseC @safe() {
 		
 		sendBlink();
 		post sendReport();
-
-		// do not waste bandwidth with this useless message
-		// important information is extracted here, for PC app
-		// it has no meaning
-		return FALSE;
 	}
   
 	event bool CommandMsgIntercept.forward(message_t *msg, void *payload, uint8_t len){
@@ -373,8 +405,12 @@ module RssiBaseC @safe() {
   	event void RadioControl.startDone(error_t error){
 		busy=FALSE;
 		
+		// set crypto keys
+#ifdef CC2420_HW_SECURITY		
+		call CC2420Keys.setKey(0, cryptokey); 
+#endif		
 		// start CTP's routing controll
-		call ForwardingControl.start();
+//		call ForwardingControl.start();
 	}
 
 	event void RadioControl.stopDone(error_t error){
@@ -890,12 +926,65 @@ module RssiBaseC @safe() {
 					post sendCommandACK();
 				} 
 			break;
+			
+			// send response as fast as possible
+			case COMMAND_PING:
+				post sendCommandACK();
+			break;
+			
+			// timesync request, send time global right now to serial
+			case COMMAND_TIMESYNC_GETGLOBAL:
+					
+			break;
+			
+			// send timesync request to broadcast radio
+			case COMMAND_TIMESYNC_GETGLOBAL_BCAST:
+				commandDest = AM_BROADCAST_ADDR;
+				btrpktresponse->command_code = COMMAND_TIMESYNC_GETGLOBAL;
+				post sendCommandRadio();
+			break;
 
 			default: 
 				;
 		}
 
 		return;
+	}
+
+	/**
+	 * Send defined command to radio
+	 */
+	void task sendCommandRadio(){
+		CommandMsg* btrpkt = NULL;
+	  	 if (cmdRadioBusy){
+	  	 	post sendCommandRadio();
+	  	 	return;
+	  	 }
+
+		btrpkt=(CommandMsg*)(call RadioCmdAMSend.getPayload(&cmdPktResponse, 0));
+
+    		// setup message with data
+		btrpkt->command_id = counter;
+
+		// send to base directly
+		// sometimes node refuses to send too large packet. it will always end with fail
+		// depends of buffers size.
+		if (call RadioCmdAMSend.send(commandDest, &cmdPktResponse, sizeof(CommandMsg)) == SUCCESS) {
+	 	    cmdRadioBusy=TRUE;
+		}
+		else {
+		        dbg("Cannot send message");
+			post sendCommandRadio();
+		}	
+	}
+	
+	event void RadioCmdAMSend.sendDone(message_t *msg, error_t error){
+		if (&cmdPktResponse==msg){
+			cmdRadioBusy=FALSE;
+			if (error!=SUCCESS){
+				post sendCommandRadio();
+			}
+		}
 	}
 
 	/**
@@ -1074,6 +1163,12 @@ module RssiBaseC @safe() {
         // ping coutner
         btrpkt->counter = multiPingCurPackets;
 
+		// security if wanted?
+#ifdef CC2420_HW_SECURITY
+		call CtpLogger.logEventDbg(0x87, multiPingCurPackets, 4, 0);
+		call CC2420Security.setCbcMac(&pingPkt, 0, 0, 4);
+#endif
+
     	if (call PingMsgSend.send(multiPingRequest.destination, &pingPkt, sizeof(MultiPingResponseMsg) + multiPingRequest.size) == SUCCESS) {
       	    multiPingBusy = TRUE;
     	}
@@ -1090,11 +1185,11 @@ module RssiBaseC @safe() {
 			// invalid length - cannot process
 			return;
 		}		
-		
+call CtpLogger.logEventDbg(0x85, multiPingCurPackets, 0, 0);		
 		// get received message
 		btrpkt = (MultiPingMsg * ) payload;
 		// size is constrained to TOSH_DATA_LENGTH
-		if ((btrpkt->size + sizeof(MultiPingResponseMsg))>TOSH_DATA_LENGTH){
+		if ((btrpkt->size + sizeof(MultiPingResponseMsg))> call RadioPacket.maxPayloadLength()){
 			return;
 		}
 		
@@ -1108,7 +1203,7 @@ module RssiBaseC @safe() {
 			call PingTimer.stop();
 			return;
 		}
-		
+	call CtpLogger.logEventDbg(0x81, multiPingCurPackets, 0, 0);	
 		// depending on timer strategy start timer...
 		if (btrpkt->timerStrategyPeriodic){
 			// periodic timer with defined delay
@@ -1839,5 +1934,10 @@ module RssiBaseC @safe() {
 		return msg; 
 	}
 
-
+#ifdef CC2420_HW_SECURITY 
+	event void CC2420Keys.setKeyDone(uint8_t keyNo, uint8_t *key){
+		// OK GREAT....
+		call CtpLogger.logEventSimple(120, keyNo);
+	}
+#endif
 }

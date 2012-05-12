@@ -47,7 +47,15 @@ configuration RssiBaseAppC {
   components SerialActiveMessageC as Serial;
   
   components ActiveMessageC, MainC, LedsC;  
+
+#ifdef CC2420_HW_SECURITY
+  components new SecAMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
+#else
   components new AMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
+#endif
+
+  components new AMSenderC(AM_COMMANDMSG) as RadioCmdAMSend;
+
   //components new AMSenderC(AM_PINGMSG) as PingMsgSender;
   // RSSI report send timer
   components new TimerMilliC() as SendTimer;
@@ -68,6 +76,13 @@ configuration RssiBaseAppC {
 #ifdef __CC2420_H__
   components CC2420ActiveMessageC;
   App -> CC2420ActiveMessageC.CC2420Packet;
+//  App.CC2420PacketBody -> CC2420Packet.CC2420PacketBody;
+  
+#ifdef CC2420_HW_SECURITY 
+	components CC2420KeysC;
+	App.CC2420Security -> PingMsgSender;
+	App.CC2420Keys -> CC2420KeysC;
+#endif
   
    // setting channel
   components CC2420RadioC;
@@ -95,11 +110,12 @@ configuration RssiBaseAppC {
 // serial interceptors - do not forward messages for myself
   App.SerialCommandIntercept->BaseStationC.SerialIntercept[AM_COMMANDMSG];
   
-  
 // sending reports to UART via queue
   App.UartAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
 // sending commands and alive reports  
  App.UartCmdAMSend -> BaseStationC.SerialSend[AM_COMMANDMSG];
+// radio command senging
+ App.RadioCmdAMSend -> RadioCmdAMSend;
 // sending noise floor readings 
  App.UartNoiseAMSend -> BaseStationC.SerialSend[AM_NOISEFLOORREADINGMSG];
 // Quick serial sending by pushing to queue
@@ -199,4 +215,8 @@ configuration RssiBaseAppC {
     App.CtpLoggerControl -> LoggerC.StdControl;
     App.CtpLogger -> LoggerC.CollectionDebug;
 //  	
+//components DefaultLplC;
+
+//////// TIMESYNC
+//App.TimeSyncSend -> BaseStationC.SerialSend[AM_TIMESYNCMSG];
 }
