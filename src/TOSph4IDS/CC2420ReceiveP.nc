@@ -49,7 +49,7 @@ module CC2420ReceiveP @safe() {
   provides interface StdControl;
   provides interface CC2420Receive;
   provides interface Receive;
-  provides interface Receive as ReceiveBadCRC;
+  provides interface ReceiveBadCRC;
   provides interface ReceiveIndicator as PacketIndicator;
 
   uses interface GeneralIO as CSN;
