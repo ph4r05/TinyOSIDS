@@ -70,12 +70,13 @@ module BaseStationP @safe() {
 implementation
 {
   enum {
-    UART_QUEUE_LEN = 12,
-    RADIO_QUEUE_LEN = 12,
+    UART_QUEUE_LEN = 32,
+    RADIO_QUEUE_LEN = 24,
   };
 
   message_t  uartQueueBufs[UART_QUEUE_LEN];
   message_t  * ONE_NOK uartQueue[UART_QUEUE_LEN];
+  message_t * ONE_NOK uartQueueExternal[UART_QUEUE_LEN];
   uint8_t    uartIn, uartOut;
   bool       uartBusy, uartFull;
 
@@ -98,14 +99,17 @@ implementation
   event void Boot.booted() {
     uint8_t i;
 
-    for (i = 0; i < UART_QUEUE_LEN; i++)
+    for (i = 0; i < UART_QUEUE_LEN; i++){
       uartQueue[i] = &uartQueueBufs[i];
+      uartQueueExternal[i] = NULL;
+    }
     uartIn = uartOut = 0;
     uartBusy = FALSE;
     uartFull = TRUE;
 
-    for (i = 0; i < RADIO_QUEUE_LEN; i++)
+    for (i = 0; i < RADIO_QUEUE_LEN; i++){
       radioQueue[i] = &radioQueueBufs[i];
+    }
     radioIn = radioOut = 0;
     radioBusy = FALSE;
     radioFull = TRUE;
