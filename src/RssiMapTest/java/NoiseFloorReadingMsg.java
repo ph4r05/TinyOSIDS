@@ -85,14 +85,10 @@ public class NoiseFloorReadingMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <NoiseFloorReadingMsg> \n";
       try {
-        s += "  [nx_struct NoiseFloorReadingMsg 4 18
-=0x"+Long.toHexString(get_nx_struct NoiseFloorReadingMsg 4 18
-())+"]\n";
+        s += "  [counter=0x"+Long.toHexString(get_counter())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct NoiseFloorReadingMsg 4 18
-=0x"+Long.toHexString(get_nx_struct NoiseFloorReadingMsg 4 18
-())+"]\n";
+        s += "  [noise=0x"+Long.toHexString(get_noise())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -100,167 +96,129 @@ public class NoiseFloorReadingMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct NoiseFloorReadingMsg 4 18
-
-    //   Field type: 
+    // Accessor methods for field: counter
+    //   Field type: int, unsigned
     //   Offset (bits): 0
-    //   Size (bits): 
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct NoiseFloorReadingMsg 4 18
-' is signed (false).
+     * Return whether the field 'counter' is signed (false).
      */
-    public static boolean isSigned_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static boolean isSigned_counter() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct NoiseFloorReadingMsg 4 18
-' is an array (false).
+     * Return whether the field 'counter' is an array (false).
      */
-    public static boolean isArray_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static boolean isArray_counter() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the offset (in bytes) of the field 'counter'
      */
-    public static int offset_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static int offset_counter() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the offset (in bits) of the field 'counter'
      */
-    public static int offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static int offsetBits_counter() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the value (as a int) of the field 'counter'
      */
-    public  get_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ()get(offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-(), );
+    public int get_counter() {
+        return (int)getUIntBEElement(offsetBits_counter(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Set the value of the field 'counter'
      */
-    public void set_nx_struct NoiseFloorReadingMsg 4 18
-( value) {
-        set(offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-(), , value);
+    public void set_counter(int value) {
+        setUIntBEElement(offsetBits_counter(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the size, in bytes, of the field 'counter'
      */
-    public static int size_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ( / 8);
+    public static int size_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the size, in bits, of the field 'counter'
      */
-    public static int sizeBits_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ;
+    public static int sizeBits_counter() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct NoiseFloorReadingMsg 4 18
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits): 
+    // Accessor methods for field: noise
+    //   Field type: int, unsigned
+    //   Offset (bits): 16
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct NoiseFloorReadingMsg 4 18
-' is signed (false).
+     * Return whether the field 'noise' is signed (false).
      */
-    public static boolean isSigned_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static boolean isSigned_noise() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct NoiseFloorReadingMsg 4 18
-' is an array (false).
+     * Return whether the field 'noise' is an array (false).
      */
-    public static boolean isArray_nx_struct NoiseFloorReadingMsg 4 18
-() {
+    public static boolean isArray_noise() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the offset (in bytes) of the field 'noise'
      */
-    public static int offset_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return (0 / 8);
+    public static int offset_noise() {
+        return (16 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the offset (in bits) of the field 'noise'
      */
-    public static int offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return 0;
+    public static int offsetBits_noise() {
+        return 16;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the value (as a int) of the field 'noise'
      */
-    public  get_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ()get(offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-(), );
+    public int get_noise() {
+        return (int)getUIntBEElement(offsetBits_noise(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Set the value of the field 'noise'
      */
-    public void set_nx_struct NoiseFloorReadingMsg 4 18
-( value) {
-        set(offsetBits_nx_struct NoiseFloorReadingMsg 4 18
-(), , value);
+    public void set_noise(int value) {
+        setUIntBEElement(offsetBits_noise(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the size, in bytes, of the field 'noise'
      */
-    public static int size_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ( / 8);
+    public static int size_noise() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct NoiseFloorReadingMsg 4 18
-'
+     * Return the size, in bits, of the field 'noise'
      */
-    public static int sizeBits_nx_struct NoiseFloorReadingMsg 4 18
-() {
-        return ;
+    public static int sizeBits_noise() {
+        return 16;
     }
 
 }

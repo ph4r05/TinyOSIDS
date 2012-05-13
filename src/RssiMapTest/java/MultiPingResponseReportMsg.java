@@ -85,39 +85,45 @@ public class MultiPingResponseReportMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <MultiPingResponseReportMsg> \n";
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [counter=0x"+Long.toHexString(get_counter())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [datanum=0x"+Long.toHexString(get_datanum())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [nodeid=";
+        for (int i = 0; i < 3; i++) {
+          s += "0x"+Long.toHexString(getElement_nodeid(i) & 0xffff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [request=";
+        for (int i = 0; i < 3; i++) {
+          s += "0x"+Long.toHexString(getElement_request(i) & 0xffff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [nodecounter=";
+        for (int i = 0; i < 3; i++) {
+          s += "0x"+Long.toHexString(getElement_nodecounter(i) & 0xffff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [rssi=";
+        for (int i = 0; i < 3; i++) {
+          s += "0x"+Long.toHexString(getElement_rssi(i) & 0xffff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingResponseReportMsg 30 16
-=0x"+Long.toHexString(get_nx_struct MultiPingResponseReportMsg 30 16
-())+"]\n";
+        s += "  [len=";
+        for (int i = 0; i < 3; i++) {
+          s += "0x"+Long.toHexString(getElement_len(i) & 0xff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -125,612 +131,794 @@ public class MultiPingResponseReportMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
+    // Accessor methods for field: counter
+    //   Field type: int, signed
     //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
+     * Return whether the field 'counter' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
+    public static boolean isSigned_counter() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'counter' is an array (false).
+     */
+    public static boolean isArray_counter() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return the offset (in bytes) of the field 'counter'
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
-    }
-
-    /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
-     */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
+    public static int offset_counter() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bits) of the field 'counter'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
+    public static int offsetBits_counter() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the value (as a int) of the field 'counter'
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public int get_counter() {
+        return (int)getUIntBEElement(offsetBits_counter(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set the value of the field 'counter'
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public void set_counter(int value) {
+        setUIntBEElement(offsetBits_counter(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bytes, of the field 'counter'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public static int size_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bits, of the field 'counter'
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
+    public static int sizeBits_counter() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
+    // Accessor methods for field: datanum
+    //   Field type: short, signed
+    //   Offset (bits): 16
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
+     * Return whether the field 'datanum' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
+    public static boolean isSigned_datanum() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'datanum' is an array (false).
+     */
+    public static boolean isArray_datanum() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return the offset (in bytes) of the field 'datanum'
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static int offset_datanum() {
+        return (16 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bits) of the field 'datanum'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int offsetBits_datanum() {
+        return 16;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the value (as a short) of the field 'datanum'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public short get_datanum() {
+        return (short)getUIntBEElement(offsetBits_datanum(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set the value of the field 'datanum'
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public void set_datanum(short value) {
+        setUIntBEElement(offsetBits_datanum(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bytes, of the field 'datanum'
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public static int size_datanum() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bits, of the field 'datanum'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
-     */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
+    public static int sizeBits_datanum() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
+    // Accessor methods for field: nodeid
+    //   Field type: int[], signed
+    //   Offset (bits): 24
+    //   Size of each element (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
+     * Return whether the field 'nodeid' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isSigned_nodeid() {
+        return true;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return whether the field 'nodeid' is an array (true).
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isArray_nodeid() {
+        return true;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bytes) of the field 'nodeid'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int offset_nodeid(int index1) {
+        int offset = 24;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return (offset / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bits) of the field 'nodeid'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public static int offsetBits_nodeid(int index1) {
+        int offset = 24;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return offset;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the entire array 'nodeid' as a int[]
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public int[] get_nodeid() {
+        int[] tmp = new int[3];
+        for (int index0 = 0; index0 < numElements_nodeid(0); index0++) {
+            tmp[index0] = getElement_nodeid(index0);
+        }
+        return tmp;
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set the contents of the array 'nodeid' from the given int[]
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public void set_nodeid(int[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_nodeid(index0, value[index0]);
+        }
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return an element (as a int) of the array 'nodeid'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public int getElement_nodeid(int index1) {
+        return (int)getUIntBEElement(offsetBits_nodeid(index1), 16);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set an element of the array 'nodeid'
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
-    }
-
-    /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
-    /////////////////////////////////////////////////////////
-
-    /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
-     */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public void setElement_nodeid(int index1, int value) {
+        setUIntBEElement(offsetBits_nodeid(index1), 16, value);
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return the total size, in bytes, of the array 'nodeid'
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static int totalSize_nodeid() {
+        return (48 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the total size, in bits, of the array 'nodeid'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int totalSizeBits_nodeid() {
+        return 48;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bytes, of each element of the array 'nodeid'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public static int elementSize_nodeid() {
+        return (16 / 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bits, of each element of the array 'nodeid'
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public static int elementSizeBits_nodeid() {
+        return 16;
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of dimensions in the array 'nodeid'
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public static int numDimensions_nodeid() {
+        return 1;
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of elements in the array 'nodeid'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public static int numElements_nodeid() {
+        return 3;
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of elements in the array 'nodeid'
+     * for the given dimension.
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
+    public static int numElements_nodeid(int dimension) {
+      int array_dims[] = { 3,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
+    // Accessor methods for field: request
+    //   Field type: int[], signed
+    //   Offset (bits): 72
+    //   Size of each element (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
+     * Return whether the field 'request' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isSigned_request() {
+        return true;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return whether the field 'request' is an array (true).
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isArray_request() {
+        return true;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bytes) of the field 'request'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int offset_request(int index1) {
+        int offset = 72;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return (offset / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bits) of the field 'request'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public static int offsetBits_request(int index1) {
+        int offset = 72;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return offset;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the entire array 'request' as a int[]
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public int[] get_request() {
+        int[] tmp = new int[3];
+        for (int index0 = 0; index0 < numElements_request(0); index0++) {
+            tmp[index0] = getElement_request(index0);
+        }
+        return tmp;
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set the contents of the array 'request' from the given int[]
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public void set_request(int[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_request(index0, value[index0]);
+        }
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return an element (as a int) of the array 'request'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public int getElement_request(int index1) {
+        return (int)getUIntBEElement(offsetBits_request(index1), 16);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set an element of the array 'request'
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
-    }
-
-    /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
-    /////////////////////////////////////////////////////////
-
-    /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
-     */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public void setElement_request(int index1, int value) {
+        setUIntBEElement(offsetBits_request(index1), 16, value);
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return the total size, in bytes, of the array 'request'
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static int totalSize_request() {
+        return (48 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the total size, in bits, of the array 'request'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int totalSizeBits_request() {
+        return 48;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bytes, of each element of the array 'request'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public static int elementSize_request() {
+        return (16 / 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the size, in bits, of each element of the array 'request'
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public static int elementSizeBits_request() {
+        return 16;
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of dimensions in the array 'request'
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public static int numDimensions_request() {
+        return 1;
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of elements in the array 'request'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public static int numElements_request() {
+        return 3;
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the number of elements in the array 'request'
+     * for the given dimension.
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
+    public static int numElements_request(int dimension) {
+      int array_dims[] = { 3,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingResponseReportMsg 30 16
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   nodeid [3]Nnx_uint16_t 24 16
-
+    // Accessor methods for field: nodecounter
+    //   Field type: int[], signed
+    //   Offset (bits): 120
+    //   Size of each element (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is signed (false).
+     * Return whether the field 'nodecounter' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isSigned_nodecounter() {
+        return true;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingResponseReportMsg 30 16
-' is an array (false).
+     * Return whether the field 'nodecounter' is an array (true).
      */
-    public static boolean isArray_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return false;
+    public static boolean isArray_nodecounter() {
+        return true;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bytes) of the field 'nodecounter'
      */
-    public static int offset_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (0 / 8);
+    public static int offset_nodecounter(int index1) {
+        int offset = 120;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return (offset / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the offset (in bits) of the field 'nodecounter'
      */
-    public static int offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return 0;
+    public static int offsetBits_nodecounter(int index1) {
+        int offset = 120;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return offset;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return the entire array 'nodecounter' as a int[]
      */
-    public  get_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return ()get(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-);
+    public int[] get_nodecounter() {
+        int[] tmp = new int[3];
+        for (int index0 = 0; index0 < numElements_nodecounter(0); index0++) {
+            tmp[index0] = getElement_nodecounter(index0);
+        }
+        return tmp;
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set the contents of the array 'nodecounter' from the given int[]
      */
-    public void set_nx_struct MultiPingResponseReportMsg 30 16
-( value) {
-        set(offsetBits_nx_struct MultiPingResponseReportMsg 30 16
-(),   nodeid [3]Nnx_uint16_t 24 16
-, value);
+    public void set_nodecounter(int[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_nodecounter(index0, value[index0]);
+        }
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Return an element (as a int) of the array 'nodecounter'
      */
-    public static int size_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return (  nodeid [3]Nnx_uint16_t 24 16
- / 8);
+    public int getElement_nodecounter(int index1) {
+        return (int)getUIntBEElement(offsetBits_nodecounter(index1), 16);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingResponseReportMsg 30 16
-'
+     * Set an element of the array 'nodecounter'
      */
-    public static int sizeBits_nx_struct MultiPingResponseReportMsg 30 16
-() {
-        return   nodeid [3]Nnx_uint16_t 24 16
-;
+    public void setElement_nodecounter(int index1, int value) {
+        setUIntBEElement(offsetBits_nodecounter(index1), 16, value);
+    }
+
+    /**
+     * Return the total size, in bytes, of the array 'nodecounter'
+     */
+    public static int totalSize_nodecounter() {
+        return (48 / 8);
+    }
+
+    /**
+     * Return the total size, in bits, of the array 'nodecounter'
+     */
+    public static int totalSizeBits_nodecounter() {
+        return 48;
+    }
+
+    /**
+     * Return the size, in bytes, of each element of the array 'nodecounter'
+     */
+    public static int elementSize_nodecounter() {
+        return (16 / 8);
+    }
+
+    /**
+     * Return the size, in bits, of each element of the array 'nodecounter'
+     */
+    public static int elementSizeBits_nodecounter() {
+        return 16;
+    }
+
+    /**
+     * Return the number of dimensions in the array 'nodecounter'
+     */
+    public static int numDimensions_nodecounter() {
+        return 1;
+    }
+
+    /**
+     * Return the number of elements in the array 'nodecounter'
+     */
+    public static int numElements_nodecounter() {
+        return 3;
+    }
+
+    /**
+     * Return the number of elements in the array 'nodecounter'
+     * for the given dimension.
+     */
+    public static int numElements_nodecounter(int dimension) {
+      int array_dims[] = { 3,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
+    }
+
+    /////////////////////////////////////////////////////////
+    // Accessor methods for field: rssi
+    //   Field type: short[], signed
+    //   Offset (bits): 168
+    //   Size of each element (bits): 16
+    /////////////////////////////////////////////////////////
+
+    /**
+     * Return whether the field 'rssi' is signed (true).
+     */
+    public static boolean isSigned_rssi() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'rssi' is an array (true).
+     */
+    public static boolean isArray_rssi() {
+        return true;
+    }
+
+    /**
+     * Return the offset (in bytes) of the field 'rssi'
+     */
+    public static int offset_rssi(int index1) {
+        int offset = 168;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return (offset / 8);
+    }
+
+    /**
+     * Return the offset (in bits) of the field 'rssi'
+     */
+    public static int offsetBits_rssi(int index1) {
+        int offset = 168;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return offset;
+    }
+
+    /**
+     * Return the entire array 'rssi' as a short[]
+     */
+    public short[] get_rssi() {
+        short[] tmp = new short[3];
+        for (int index0 = 0; index0 < numElements_rssi(0); index0++) {
+            tmp[index0] = getElement_rssi(index0);
+        }
+        return tmp;
+    }
+
+    /**
+     * Set the contents of the array 'rssi' from the given short[]
+     */
+    public void set_rssi(short[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_rssi(index0, value[index0]);
+        }
+    }
+
+    /**
+     * Return an element (as a short) of the array 'rssi'
+     */
+    public short getElement_rssi(int index1) {
+        return (short)getSIntBEElement(offsetBits_rssi(index1), 16);
+    }
+
+    /**
+     * Set an element of the array 'rssi'
+     */
+    public void setElement_rssi(int index1, short value) {
+        setSIntBEElement(offsetBits_rssi(index1), 16, value);
+    }
+
+    /**
+     * Return the total size, in bytes, of the array 'rssi'
+     */
+    public static int totalSize_rssi() {
+        return (48 / 8);
+    }
+
+    /**
+     * Return the total size, in bits, of the array 'rssi'
+     */
+    public static int totalSizeBits_rssi() {
+        return 48;
+    }
+
+    /**
+     * Return the size, in bytes, of each element of the array 'rssi'
+     */
+    public static int elementSize_rssi() {
+        return (16 / 8);
+    }
+
+    /**
+     * Return the size, in bits, of each element of the array 'rssi'
+     */
+    public static int elementSizeBits_rssi() {
+        return 16;
+    }
+
+    /**
+     * Return the number of dimensions in the array 'rssi'
+     */
+    public static int numDimensions_rssi() {
+        return 1;
+    }
+
+    /**
+     * Return the number of elements in the array 'rssi'
+     */
+    public static int numElements_rssi() {
+        return 3;
+    }
+
+    /**
+     * Return the number of elements in the array 'rssi'
+     * for the given dimension.
+     */
+    public static int numElements_rssi(int dimension) {
+      int array_dims[] = { 3,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
+    }
+
+    /////////////////////////////////////////////////////////
+    // Accessor methods for field: len
+    //   Field type: byte[], signed
+    //   Offset (bits): 216
+    //   Size of each element (bits): 8
+    /////////////////////////////////////////////////////////
+
+    /**
+     * Return whether the field 'len' is signed (true).
+     */
+    public static boolean isSigned_len() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'len' is an array (true).
+     */
+    public static boolean isArray_len() {
+        return true;
+    }
+
+    /**
+     * Return the offset (in bytes) of the field 'len'
+     */
+    public static int offset_len(int index1) {
+        int offset = 216;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 8;
+        return (offset / 8);
+    }
+
+    /**
+     * Return the offset (in bits) of the field 'len'
+     */
+    public static int offsetBits_len(int index1) {
+        int offset = 216;
+        if (index1 < 0 || index1 >= 3) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 8;
+        return offset;
+    }
+
+    /**
+     * Return the entire array 'len' as a byte[]
+     */
+    public byte[] get_len() {
+        byte[] tmp = new byte[3];
+        for (int index0 = 0; index0 < numElements_len(0); index0++) {
+            tmp[index0] = getElement_len(index0);
+        }
+        return tmp;
+    }
+
+    /**
+     * Set the contents of the array 'len' from the given byte[]
+     */
+    public void set_len(byte[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_len(index0, value[index0]);
+        }
+    }
+
+    /**
+     * Return an element (as a byte) of the array 'len'
+     */
+    public byte getElement_len(int index1) {
+        return (byte)getSIntBEElement(offsetBits_len(index1), 8);
+    }
+
+    /**
+     * Set an element of the array 'len'
+     */
+    public void setElement_len(int index1, byte value) {
+        setSIntBEElement(offsetBits_len(index1), 8, value);
+    }
+
+    /**
+     * Return the total size, in bytes, of the array 'len'
+     */
+    public static int totalSize_len() {
+        return (24 / 8);
+    }
+
+    /**
+     * Return the total size, in bits, of the array 'len'
+     */
+    public static int totalSizeBits_len() {
+        return 24;
+    }
+
+    /**
+     * Return the size, in bytes, of each element of the array 'len'
+     */
+    public static int elementSize_len() {
+        return (8 / 8);
+    }
+
+    /**
+     * Return the size, in bits, of each element of the array 'len'
+     */
+    public static int elementSizeBits_len() {
+        return 8;
+    }
+
+    /**
+     * Return the number of dimensions in the array 'len'
+     */
+    public static int numDimensions_len() {
+        return 1;
+    }
+
+    /**
+     * Return the number of elements in the array 'len'
+     */
+    public static int numElements_len() {
+        return 3;
+    }
+
+    /**
+     * Return the number of elements in the array 'len'
+     * for the given dimension.
+     */
+    public static int numElements_len(int dimension) {
+      int array_dims[] = { 3,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
+    }
+
+    /**
+     * Fill in the array 'len' with a String
+     */
+    public void setString_len(String s) { 
+         int len = s.length();
+         int i;
+         for (i = 0; i < len; i++) {
+             setElement_len(i, (byte)s.charAt(i));
+         }
+         setElement_len(i, (byte)0); //null terminate
+    }
+
+    /**
+     * Read the array 'len' as a String
+     */
+    public String getString_len() { 
+         char carr[] = new char[Math.min(net.tinyos.message.Message.MAX_CONVERTED_STRING_LENGTH,3)];
+         int i;
+         for (i = 0; i < carr.length; i++) {
+             if ((char)getElement_len(i) == (char)0) break;
+             carr[i] = (char)getElement_len(i);
+         }
+         return new String(carr,0,i);
     }
 
 }

@@ -85,49 +85,31 @@ public class MultiPingMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <MultiPingMsg> \n";
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [destination=0x"+Long.toHexString(get_destination())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [counter=0x"+Long.toHexString(get_counter())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [txpower=0x"+Long.toHexString(get_txpower())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [channel=0x"+Long.toHexString(get_channel())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [packets=0x"+Long.toHexString(get_packets())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [delay=0x"+Long.toHexString(get_delay())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [size=0x"+Long.toHexString(get_size())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [counterStrategySuccess=0x"+Long.toHexString(get_counterStrategySuccess())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct MultiPingMsg 13 12
-=0x"+Long.toHexString(get_nx_struct MultiPingMsg 13 12
-())+"]\n";
+        s += "  [timerStrategyPeriodic=0x"+Long.toHexString(get_timerStrategyPeriodic())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -135,786 +117,570 @@ public class MultiPingMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
+    // Accessor methods for field: destination
+    //   Field type: int, signed
     //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'destination' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_destination() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'destination' is an array (false).
+     */
+    public static boolean isArray_destination() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'destination'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
-    }
-
-    /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
+    public static int offset_destination() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'destination'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
+    public static int offsetBits_destination() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a int) of the field 'destination'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public int get_destination() {
+        return (int)getUIntBEElement(offsetBits_destination(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'destination'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public void set_destination(int value) {
+        setUIntBEElement(offsetBits_destination(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'destination'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
+    public static int size_destination() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'destination'
      */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_destination() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: counter
+    //   Field type: int, signed
+    //   Offset (bits): 16
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'counter' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_counter() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'counter' is an array (false).
+     */
+    public static boolean isArray_counter() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'counter'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'counter'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_counter() {
+        return 16;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a int) of the field 'counter'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public int get_counter() {
+        return (int)getUIntBEElement(offsetBits_counter(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'counter'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_counter(int value) {
+        setUIntBEElement(offsetBits_counter(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'counter'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'counter'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_counter() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: txpower
+    //   Field type: short, signed
+    //   Offset (bits): 32
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'txpower' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_txpower() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'txpower' is an array (false).
+     */
+    public static boolean isArray_txpower() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'txpower'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_txpower() {
+        return (32 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'txpower'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_txpower() {
+        return 32;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a short) of the field 'txpower'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public short get_txpower() {
+        return (short)getUIntBEElement(offsetBits_txpower(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'txpower'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_txpower(short value) {
+        setUIntBEElement(offsetBits_txpower(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'txpower'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_txpower() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'txpower'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_txpower() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: channel
+    //   Field type: short, signed
+    //   Offset (bits): 40
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'channel' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_channel() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'channel' is an array (false).
+     */
+    public static boolean isArray_channel() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'channel'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_channel() {
+        return (40 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'channel'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_channel() {
+        return 40;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a short) of the field 'channel'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public short get_channel() {
+        return (short)getUIntBEElement(offsetBits_channel(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'channel'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_channel(short value) {
+        setUIntBEElement(offsetBits_channel(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'channel'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_channel() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'channel'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_channel() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: packets
+    //   Field type: int, signed
+    //   Offset (bits): 48
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'packets' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_packets() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'packets' is an array (false).
+     */
+    public static boolean isArray_packets() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'packets'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_packets() {
+        return (48 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'packets'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_packets() {
+        return 48;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a int) of the field 'packets'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public int get_packets() {
+        return (int)getUIntBEElement(offsetBits_packets(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'packets'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_packets(int value) {
+        setUIntBEElement(offsetBits_packets(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'packets'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_packets() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'packets'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_packets() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: delay
+    //   Field type: int, signed
+    //   Offset (bits): 64
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'delay' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_delay() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'delay' is an array (false).
+     */
+    public static boolean isArray_delay() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'delay'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_delay() {
+        return (64 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'delay'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_delay() {
+        return 64;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a int) of the field 'delay'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public int get_delay() {
+        return (int)getUIntBEElement(offsetBits_delay(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'delay'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_delay(int value) {
+        setUIntBEElement(offsetBits_delay(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'delay'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_delay() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'delay'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_delay() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: size
+    //   Field type: short, signed
+    //   Offset (bits): 80
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'size' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_size() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'size' is an array (false).
+     */
+    public static boolean isArray_size() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'size'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_size() {
+        return (80 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'size'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_size() {
+        return 80;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a short) of the field 'size'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public short get_size() {
+        return (short)getUIntBEElement(offsetBits_size(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'size'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_size(short value) {
+        setUIntBEElement(offsetBits_size(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'size'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_size() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'size'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_size() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: counterStrategySuccess
+    //   Field type: byte, signed
+    //   Offset (bits): 88
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'counterStrategySuccess' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_counterStrategySuccess() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'counterStrategySuccess' is an array (false).
+     */
+    public static boolean isArray_counterStrategySuccess() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'counterStrategySuccess'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_counterStrategySuccess() {
+        return (88 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'counterStrategySuccess'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_counterStrategySuccess() {
+        return 88;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a byte) of the field 'counterStrategySuccess'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public byte get_counterStrategySuccess() {
+        return (byte)getSIntBEElement(offsetBits_counterStrategySuccess(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'counterStrategySuccess'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_counterStrategySuccess(byte value) {
+        setSIntBEElement(offsetBits_counterStrategySuccess(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'counterStrategySuccess'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_counterStrategySuccess() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'counterStrategySuccess'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_counterStrategySuccess() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct MultiPingMsg 13 12
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 32 8
-
+    // Accessor methods for field: timerStrategyPeriodic
+    //   Field type: byte, signed
+    //   Offset (bits): 96
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is signed (false).
+     * Return whether the field 'timerStrategyPeriodic' is signed (true).
      */
-    public static boolean isSigned_nx_struct MultiPingMsg 13 12
-() {
+    public static boolean isSigned_timerStrategyPeriodic() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'timerStrategyPeriodic' is an array (false).
+     */
+    public static boolean isArray_timerStrategyPeriodic() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct MultiPingMsg 13 12
-' is an array (false).
+     * Return the offset (in bytes) of the field 'timerStrategyPeriodic'
      */
-    public static boolean isArray_nx_struct MultiPingMsg 13 12
-() {
-        return false;
+    public static int offset_timerStrategyPeriodic() {
+        return (96 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the offset (in bits) of the field 'timerStrategyPeriodic'
      */
-    public static int offset_nx_struct MultiPingMsg 13 12
-() {
-        return (0 / 8);
+    public static int offsetBits_timerStrategyPeriodic() {
+        return 96;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the value (as a byte) of the field 'timerStrategyPeriodic'
      */
-    public static int offsetBits_nx_struct MultiPingMsg 13 12
-() {
-        return 0;
+    public byte get_timerStrategyPeriodic() {
+        return (byte)getSIntBEElement(offsetBits_timerStrategyPeriodic(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Set the value of the field 'timerStrategyPeriodic'
      */
-    public  get_nx_struct MultiPingMsg 13 12
-() {
-        return ()get(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-);
+    public void set_timerStrategyPeriodic(byte value) {
+        setSIntBEElement(offsetBits_timerStrategyPeriodic(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bytes, of the field 'timerStrategyPeriodic'
      */
-    public void set_nx_struct MultiPingMsg 13 12
-( value) {
-        set(offsetBits_nx_struct MultiPingMsg 13 12
-(),   txpower Nnx_uint8_t 32 8
-, value);
+    public static int size_timerStrategyPeriodic() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct MultiPingMsg 13 12
-'
+     * Return the size, in bits, of the field 'timerStrategyPeriodic'
      */
-    public static int size_nx_struct MultiPingMsg 13 12
-() {
-        return (  txpower Nnx_uint8_t 32 8
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct MultiPingMsg 13 12
-'
-     */
-    public static int sizeBits_nx_struct MultiPingMsg 13 12
-() {
-        return   txpower Nnx_uint8_t 32 8
-;
+    public static int sizeBits_timerStrategyPeriodic() {
+        return 8;
     }
 
 }

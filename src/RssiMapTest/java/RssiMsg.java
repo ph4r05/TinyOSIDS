@@ -85,29 +85,19 @@ public class RssiMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <RssiMsg> \n";
       try {
-        s += "  [nx_struct RssiMsg 8 10
-=0x"+Long.toHexString(get_nx_struct RssiMsg 8 10
-())+"]\n";
+        s += "  [nodeid=0x"+Long.toHexString(get_nodeid())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct RssiMsg 8 10
-=0x"+Long.toHexString(get_nx_struct RssiMsg 8 10
-())+"]\n";
+        s += "  [dstnodeid=0x"+Long.toHexString(get_dstnodeid())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct RssiMsg 8 10
-=0x"+Long.toHexString(get_nx_struct RssiMsg 8 10
-())+"]\n";
+        s += "  [counter=0x"+Long.toHexString(get_counter())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct RssiMsg 8 10
-=0x"+Long.toHexString(get_nx_struct RssiMsg 8 10
-())+"]\n";
+        s += "  [rssi=0x"+Long.toHexString(get_rssi())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct RssiMsg 8 10
-=0x"+Long.toHexString(get_nx_struct RssiMsg 8 10
-())+"]\n";
+        s += "  [rssiFromBase=0x"+Long.toHexString(get_rssiFromBase())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -115,438 +105,318 @@ public class RssiMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct RssiMsg 8 10
-
-    //   Field type: 
+    // Accessor methods for field: nodeid
+    //   Field type: short, signed
     //   Offset (bits): 0
-    //   Size (bits):   counter Nnx_uint16_t 16 16
-
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is signed (false).
+     * Return whether the field 'nodeid' is signed (true).
      */
-    public static boolean isSigned_nx_struct RssiMsg 8 10
-() {
+    public static boolean isSigned_nodeid() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'nodeid' is an array (false).
+     */
+    public static boolean isArray_nodeid() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is an array (false).
+     * Return the offset (in bytes) of the field 'nodeid'
      */
-    public static boolean isArray_nx_struct RssiMsg 8 10
-() {
-        return false;
-    }
-
-    /**
-     * Return the offset (in bytes) of the field 'nx_struct RssiMsg 8 10
-'
-     */
-    public static int offset_nx_struct RssiMsg 8 10
-() {
+    public static int offset_nodeid() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the offset (in bits) of the field 'nodeid'
      */
-    public static int offsetBits_nx_struct RssiMsg 8 10
-() {
+    public static int offsetBits_nodeid() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the value (as a short) of the field 'nodeid'
      */
-    public  get_nx_struct RssiMsg 8 10
-() {
-        return ()get(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-);
+    public short get_nodeid() {
+        return (short)getUIntBEElement(offsetBits_nodeid(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct RssiMsg 8 10
-'
+     * Set the value of the field 'nodeid'
      */
-    public void set_nx_struct RssiMsg 8 10
-( value) {
-        set(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-, value);
+    public void set_nodeid(short value) {
+        setUIntBEElement(offsetBits_nodeid(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bytes, of the field 'nodeid'
      */
-    public static int size_nx_struct RssiMsg 8 10
-() {
-        return (  counter Nnx_uint16_t 16 16
- / 8);
+    public static int size_nodeid() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bits, of the field 'nodeid'
      */
-    public static int sizeBits_nx_struct RssiMsg 8 10
-() {
-        return   counter Nnx_uint16_t 16 16
-;
+    public static int sizeBits_nodeid() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct RssiMsg 8 10
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   counter Nnx_uint16_t 16 16
-
+    // Accessor methods for field: dstnodeid
+    //   Field type: short, signed
+    //   Offset (bits): 8
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is signed (false).
+     * Return whether the field 'dstnodeid' is signed (true).
      */
-    public static boolean isSigned_nx_struct RssiMsg 8 10
-() {
+    public static boolean isSigned_dstnodeid() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'dstnodeid' is an array (false).
+     */
+    public static boolean isArray_dstnodeid() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is an array (false).
+     * Return the offset (in bytes) of the field 'dstnodeid'
      */
-    public static boolean isArray_nx_struct RssiMsg 8 10
-() {
-        return false;
+    public static int offset_dstnodeid() {
+        return (8 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the offset (in bits) of the field 'dstnodeid'
      */
-    public static int offset_nx_struct RssiMsg 8 10
-() {
-        return (0 / 8);
+    public static int offsetBits_dstnodeid() {
+        return 8;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the value (as a short) of the field 'dstnodeid'
      */
-    public static int offsetBits_nx_struct RssiMsg 8 10
-() {
-        return 0;
+    public short get_dstnodeid() {
+        return (short)getUIntBEElement(offsetBits_dstnodeid(), 8);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct RssiMsg 8 10
-'
+     * Set the value of the field 'dstnodeid'
      */
-    public  get_nx_struct RssiMsg 8 10
-() {
-        return ()get(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-);
+    public void set_dstnodeid(short value) {
+        setUIntBEElement(offsetBits_dstnodeid(), 8, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bytes, of the field 'dstnodeid'
      */
-    public void set_nx_struct RssiMsg 8 10
-( value) {
-        set(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-, value);
+    public static int size_dstnodeid() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bits, of the field 'dstnodeid'
      */
-    public static int size_nx_struct RssiMsg 8 10
-() {
-        return (  counter Nnx_uint16_t 16 16
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct RssiMsg 8 10
-'
-     */
-    public static int sizeBits_nx_struct RssiMsg 8 10
-() {
-        return   counter Nnx_uint16_t 16 16
-;
+    public static int sizeBits_dstnodeid() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct RssiMsg 8 10
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   counter Nnx_uint16_t 16 16
-
+    // Accessor methods for field: counter
+    //   Field type: int, signed
+    //   Offset (bits): 16
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is signed (false).
+     * Return whether the field 'counter' is signed (true).
      */
-    public static boolean isSigned_nx_struct RssiMsg 8 10
-() {
+    public static boolean isSigned_counter() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'counter' is an array (false).
+     */
+    public static boolean isArray_counter() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is an array (false).
+     * Return the offset (in bytes) of the field 'counter'
      */
-    public static boolean isArray_nx_struct RssiMsg 8 10
-() {
-        return false;
+    public static int offset_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the offset (in bits) of the field 'counter'
      */
-    public static int offset_nx_struct RssiMsg 8 10
-() {
-        return (0 / 8);
+    public static int offsetBits_counter() {
+        return 16;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the value (as a int) of the field 'counter'
      */
-    public static int offsetBits_nx_struct RssiMsg 8 10
-() {
-        return 0;
+    public int get_counter() {
+        return (int)getUIntBEElement(offsetBits_counter(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct RssiMsg 8 10
-'
+     * Set the value of the field 'counter'
      */
-    public  get_nx_struct RssiMsg 8 10
-() {
-        return ()get(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-);
+    public void set_counter(int value) {
+        setUIntBEElement(offsetBits_counter(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bytes, of the field 'counter'
      */
-    public void set_nx_struct RssiMsg 8 10
-( value) {
-        set(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-, value);
+    public static int size_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bits, of the field 'counter'
      */
-    public static int size_nx_struct RssiMsg 8 10
-() {
-        return (  counter Nnx_uint16_t 16 16
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct RssiMsg 8 10
-'
-     */
-    public static int sizeBits_nx_struct RssiMsg 8 10
-() {
-        return   counter Nnx_uint16_t 16 16
-;
+    public static int sizeBits_counter() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct RssiMsg 8 10
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   counter Nnx_uint16_t 16 16
-
+    // Accessor methods for field: rssi
+    //   Field type: short, signed
+    //   Offset (bits): 32
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is signed (false).
+     * Return whether the field 'rssi' is signed (true).
      */
-    public static boolean isSigned_nx_struct RssiMsg 8 10
-() {
+    public static boolean isSigned_rssi() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'rssi' is an array (false).
+     */
+    public static boolean isArray_rssi() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is an array (false).
+     * Return the offset (in bytes) of the field 'rssi'
      */
-    public static boolean isArray_nx_struct RssiMsg 8 10
-() {
-        return false;
+    public static int offset_rssi() {
+        return (32 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the offset (in bits) of the field 'rssi'
      */
-    public static int offset_nx_struct RssiMsg 8 10
-() {
-        return (0 / 8);
+    public static int offsetBits_rssi() {
+        return 32;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the value (as a short) of the field 'rssi'
      */
-    public static int offsetBits_nx_struct RssiMsg 8 10
-() {
-        return 0;
+    public short get_rssi() {
+        return (short)getSIntBEElement(offsetBits_rssi(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct RssiMsg 8 10
-'
+     * Set the value of the field 'rssi'
      */
-    public  get_nx_struct RssiMsg 8 10
-() {
-        return ()get(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-);
+    public void set_rssi(short value) {
+        setSIntBEElement(offsetBits_rssi(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bytes, of the field 'rssi'
      */
-    public void set_nx_struct RssiMsg 8 10
-( value) {
-        set(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-, value);
+    public static int size_rssi() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bits, of the field 'rssi'
      */
-    public static int size_nx_struct RssiMsg 8 10
-() {
-        return (  counter Nnx_uint16_t 16 16
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct RssiMsg 8 10
-'
-     */
-    public static int sizeBits_nx_struct RssiMsg 8 10
-() {
-        return   counter Nnx_uint16_t 16 16
-;
+    public static int sizeBits_rssi() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct RssiMsg 8 10
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   counter Nnx_uint16_t 16 16
-
+    // Accessor methods for field: rssiFromBase
+    //   Field type: short, signed
+    //   Offset (bits): 48
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is signed (false).
+     * Return whether the field 'rssiFromBase' is signed (true).
      */
-    public static boolean isSigned_nx_struct RssiMsg 8 10
-() {
+    public static boolean isSigned_rssiFromBase() {
+        return true;
+    }
+
+    /**
+     * Return whether the field 'rssiFromBase' is an array (false).
+     */
+    public static boolean isArray_rssiFromBase() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct RssiMsg 8 10
-' is an array (false).
+     * Return the offset (in bytes) of the field 'rssiFromBase'
      */
-    public static boolean isArray_nx_struct RssiMsg 8 10
-() {
-        return false;
+    public static int offset_rssiFromBase() {
+        return (48 / 8);
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the offset (in bits) of the field 'rssiFromBase'
      */
-    public static int offset_nx_struct RssiMsg 8 10
-() {
-        return (0 / 8);
+    public static int offsetBits_rssiFromBase() {
+        return 48;
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the value (as a short) of the field 'rssiFromBase'
      */
-    public static int offsetBits_nx_struct RssiMsg 8 10
-() {
-        return 0;
+    public short get_rssiFromBase() {
+        return (short)getSIntBEElement(offsetBits_rssiFromBase(), 16);
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct RssiMsg 8 10
-'
+     * Set the value of the field 'rssiFromBase'
      */
-    public  get_nx_struct RssiMsg 8 10
-() {
-        return ()get(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-);
+    public void set_rssiFromBase(short value) {
+        setSIntBEElement(offsetBits_rssiFromBase(), 16, value);
     }
 
     /**
-     * Set the value of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bytes, of the field 'rssiFromBase'
      */
-    public void set_nx_struct RssiMsg 8 10
-( value) {
-        set(offsetBits_nx_struct RssiMsg 8 10
-(),   counter Nnx_uint16_t 16 16
-, value);
+    public static int size_rssiFromBase() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct RssiMsg 8 10
-'
+     * Return the size, in bits, of the field 'rssiFromBase'
      */
-    public static int size_nx_struct RssiMsg 8 10
-() {
-        return (  counter Nnx_uint16_t 16 16
- / 8);
-    }
-
-    /**
-     * Return the size, in bits, of the field 'nx_struct RssiMsg 8 10
-'
-     */
-    public static int sizeBits_nx_struct RssiMsg 8 10
-() {
-        return   counter Nnx_uint16_t 16 16
-;
+    public static int sizeBits_rssiFromBase() {
+        return 16;
     }
 
 }

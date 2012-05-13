@@ -85,39 +85,29 @@ public class CommandMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <CommandMsg> \n";
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [command_code=0x"+Long.toHexString(get_command_code())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [command_version=0x"+Long.toHexString(get_command_version())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [command_id=0x"+Long.toHexString(get_command_id())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [reply_on_command=0x"+Long.toHexString(get_reply_on_command())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [reply_on_command_id=0x"+Long.toHexString(get_reply_on_command_id())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [command_data=0x"+Long.toHexString(get_command_data())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct CommandMsg 17 14
-=0x"+Long.toHexString(get_nx_struct CommandMsg 17 14
-())+"]\n";
+        s += "  [command_data_next=";
+        for (int i = 0; i < 4; i++) {
+          s += "0x"+Long.toHexString(getElement_command_data_next(i) & 0xffff)+" ";
+        }
+        s += "]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -125,612 +115,509 @@ public class CommandMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
+    // Accessor methods for field: command_code
+    //   Field type: short, unsigned
     //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'command_code' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_command_code() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'command_code' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_command_code() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'command_code'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
+    public static int offset_command_code() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'command_code'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
+    public static int offsetBits_command_code() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a short) of the field 'command_code'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public short get_command_code() {
+        return (short)getUIntBEElement(offsetBits_command_code(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'command_code'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_command_code(short value) {
+        setUIntBEElement(offsetBits_command_code(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'command_code'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_command_code() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'command_code'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_command_code() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: command_version
+    //   Field type: short, unsigned
+    //   Offset (bits): 8
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'command_version' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_command_version() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'command_version' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_command_version() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'command_version'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_command_version() {
+        return (8 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'command_version'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_command_version() {
+        return 8;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a short) of the field 'command_version'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public short get_command_version() {
+        return (short)getUIntBEElement(offsetBits_command_version(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'command_version'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_command_version(short value) {
+        setUIntBEElement(offsetBits_command_version(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'command_version'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_command_version() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'command_version'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_command_version() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: command_id
+    //   Field type: int, unsigned
+    //   Offset (bits): 16
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'command_id' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_command_id() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'command_id' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_command_id() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'command_id'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_command_id() {
+        return (16 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'command_id'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_command_id() {
+        return 16;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a int) of the field 'command_id'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public int get_command_id() {
+        return (int)getUIntBEElement(offsetBits_command_id(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'command_id'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_command_id(int value) {
+        setUIntBEElement(offsetBits_command_id(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'command_id'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_command_id() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'command_id'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_command_id() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: reply_on_command
+    //   Field type: short, unsigned
+    //   Offset (bits): 32
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'reply_on_command' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_reply_on_command() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'reply_on_command' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_reply_on_command() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'reply_on_command'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_reply_on_command() {
+        return (32 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'reply_on_command'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_reply_on_command() {
+        return 32;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a short) of the field 'reply_on_command'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public short get_reply_on_command() {
+        return (short)getUIntBEElement(offsetBits_reply_on_command(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'reply_on_command'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_reply_on_command(short value) {
+        setUIntBEElement(offsetBits_reply_on_command(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'reply_on_command'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_reply_on_command() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'reply_on_command'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_reply_on_command() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: reply_on_command_id
+    //   Field type: int, unsigned
+    //   Offset (bits): 40
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'reply_on_command_id' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_reply_on_command_id() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'reply_on_command_id' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_reply_on_command_id() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'reply_on_command_id'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_reply_on_command_id() {
+        return (40 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'reply_on_command_id'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_reply_on_command_id() {
+        return 40;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a int) of the field 'reply_on_command_id'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public int get_reply_on_command_id() {
+        return (int)getUIntBEElement(offsetBits_reply_on_command_id(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'reply_on_command_id'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_reply_on_command_id(int value) {
+        setUIntBEElement(offsetBits_reply_on_command_id(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'reply_on_command_id'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_reply_on_command_id() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'reply_on_command_id'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_reply_on_command_id() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: command_data
+    //   Field type: int, unsigned
+    //   Offset (bits): 56
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'command_data' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_command_data() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'command_data' is an array (false).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
+    public static boolean isArray_command_data() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'command_data'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_command_data() {
+        return (56 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'command_data'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_command_data() {
+        return 56;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the value (as a int) of the field 'command_data'
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public int get_command_data() {
+        return (int)getUIntBEElement(offsetBits_command_data(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the value of the field 'command_data'
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_command_data(int value) {
+        setUIntBEElement(offsetBits_command_data(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bytes, of the field 'command_data'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public static int size_command_data() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the size, in bits, of the field 'command_data'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public static int sizeBits_command_data() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct CommandMsg 17 14
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   command_id Nnx_uint16_t 16 16
-
+    // Accessor methods for field: command_data_next
+    //   Field type: int[], unsigned
+    //   Offset (bits): 72
+    //   Size of each element (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is signed (false).
+     * Return whether the field 'command_data_next' is signed (false).
      */
-    public static boolean isSigned_nx_struct CommandMsg 17 14
-() {
+    public static boolean isSigned_command_data_next() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct CommandMsg 17 14
-' is an array (false).
+     * Return whether the field 'command_data_next' is an array (true).
      */
-    public static boolean isArray_nx_struct CommandMsg 17 14
-() {
-        return false;
+    public static boolean isArray_command_data_next() {
+        return true;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bytes) of the field 'command_data_next'
      */
-    public static int offset_nx_struct CommandMsg 17 14
-() {
-        return (0 / 8);
+    public static int offset_command_data_next(int index1) {
+        int offset = 72;
+        if (index1 < 0 || index1 >= 4) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return (offset / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the offset (in bits) of the field 'command_data_next'
      */
-    public static int offsetBits_nx_struct CommandMsg 17 14
-() {
-        return 0;
+    public static int offsetBits_command_data_next(int index1) {
+        int offset = 72;
+        if (index1 < 0 || index1 >= 4) throw new ArrayIndexOutOfBoundsException();
+        offset += 0 + index1 * 16;
+        return offset;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct CommandMsg 17 14
-'
+     * Return the entire array 'command_data_next' as a int[]
      */
-    public  get_nx_struct CommandMsg 17 14
-() {
-        return ()get(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-);
+    public int[] get_command_data_next() {
+        int[] tmp = new int[4];
+        for (int index0 = 0; index0 < numElements_command_data_next(0); index0++) {
+            tmp[index0] = getElement_command_data_next(index0);
+        }
+        return tmp;
     }
 
     /**
-     * Set the value of the field 'nx_struct CommandMsg 17 14
-'
+     * Set the contents of the array 'command_data_next' from the given int[]
      */
-    public void set_nx_struct CommandMsg 17 14
-( value) {
-        set(offsetBits_nx_struct CommandMsg 17 14
-(),   command_id Nnx_uint16_t 16 16
-, value);
+    public void set_command_data_next(int[] value) {
+        for (int index0 = 0; index0 < value.length; index0++) {
+            setElement_command_data_next(index0, value[index0]);
+        }
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct CommandMsg 17 14
-'
+     * Return an element (as a int) of the array 'command_data_next'
      */
-    public static int size_nx_struct CommandMsg 17 14
-() {
-        return (  command_id Nnx_uint16_t 16 16
- / 8);
+    public int getElement_command_data_next(int index1) {
+        return (int)getUIntBEElement(offsetBits_command_data_next(index1), 16);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct CommandMsg 17 14
-'
+     * Set an element of the array 'command_data_next'
      */
-    public static int sizeBits_nx_struct CommandMsg 17 14
-() {
-        return   command_id Nnx_uint16_t 16 16
-;
+    public void setElement_command_data_next(int index1, int value) {
+        setUIntBEElement(offsetBits_command_data_next(index1), 16, value);
+    }
+
+    /**
+     * Return the total size, in bytes, of the array 'command_data_next'
+     */
+    public static int totalSize_command_data_next() {
+        return (64 / 8);
+    }
+
+    /**
+     * Return the total size, in bits, of the array 'command_data_next'
+     */
+    public static int totalSizeBits_command_data_next() {
+        return 64;
+    }
+
+    /**
+     * Return the size, in bytes, of each element of the array 'command_data_next'
+     */
+    public static int elementSize_command_data_next() {
+        return (16 / 8);
+    }
+
+    /**
+     * Return the size, in bits, of each element of the array 'command_data_next'
+     */
+    public static int elementSizeBits_command_data_next() {
+        return 16;
+    }
+
+    /**
+     * Return the number of dimensions in the array 'command_data_next'
+     */
+    public static int numDimensions_command_data_next() {
+        return 1;
+    }
+
+    /**
+     * Return the number of elements in the array 'command_data_next'
+     */
+    public static int numElements_command_data_next() {
+        return 4;
+    }
+
+    /**
+     * Return the number of elements in the array 'command_data_next'
+     * for the given dimension.
+     */
+    public static int numElements_command_data_next(int dimension) {
+      int array_dims[] = { 4,  };
+        if (dimension < 0 || dimension >= 1) throw new ArrayIndexOutOfBoundsException();
+        if (array_dims[dimension] == 0) throw new IllegalArgumentException("Array dimension "+dimension+" has unknown size");
+        return array_dims[dimension];
     }
 
 }

@@ -85,24 +85,16 @@ public class PingMsg extends net.tinyos.message.Message {
     public String toString() {
       String s = "Message <PingMsg> \n";
       try {
-        s += "  [nx_struct PingMsg 5 11
-=0x"+Long.toHexString(get_nx_struct PingMsg 5 11
-())+"]\n";
+        s += "  [nodeid=0x"+Long.toHexString(get_nodeid())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct PingMsg 5 11
-=0x"+Long.toHexString(get_nx_struct PingMsg 5 11
-())+"]\n";
+        s += "  [counter=0x"+Long.toHexString(get_counter())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct PingMsg 5 11
-=0x"+Long.toHexString(get_nx_struct PingMsg 5 11
-())+"]\n";
+        s += "  [txpower=0x"+Long.toHexString(get_txpower())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       try {
-        s += "  [nx_struct PingMsg 5 11
-=0x"+Long.toHexString(get_nx_struct PingMsg 5 11
-())+"]\n";
+        s += "  [channel=0x"+Long.toHexString(get_channel())+"]\n";
       } catch (ArrayIndexOutOfBoundsException aioobe) { /* Skip field */ }
       return s;
     }
@@ -110,351 +102,255 @@ public class PingMsg extends net.tinyos.message.Message {
     // Message-type-specific access methods appear below.
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct PingMsg 5 11
-
-    //   Field type: 
+    // Accessor methods for field: nodeid
+    //   Field type: short, unsigned
     //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 24 8
-
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is signed (false).
+     * Return whether the field 'nodeid' is signed (false).
      */
-    public static boolean isSigned_nx_struct PingMsg 5 11
-() {
+    public static boolean isSigned_nodeid() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is an array (false).
+     * Return whether the field 'nodeid' is an array (false).
      */
-    public static boolean isArray_nx_struct PingMsg 5 11
-() {
+    public static boolean isArray_nodeid() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bytes) of the field 'nodeid'
      */
-    public static int offset_nx_struct PingMsg 5 11
-() {
+    public static int offset_nodeid() {
         return (0 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bits) of the field 'nodeid'
      */
-    public static int offsetBits_nx_struct PingMsg 5 11
-() {
+    public static int offsetBits_nodeid() {
         return 0;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the value (as a short) of the field 'nodeid'
      */
-    public  get_nx_struct PingMsg 5 11
-() {
-        return ()get(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-);
+    public short get_nodeid() {
+        return (short)getUIntBEElement(offsetBits_nodeid(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct PingMsg 5 11
-'
+     * Set the value of the field 'nodeid'
      */
-    public void set_nx_struct PingMsg 5 11
-( value) {
-        set(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-, value);
+    public void set_nodeid(short value) {
+        setUIntBEElement(offsetBits_nodeid(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bytes, of the field 'nodeid'
      */
-    public static int size_nx_struct PingMsg 5 11
-() {
-        return (  txpower Nnx_uint8_t 24 8
- / 8);
+    public static int size_nodeid() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bits, of the field 'nodeid'
      */
-    public static int sizeBits_nx_struct PingMsg 5 11
-() {
-        return   txpower Nnx_uint8_t 24 8
-;
+    public static int sizeBits_nodeid() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct PingMsg 5 11
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 24 8
-
+    // Accessor methods for field: counter
+    //   Field type: int, unsigned
+    //   Offset (bits): 8
+    //   Size (bits): 16
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is signed (false).
+     * Return whether the field 'counter' is signed (false).
      */
-    public static boolean isSigned_nx_struct PingMsg 5 11
-() {
+    public static boolean isSigned_counter() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is an array (false).
+     * Return whether the field 'counter' is an array (false).
      */
-    public static boolean isArray_nx_struct PingMsg 5 11
-() {
+    public static boolean isArray_counter() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bytes) of the field 'counter'
      */
-    public static int offset_nx_struct PingMsg 5 11
-() {
-        return (0 / 8);
+    public static int offset_counter() {
+        return (8 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bits) of the field 'counter'
      */
-    public static int offsetBits_nx_struct PingMsg 5 11
-() {
-        return 0;
+    public static int offsetBits_counter() {
+        return 8;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the value (as a int) of the field 'counter'
      */
-    public  get_nx_struct PingMsg 5 11
-() {
-        return ()get(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-);
+    public int get_counter() {
+        return (int)getUIntBEElement(offsetBits_counter(), 16);
     }
 
     /**
-     * Set the value of the field 'nx_struct PingMsg 5 11
-'
+     * Set the value of the field 'counter'
      */
-    public void set_nx_struct PingMsg 5 11
-( value) {
-        set(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-, value);
+    public void set_counter(int value) {
+        setUIntBEElement(offsetBits_counter(), 16, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bytes, of the field 'counter'
      */
-    public static int size_nx_struct PingMsg 5 11
-() {
-        return (  txpower Nnx_uint8_t 24 8
- / 8);
+    public static int size_counter() {
+        return (16 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bits, of the field 'counter'
      */
-    public static int sizeBits_nx_struct PingMsg 5 11
-() {
-        return   txpower Nnx_uint8_t 24 8
-;
+    public static int sizeBits_counter() {
+        return 16;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct PingMsg 5 11
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 24 8
-
+    // Accessor methods for field: txpower
+    //   Field type: short, unsigned
+    //   Offset (bits): 24
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is signed (false).
+     * Return whether the field 'txpower' is signed (false).
      */
-    public static boolean isSigned_nx_struct PingMsg 5 11
-() {
+    public static boolean isSigned_txpower() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is an array (false).
+     * Return whether the field 'txpower' is an array (false).
      */
-    public static boolean isArray_nx_struct PingMsg 5 11
-() {
+    public static boolean isArray_txpower() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bytes) of the field 'txpower'
      */
-    public static int offset_nx_struct PingMsg 5 11
-() {
-        return (0 / 8);
+    public static int offset_txpower() {
+        return (24 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bits) of the field 'txpower'
      */
-    public static int offsetBits_nx_struct PingMsg 5 11
-() {
-        return 0;
+    public static int offsetBits_txpower() {
+        return 24;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the value (as a short) of the field 'txpower'
      */
-    public  get_nx_struct PingMsg 5 11
-() {
-        return ()get(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-);
+    public short get_txpower() {
+        return (short)getUIntBEElement(offsetBits_txpower(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct PingMsg 5 11
-'
+     * Set the value of the field 'txpower'
      */
-    public void set_nx_struct PingMsg 5 11
-( value) {
-        set(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-, value);
+    public void set_txpower(short value) {
+        setUIntBEElement(offsetBits_txpower(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bytes, of the field 'txpower'
      */
-    public static int size_nx_struct PingMsg 5 11
-() {
-        return (  txpower Nnx_uint8_t 24 8
- / 8);
+    public static int size_txpower() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bits, of the field 'txpower'
      */
-    public static int sizeBits_nx_struct PingMsg 5 11
-() {
-        return   txpower Nnx_uint8_t 24 8
-;
+    public static int sizeBits_txpower() {
+        return 8;
     }
 
     /////////////////////////////////////////////////////////
-    // Accessor methods for field: nx_struct PingMsg 5 11
-
-    //   Field type: 
-    //   Offset (bits): 0
-    //   Size (bits):   txpower Nnx_uint8_t 24 8
-
+    // Accessor methods for field: channel
+    //   Field type: short, unsigned
+    //   Offset (bits): 32
+    //   Size (bits): 8
     /////////////////////////////////////////////////////////
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is signed (false).
+     * Return whether the field 'channel' is signed (false).
      */
-    public static boolean isSigned_nx_struct PingMsg 5 11
-() {
+    public static boolean isSigned_channel() {
         return false;
     }
 
     /**
-     * Return whether the field 'nx_struct PingMsg 5 11
-' is an array (false).
+     * Return whether the field 'channel' is an array (false).
      */
-    public static boolean isArray_nx_struct PingMsg 5 11
-() {
+    public static boolean isArray_channel() {
         return false;
     }
 
     /**
-     * Return the offset (in bytes) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bytes) of the field 'channel'
      */
-    public static int offset_nx_struct PingMsg 5 11
-() {
-        return (0 / 8);
+    public static int offset_channel() {
+        return (32 / 8);
     }
 
     /**
-     * Return the offset (in bits) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the offset (in bits) of the field 'channel'
      */
-    public static int offsetBits_nx_struct PingMsg 5 11
-() {
-        return 0;
+    public static int offsetBits_channel() {
+        return 32;
     }
 
     /**
-     * Return the value (as a ) of the field 'nx_struct PingMsg 5 11
-'
+     * Return the value (as a short) of the field 'channel'
      */
-    public  get_nx_struct PingMsg 5 11
-() {
-        return ()get(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-);
+    public short get_channel() {
+        return (short)getUIntBEElement(offsetBits_channel(), 8);
     }
 
     /**
-     * Set the value of the field 'nx_struct PingMsg 5 11
-'
+     * Set the value of the field 'channel'
      */
-    public void set_nx_struct PingMsg 5 11
-( value) {
-        set(offsetBits_nx_struct PingMsg 5 11
-(),   txpower Nnx_uint8_t 24 8
-, value);
+    public void set_channel(short value) {
+        setUIntBEElement(offsetBits_channel(), 8, value);
     }
 
     /**
-     * Return the size, in bytes, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bytes, of the field 'channel'
      */
-    public static int size_nx_struct PingMsg 5 11
-() {
-        return (  txpower Nnx_uint8_t 24 8
- / 8);
+    public static int size_channel() {
+        return (8 / 8);
     }
 
     /**
-     * Return the size, in bits, of the field 'nx_struct PingMsg 5 11
-'
+     * Return the size, in bits, of the field 'channel'
      */
-    public static int sizeBits_nx_struct PingMsg 5 11
-() {
-        return   txpower Nnx_uint8_t 24 8
-;
+    public static int sizeBits_channel() {
+        return 8;
     }
 
 }
