@@ -208,6 +208,7 @@ module RssiBaseC @safe() {
 			struct2save.rssi = getRssi(msg);
 			struct2save.nodecounter = btrpkt->counter;
 			struct2save.len = len;
+			struct2save.request = btrpkt->request;
 			
 			call RSSIQueue.enqueue(struct2save);
 		}
@@ -225,6 +226,7 @@ module RssiBaseC @safe() {
 		return msg;
 	}
 	
+	// DEPRECATED
 	void SimpleRssiMsgReceived(message_t ONE * msg, void ONE * payload, uint8_t len) {
 		// store RSSI to local buffer
 		MultiPingResponseReportStruct_t struct2save;
@@ -246,6 +248,7 @@ module RssiBaseC @safe() {
 			struct2save.rssi = getRssi(msg);
 			struct2save.nodecounter = btrpkt->counter;
 			struct2save.len = len;
+			struct2save.request = 0;
 			
 			call RSSIQueue.enqueue(struct2save);
 		}
@@ -347,6 +350,7 @@ module RssiBaseC @safe() {
 					btrpkt->nodeid[i] = tmpStruct.nodeid;
 					btrpkt->rssi[i] = tmpStruct.rssi;
 					btrpkt->len[i] = tmpStruct.len;
+					btrpkt->request[i] = tmpStruct.request;
 				}
 	
 				if (call UartMultiPingResponseSender.enqueueData(btrpkt, sizeof(MultiPingResponseReportMsg))==SUCCESS){
@@ -795,6 +799,7 @@ module RssiBaseC @safe() {
 
         // ping coutner
         btrpkt->counter = multiPingCurPackets;
+        btrpkt->request = multiPingRequest.counter;
 
     	if (call PingMsgSend.send(multiPingRequest.destination, &pingPkt, sizeof(MultiPingResponseMsg) + multiPingRequest.size) == SUCCESS) {
       	    multiPingBusy = TRUE;

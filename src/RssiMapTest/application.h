@@ -37,7 +37,7 @@
 #define RSSIMAPAPP_H__
 
 #ifndef TOSH_DATA_LENGTH
-#define TOSH_DATA_LENGTH 34
+#define TOSH_DATA_LENGTH 72
 #endif
 
 /**
@@ -150,6 +150,8 @@ typedef nx_struct NoiseFloorReadingMsg {
 typedef nx_struct MultiPingResponseMsg {
 	// SEQ number
 	nx_uint16_t counter;
+	// requets number
+	nx_uint16_t request;
 
 	// data field to support variable sized messages
 	nx_uint8_t data[0];
@@ -161,6 +163,7 @@ typedef nx_struct MultiPingResponseMsg {
 
 typedef nx_struct MultiPingResponseReportStruct {
 	nx_uint16_t nodeid;
+	nx_uint16_t request;
 	nx_uint16_t nodecounter;
 	nx_int16_t rssi;
 	nx_uint8_t len;
@@ -192,6 +195,7 @@ typedef nx_struct MultiPingResponseReportMsg {
 	// mig cannot work wih structures inside messages
 	//MultiPingResponseReportStruct buff[8];
 	nx_uint16_t nodeid[MULTIPINGRESPONSEREPORT_MAXDATA];
+	nx_uint16_t request[MULTIPINGRESPONSEREPORT_MAXDATA];
 	nx_uint16_t nodecounter[MULTIPINGRESPONSEREPORT_MAXDATA];
 	nx_int16_t rssi[MULTIPINGRESPONSEREPORT_MAXDATA];
 	nx_int8_t len[MULTIPINGRESPONSEREPORT_MAXDATA];
