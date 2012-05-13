@@ -38,7 +38,6 @@
  * @version $Revision: 1.22 $ $Date: 2009/10/28 21:09:52 $
  */
 
-#include "../RssiDemoMessages.h"
 #include "IEEE802154.h"
 #include "message.h"
 #include "AM.h"

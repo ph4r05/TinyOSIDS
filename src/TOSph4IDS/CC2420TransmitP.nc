@@ -38,7 +38,6 @@
  * @version $Revision: 1.16 $ $Date: 2009/10/28 21:09:52 $
  */
 
-#include "../RssiDemoMessages.h"
 #include "CC2420.h"
 #include "CC2420TimeSyncMessage.h"
 #include "crc.h"
