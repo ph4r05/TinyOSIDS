@@ -1,5 +1,3 @@
-#COMPONENT=RssiBaseAppC
-
 INCLUDES= -I..               		\
           -I../Reset		 		\
           -I$(TOSDIR)/lib/net 		\

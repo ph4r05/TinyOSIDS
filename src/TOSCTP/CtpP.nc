@@ -50,7 +50,6 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../RssiDemoMessages.h"
 #include "CtpForwardingEngine.h"
 /**
  * A data collection service that uses a tree routing protocol
