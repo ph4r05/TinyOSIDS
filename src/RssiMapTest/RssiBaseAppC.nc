@@ -120,9 +120,7 @@ configuration RssiBaseAppC {
  
   // split control notifiers
   App.RadioControl -> ActiveMessageC;
-  
-  components SerialActiveMessageC;
-  App.SerialControl -> SerialActiveMessageC;
+  App.SerialControl -> Serial;
   
   App.Boot -> MainC;
   App.SendTimer -> SendTimer;
@@ -131,9 +129,10 @@ configuration RssiBaseAppC {
   
   App.PingMsgSend -> PingMsgSender;
   App.Leds -> LedsC;
-  App.Packet -> PingMsgSender;
-  App.AMPacket -> PingMsgSender;
-  App.Acks -> PingMsgSender;
+  
+  App.Packet -> ActiveMessageC;
+  App.AMPacket -> ActiveMessageC;
+  App.Acks -> ActiveMessageC;
   
   App.RadioPacket -> ActiveMessageC;
   App.RadioAMPacket -> ActiveMessageC;
