@@ -1,15 +1,15 @@
 COMPONENT=RssiBaseAppC
 
 INCLUDES= -I..               		\
-          -I../InterceptBase 		\
           -I../Reset		 		\
+          -I../SerialQueueSender	\
+          -I../AMTap				\
+          -I../AMTapImpl			\
+          -I../TOSCTP				\
           -I$(TOSDIR)/lib/net 		\
           -I$(TOSDIR)/lib/net/le	\
           -I$(TOSDIR)/lib/net/ctp
-          -I../TOSph4IDS
-          -I../SerialQueueSender
-#          \
-#          -I$(TOSDIR)/lib/net/lqi
+          
 
 CFLAGS += $(INCLUDES)
 
