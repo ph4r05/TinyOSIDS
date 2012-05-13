@@ -1,6 +1,7 @@
 COMPONENT=RssiBaseAppC
 
 INCLUDES= -I..               		\
+		  -I../AMTap		 		\
           -I../InterceptBase 		\
           -I../Reset		 		\
           -I$(TOSDIR)/lib/net 		\
