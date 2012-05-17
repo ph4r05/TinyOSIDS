@@ -254,6 +254,8 @@ implementation {
             error_t eval = SUCCESS;
             // copy data to payload
             memcpy((void*)msgPayload, (void*)smsg, metaPtr->len);
+            // need to set source correctly
+            call AMPacket.setSource(&uartPacket, TOS_NODE_ID);
             // try so send message
             eval = call AMSend.send(AM_BROADCAST_ADDR, &uartPacket, metaPtr->len);
             if (eval == SUCCESS) {

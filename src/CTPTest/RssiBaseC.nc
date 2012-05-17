@@ -325,7 +325,9 @@ module RssiBaseC @safe() {
 	        btrpkt->command_data_next[2] |= (0 << 8);
 	        btrpkt->command_data_next[3] = 0;
 	        btrpkt->command_data_next[3] |= (0<<8);
-	        
+	        // need to set source
+    		call UartAMPacket.setSource(&cmdPkt, TOS_NODE_ID);
+    		
 			if(call UartCommandSender.send(TOS_NODE_ID, &cmdPkt, sizeof(CommandMsg)) == SUCCESS) {
 				aliveCounter+=1;
 				serialBusy = TRUE;
@@ -581,6 +583,9 @@ module RssiBaseC @safe() {
     // ACK as reply, if not set already
     //if (btrpkt->command_code != COMMAND_ACK && btrpkt->command_code != COMMAND_NACK)
     //    btrpkt->command_code = COMMAND_ACK;
+
+	// need to set source
+    call UartAMPacket.setSource(&cmdPktResponse, TOS_NODE_ID);
 
     // send to base directly
     // sometimes node refuses to send too large packet. it will always end with fail
