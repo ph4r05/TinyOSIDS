@@ -44,6 +44,9 @@ configuration RssiBaseAppC {
   components SerialActiveMessageC as Serial;
   components ActiveMessageC, MainC, LedsC;  
 
+  // init timer (radio init)
+  components new TimerMilliC() as InitTimer;
+
   // keep alive send timer
   components new TimerMilliC() as AliveTimer;
   components ResetC;
@@ -87,6 +90,7 @@ configuration RssiBaseAppC {
   App.SerialControl -> Serial;
   
   App.Boot -> MainC;
+  App.InitTimer -> InitTimer;
   App.AliveTimer -> AliveTimer;
   
   //App.RadioControl -> ActiveMessageC;

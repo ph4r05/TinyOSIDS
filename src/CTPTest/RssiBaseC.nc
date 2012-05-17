@@ -41,14 +41,6 @@
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
 //#define CC2420_NO_ACKNOWLEDGEMENTS 1
-	
-#ifdef __CC2420_H__
-
-#elif defined(TDA5250_MESSAGE_H)
-      
-#else
-  
-#endif 
 
 module RssiBaseC @safe() {
 	uses {  		
@@ -90,6 +82,7 @@ module RssiBaseC @safe() {
 		
 	}
 
+  uses interface Timer<TMilli> as InitTimer;
   uses interface Timer<TMilli> as AliveTimer;
   
   uses interface PacketAcknowledgements as Acks;
@@ -168,6 +161,11 @@ module RssiBaseC @safe() {
   	void sendCtpInfoMsg(uint8_t type, uint8_t arg);
   	
 	/**************** GENERIC ****************/
+	bool radioOn=FALSE;  
+    bool radioRealOn=FALSE;  
+    uint16_t radioCn=0;
+    uint16_t radioInitCn=0;
+     
 	bool busy = TRUE;
 	bool serialBusy = TRUE;
   
@@ -230,18 +228,37 @@ module RssiBaseC @safe() {
 	
 	/************************ INITIALIZATION ************************/
 	event void Boot.booted() {
-		// nothing to say, you are goood ;-)
+		// prepare radio init 500ms after boot
+		call InitTimer.startOneShot(500);
+		
+		// start serial comm
+		call SerialControl.start();
+	}
+	
+	void task startRadio() {
+		call RadioControl.start();
+	}
+
+	void task stopRadio() {
+		call RadioControl.stop();
+	}
+
+	event void InitTimer.fired() {
+		radioOn = ! radioOn;
+		radioInitCn += 1;
+
+		if(radioOn) {
+			post startRadio();
+		}
+		else {
+			post stopRadio();
+		}
 	}
   
   	event void RadioControl.startDone(error_t error){
 		busy=FALSE;
 		
-		// set crypto keys
-#ifdef CC2420_HW_SECURITY		
-		call CC2420Keys.setKey(0, cryptokey); 
-#endif		
-		// start CTP's routing controll
-//		call ForwardingControl.start();
+		call ForwardingControl.start();
 	}
 
 	event void RadioControl.stopDone(error_t error){
@@ -255,6 +272,8 @@ module RssiBaseC @safe() {
 
 	event void SerialControl.startDone(error_t error){
 		serialBusy=FALSE;
+		call UartCtpReportDataSender.sendState(TRUE);
+		call UartCtpInfoMsgSender.sendState(TRUE);
 		call AliveTimer.startPeriodic(500);
 	}
   
@@ -287,15 +306,15 @@ module RssiBaseC @safe() {
 			btrpkt->command_version = 1;
 			btrpkt->command_data = 1;
 			// fill radio chip here
-	#ifdef __CC2420_H__
+		#ifdef __CC2420_H__
 	        btrpkt->command_data_next[0]=1;
-	#elif defined(PLATFORM_IRIS)
+		#elif defined(PLATFORM_IRIS)
 	        btrpkt->command_data_next[0]=2;
-	#elif defined(TDA5250_MESSAGE_H)
+		#elif defined(TDA5250_MESSAGE_H)
 	        btrpkt->command_data_next[0]=3;
-	#else
+		#else
 	        btrpkt->command_data_next[0]=4;
-	#endif
+		#endif
 	        // fill node ID
 	        btrpkt->command_data_next[1] = TOS_NODE_ID;
 	        

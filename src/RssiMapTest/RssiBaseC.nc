@@ -61,10 +61,8 @@ module RssiBaseC @safe() {
 	  interface QueueSender as UartMultiPingResponseSender;
 	
 	}
-
-/*
-  uses interface Intercept as Report;
-*/
+  
+  uses interface Timer<TMilli> as InitTimer;
   uses interface Timer<TMilli> as AliveTimer;
   uses interface Timer<TMilli> as SendTimer;
   uses interface Timer<TMilli> as PingTimer;
@@ -143,6 +141,11 @@ module RssiBaseC @safe() {
   	uint8_t operationMode=1;
   	
 	/**************** GENERIC ****************/
+	 bool radioOn=FALSE;  
+     bool radioRealOn=FALSE;  
+     uint16_t radioCn=0;
+     uint16_t radioInitCn=0;
+  
 	bool busy = TRUE;
 	bool serialBusy = TRUE;
   
@@ -294,7 +297,31 @@ module RssiBaseC @safe() {
 	
 	/************************ INITIALIZATION ************************/
 	event void Boot.booted() {
-		call UartMultiPingResponseSender.sendState(TRUE);
+		// prepare radio init 500ms after boot
+		call InitTimer.startOneShot(500);
+		
+		// start serial comm
+		call SerialControl.start();
+	}
+  
+	void task startRadio() {
+		call RadioControl.start();
+	}
+
+	void task stopRadio() {
+		call RadioControl.stop();
+	}
+
+	event void InitTimer.fired() {
+		radioOn = ! radioOn;
+		radioInitCn += 1;
+
+		if(radioOn) {
+			post startRadio();
+		}
+		else {
+			post stopRadio();
+		}
 	}
   
   	event void RadioControl.startDone(error_t error){
@@ -312,6 +339,7 @@ module RssiBaseC @safe() {
 
 	event void SerialControl.startDone(error_t error){
 		serialBusy=FALSE;
+		call UartMultiPingResponseSender.sendState(TRUE);
 		call AliveTimer.startPeriodic(500);
 	}
   
@@ -417,15 +445,15 @@ module RssiBaseC @safe() {
 			btrpkt->command_version = 1;
 			btrpkt->command_data = 1;
 			// fill radio chip here
-	#ifdef __CC2420_H__
+		#ifdef __CC2420_H__
 	        btrpkt->command_data_next[0]=1;
-	#elif defined(PLATFORM_IRIS)
+		#elif defined(PLATFORM_IRIS)
 	        btrpkt->command_data_next[0]=2;
-	#elif defined(TDA5250_MESSAGE_H)
+		#elif defined(TDA5250_MESSAGE_H)
 	        btrpkt->command_data_next[0]=3;
-	#else
+		#else
 	        btrpkt->command_data_next[0]=4;
-	#endif
+		#endif
 	        // fill node ID
 	        btrpkt->command_data_next[1] = TOS_NODE_ID;
 	        

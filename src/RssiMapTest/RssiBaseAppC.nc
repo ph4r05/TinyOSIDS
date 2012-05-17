@@ -47,6 +47,9 @@ configuration RssiBaseAppC {
   // PING beacon sender
   components new AMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
 
+  // radio init timer
+  components new TimerMilliC() as InitTimer;
+
   // RSSI report send timer
   components new TimerMilliC() as SendTimer;
   // keep alive send timer
@@ -123,6 +126,7 @@ configuration RssiBaseAppC {
   App.SerialControl -> Serial;
   
   App.Boot -> MainC;
+  App.InitTimer -> InitTimer;
   App.SendTimer -> SendTimer;
   App.AliveTimer -> AliveTimer;
   App.PingTimer -> PingTimer;
