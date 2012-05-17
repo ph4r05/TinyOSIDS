@@ -48,11 +48,11 @@
  * MIG has trouble to include some needed header files, so they are included in MUGhlp.h.
  */
 
-#ifdef MIG
-#include "../printf.h"
-#else
-#include "printf.h"
-#endif
+//#ifdef MIG
+//#include "../printf.h"
+//#else
+//#include "printf.h"
+//#endif
 
 #include "../commands.h"
 

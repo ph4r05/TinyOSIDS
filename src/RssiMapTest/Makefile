@@ -1,7 +1,6 @@
 COMPONENT=RssiBaseAppC
 
-INCLUDES= -I..               		\
-          -I../Reset		 		\
+INCLUDES= -I../Reset		 		\
           -I../SerialQueueSender	
 
 CFLAGS += $(INCLUDES)
@@ -14,6 +13,6 @@ ifneq ($(filter iris,$(MAKECMDGOALS)),)
 endif
 
 # increase tosh data length
-CFLAGS += -DTOSH_DATA_LENGTH=34
+CFLAGS += -DTOSH_DATA_LENGTH=72
 
 include $(MAKERULES)

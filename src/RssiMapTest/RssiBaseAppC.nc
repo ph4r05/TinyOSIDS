@@ -127,6 +127,7 @@ configuration RssiBaseAppC {
   
   App.Boot -> MainC;
   App.InitTimer -> InitTimer;
+  
   App.SendTimer -> SendTimer;
   App.AliveTimer -> AliveTimer;
   App.PingTimer -> PingTimer;

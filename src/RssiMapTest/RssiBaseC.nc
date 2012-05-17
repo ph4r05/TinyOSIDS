@@ -357,7 +357,7 @@ module RssiBaseC @safe() {
 			return;
 		}
 
-		atomic {
+		{
 			// queue is full?
 			if(call UartMultiPingResponseSender.full()==FALSE) {
 				// dequeue from RSSI QUEUE, Build message, add to serial queue
@@ -370,7 +370,7 @@ module RssiBaseC @safe() {
 				toSend = toSend > MULTIPINGRESPONSEREPORT_MAXDATA ? MULTIPINGRESPONSEREPORT_MAXDATA : toSend;
 				btrpkt->datanum = toSend;
 					
-				for(i=0; i<toSend; i++){
+				atomic for(i=0; i<toSend; i++){
 					// get data, but leave in queue, removed is only if operation was succ
 					MultiPingResponseReportStruct_t tmpStruct = call RSSIQueue.element(i);
 					btrpkt->counter=counter++;
@@ -438,12 +438,16 @@ module RssiBaseC @safe() {
 		
 		atomic {
 			btrpkt = (CommandMsg* ) (call UartCommandSender.getPayload(&cmdPkt, sizeof(CommandMsg)));
+			
+			// need to set source manualy here
+			call UartAMPacket.setSource(&cmdPkt, TOS_NODE_ID);
+			
 			// only one report here, yet
 			btrpkt->command_id = aliveCounter;
 			btrpkt->reply_on_command = COMMAND_IDENTIFY;
 			btrpkt->command_code = COMMAND_ACK;
 			btrpkt->command_version = 1;
-			btrpkt->command_data = 1;
+			btrpkt->command_data = TOS_NODE_ID;
 			// fill radio chip here
 		#ifdef __CC2420_H__
 	        btrpkt->command_data_next[0]=1;
@@ -667,6 +671,9 @@ module RssiBaseC @safe() {
 
     // setup message with data
     btrpkt->command_id = counter;
+    
+    // need to set source
+    call UartAMPacket.setSource(&cmdPktResponse, TOS_NODE_ID);
 
     // deprecated, allow to send any command
     // used for queueFlush command too
@@ -712,6 +719,9 @@ module RssiBaseC @safe() {
 			post sendNoiseReading();
 			return;
 		}
+		
+		// need to set source
+    	call UartAMPacket.setSource(&noisePkt, TOS_NODE_ID);
 		
 		// construct new command packet with answer
 		btrpkt = (NoiseFloorReadingMsg* ) (call UartNoiseAMSend.getPayload(&noisePkt, sizeof(NoiseFloorReadingMsg)));
