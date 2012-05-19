@@ -47,6 +47,10 @@ implementation {
   AddOnP.CC2420PacketBody -> CC2420PacketC;
   AddOnP.CC2420Packet -> CC2420PacketC;
   
+  // statistics manager is wired to this addon 
+  components StatManC;
+  AddOnP.StatMan -> StatManC.StatMan;
+  
   // provides wiring
   AddOn = AddOnP.AddOn;
 }

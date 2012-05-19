@@ -31,6 +31,9 @@ module AddOnP @safe() {
 		// to be able to directly access packet fields (metadata, headers)
 		interface CC2420Packet;
 	    interface CC2420PacketBody;
+	    
+	    // statistics manager here
+	    interface StatMan;
     }
 	
 	provides {
@@ -44,7 +47,7 @@ implementation
     // perform init tasks
     // prepare queues, starts interfaces
     event void Boot.booted() {
-        
+        call StatMan.test();
     }
     
     command void AddOn.test(){

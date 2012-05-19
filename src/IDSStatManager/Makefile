@@ -1,4 +1,4 @@
-COMPONENT=AddOnC
+COMPONENT=StatManC
 
 INCLUDES= -I../Reset		 		\
 		  -I../AMTap				\
@@ -7,8 +7,8 @@ INCLUDES= -I../Reset		 		\
           -I../AMTapImpl			\
           -I../MACAuth				\
           -I../TOSCTP				\
-          -I../TOSph4IDS		 	\
-          -I../IDSStatManager		 			
+          -I../TOSph4IDS			\
+          -I../IDSAddOn	 				
 #		  -I%T/lib/printf			\          
 
 CFLAGS += $(INCLUDES)
