@@ -228,4 +228,8 @@ implementation {
     call Resource.release[client]();
   }
 
+
+	event void CC2420Config.syncDone(error_t error){
+		// TODO Auto-generated method stub
+	}
 }

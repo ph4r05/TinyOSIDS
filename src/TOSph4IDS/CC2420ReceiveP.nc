@@ -662,7 +662,7 @@ implementation {
       // result of CRC check - see CC2420 datasheet.
       // Check CRC only if CRC check is enabled
       // condition: pass if is CRC check disabled in this layer, OR CRC check is correct
-      if ((call CC2420Config.CRCCheck() < 2 || (buf[ rxFrameLength ] >> 7 )) && rx_buf ) {
+      if ((call CC2420Config.getCRCCheck() < 2 || (buf[ rxFrameLength ] >> 7 )) && rx_buf ) {
         uint8_t type = ( header->fcf >> IEEE154_FCF_FRAME_TYPE ) & 7;
         signal CC2420Receive.receive( type, m_p_rx_buf );
         if ( type == IEEE154_TYPE_DATA ) {

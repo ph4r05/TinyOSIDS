@@ -119,9 +119,9 @@ interface CC2420Config {
    * 1 => perform CRC check only at upper layer (CC2420ActiveMessage/CC2420TinyOsMessage), no at lower layer 
    * 2 => classical CRC check operation 
    */
-  command uint8_t getCRCCheck();
-  command void setCRCCheck(uint8_t crc); 
+  async command uint8_t getCRCCheck();
+  async command void setCRCCheck(uint8_t crc); 
 
-  command uint8_t getCRCFlags();
-  command void setCRCFlags(uint8_t flags); 
+  async command uint8_t getCRCFlags();
+  async command void setCRCFlags(uint8_t flags); 
 }

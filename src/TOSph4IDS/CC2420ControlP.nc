@@ -504,24 +504,23 @@ implementation {
   }
 
   /***************** CRC check options  ****************/
-  command uint8_t getCRCCheck(){
+  async command uint8_t CC2420Config.getCRCCheck(){
       atomic return CRCCheck;
   }
   
-  command void setCRCCheck(uint8_t crc){
+  async command void CC2420Config.setCRCCheck(uint8_t crc){
       // if invalid mode is set -> set default CRC operation
       if (crc>3) crc=2;
       atomic CRCCheck = crc;
   }
 
-  command uint8_t getCRCFlags(){
+  async command uint8_t CC2420Config.getCRCFlags(){
      atomic return CRCFlags;
   }
 
-  command void setCRCFlags(uint8_t flags){
+  async command void CC2420Config.setCRCFlags(uint8_t flags){
      atomic CRCFlags = flags;
   }
-
   
   /***************** Defaults ****************/
   default event void CC2420Config.syncDone( error_t error ) {

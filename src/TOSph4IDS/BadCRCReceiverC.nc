@@ -3,5 +3,5 @@ configuration BadCRCReceiverC {
 
 } implementation {
 	components CC2420ReceiveC;
-        ReceiveBadCRC = CC2420ReceiveC.ReceiveBadCRC;
+    ReceiveBadCRC = CC2420ReceiveC.ReceiveBadCRC;
 }

@@ -154,6 +154,11 @@ implementation {
    * Time when was the first CCA check performed - used to compute CCA wait time
    */
   uint32_t ccaStartTime;
+  
+  /**
+   * Current/last message id
+   */
+  uint32_t curMsgId;
 #endif  
   /***************** Prototypes ****************/
   error_t send( message_t * ONE p_msg, bool cca );

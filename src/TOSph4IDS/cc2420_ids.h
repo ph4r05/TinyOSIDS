@@ -141,11 +141,11 @@ typedef nx_struct cc2420_metadata_t {
 	// has meaning only for received messages
 	nx_bool authentic;
 #endif
-	// timestamp when first CCA was sampled
-	// has meaning only for SENT messages
+	// Timestamp when first CCA was sampled.
+	// Has meaning only for SENT messages
 	nx_uint32_t ccaWaitTime;
-	// number of CCA checks needed to send message
-	// has meaning only for SENT messages
+	// Number of CCA checks needed to send message.
+	// Has meaning only for SENT messages
 	nx_uint8_t ccaWaitRounds;
 
   nx_uint32_t timestamp;
