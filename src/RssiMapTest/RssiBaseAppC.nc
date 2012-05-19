@@ -58,7 +58,7 @@ configuration RssiBaseAppC {
   components new TimerMilliC() as PingTimer;
   
   // RSSI reading queue
-  components new QueueC(MultiPingResponseReportStruct_t, RSSI_QUEUE_LEN) as RSSIQueue;
+  components new ObjQueueC(MultiPingResponseReportStruct_t, RSSI_QUEUE_LEN) as RSSIQueue;
   // HW rad reset component
   components ResetC;
   

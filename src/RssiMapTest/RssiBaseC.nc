@@ -81,7 +81,7 @@ module RssiBaseC @safe() {
   uses interface Boot;
 
   // store RSSI measurements
-  uses interface Queue<MultiPingResponseReportStruct_t> as RSSIQueue;
+  uses interface ObjQueue<MultiPingResponseReportStruct_t> as RSSIQueue;
 
 	/**************** RADIO DEPENDENT INTERFACES ****************/
 #ifdef __CC2420_H__
@@ -212,8 +212,10 @@ module RssiBaseC @safe() {
 			struct2save.nodecounter = btrpkt->counter;
 			struct2save.len = len;
 			struct2save.request = btrpkt->request;
-			
-			call RSSIQueue.enqueue(struct2save);
+#ifdef DEBUGPRINTF
+		printf("pingRecv: %d\n", btrpkt->request);
+#endif			
+			call RSSIQueue.enqueue(&struct2save);
 		}
 		
 		sendBlink();
@@ -253,7 +255,7 @@ module RssiBaseC @safe() {
 			struct2save.len = len;
 			struct2save.request = 0;
 			
-			call RSSIQueue.enqueue(struct2save);
+			call RSSIQueue.enqueue(&struct2save);
 		}
 		
 		sendBlink();
@@ -357,7 +359,7 @@ module RssiBaseC @safe() {
 			return;
 		}
 
-		{
+		atomic {
 			// queue is full?
 			if(call UartMultiPingResponseSender.full()==FALSE) {
 				// dequeue from RSSI QUEUE, Build message, add to serial queue
@@ -372,13 +374,16 @@ module RssiBaseC @safe() {
 					
 				atomic for(i=0; i<toSend; i++){
 					// get data, but leave in queue, removed is only if operation was succ
-					MultiPingResponseReportStruct_t tmpStruct = call RSSIQueue.element(i);
+					MultiPingResponseReportStruct_t * tmpStruct = call RSSIQueue.element(i);
 					btrpkt->counter=counter++;
-					btrpkt->nodecounter[i] = tmpStruct.nodecounter;
-					btrpkt->nodeid[i] = tmpStruct.nodeid;
-					btrpkt->rssi[i] = tmpStruct.rssi;
-					btrpkt->len[i] = tmpStruct.len;
-					btrpkt->request[i] = tmpStruct.request;
+					btrpkt->nodecounter[i] = tmpStruct->nodecounter;
+					btrpkt->nodeid[i] = tmpStruct->nodeid;
+					btrpkt->rssi[i] = tmpStruct->rssi;
+					btrpkt->len[i] = tmpStruct->len;
+					btrpkt->request[i] = tmpStruct->request;
+#ifdef DEBUGPRINTF
+					printf("rr: %d\n", btrpkt->request[i]);
+#endif	
 				}
 	
 				if (call UartMultiPingResponseSender.enqueueData(btrpkt, sizeof(MultiPingResponseReportMsg))==SUCCESS){
@@ -838,7 +843,9 @@ module RssiBaseC @safe() {
         // ping coutner
         btrpkt->counter = multiPingCurPackets;
         btrpkt->request = multiPingRequest.counter;
-
+#ifdef DEBUGPRINTF
+		printf("pingSend: %d\n", btrpkt->request);
+#endif	
     	if (call PingMsgSend.send(multiPingRequest.destination, &pingPkt, sizeof(MultiPingResponseMsg) + multiPingRequest.size) == SUCCESS) {
       	    multiPingBusy = TRUE;
     	}
@@ -863,6 +870,9 @@ module RssiBaseC @safe() {
 			return;
 		}
 		
+#ifdef DEBUGPRINTF
+		printf("ReqRecv: %d\n", btrpkt->counter);
+#endif
 		// copy current request from packet to local var
 		memcpy((void*)&multiPingRequest, payload, sizeof(MultiPingMsg));
 		// set curr running to zero, stop timer 

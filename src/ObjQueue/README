@@ -1,0 +1,6 @@
+Similar to QueueC component, but this takes structure passed as a pointer and copies 
+it into the memory slot allocated for it in queue. 
+
+Thus using this component one can initialize local structure and push to queue. 
+There is no need to take care about buffers in user code. After push (enqueue) you can
+modify local structure without modifying pushed structure, it remains same.

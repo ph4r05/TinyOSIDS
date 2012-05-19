@@ -36,8 +36,11 @@
 #ifndef RSSIMAPAPP_H__
 #define RSSIMAPAPP_H__
 
+// disable debug in "production"
+//#define DEBUGPRINTF
+
 #ifndef TOSH_DATA_LENGTH
-#define TOSH_DATA_LENGTH 72
+#define TOSH_DATA_LENGTH 112
 #endif
 
 /**
@@ -48,11 +51,13 @@
  * MIG has trouble to include some needed header files, so they are included in MUGhlp.h.
  */
 
-//#ifdef MIG
-//#include "../printf.h"
-//#else
-//#include "printf.h"
-//#endif
+#ifdef DEBUGPRINTF
+#ifdef MIG
+#include "../printf.h"
+#else
+#include "printf.h"
+#endif
+#endif
 
 #include "../commands.h"
 
