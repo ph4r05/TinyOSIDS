@@ -713,15 +713,23 @@ module RssiBaseC @safe() {
 	// sends prepared noise floor reading data
 	void task sendNoiseReading(){
 		NoiseFloorReadingMsg * btrpkt = NULL;
+		error_t sendError;
+		
 		// ise noise floor data valid?
 		if (noiseFresh==FALSE){
 			// nothing to do, noise data is not valid
+#ifdef DEBUGPRINTF
+	  		printf("noiseNF\n");
+#endif	  				
 			return;	
 		}
 		
 		// if is busy try another time
 		if (noiseBusy==TRUE){
 			post sendNoiseReading();
+#ifdef DEBUGPRINTF
+	  		printf("noiseBU\n");
+#endif			
 			return;
 		}
 		
@@ -734,11 +742,18 @@ module RssiBaseC @safe() {
 		btrpkt->counter = noiseCounter;
 		btrpkt->noise = noiseData;
 		
-		if(call UartNoiseAMSend.send(TOS_NODE_ID, &noisePkt, sizeof(NoiseFloorReadingMsg)) == SUCCESS) {
+		sendError = call UartNoiseAMSend.send(TOS_NODE_ID, &noisePkt, sizeof(NoiseFloorReadingMsg));
+		if(sendError == SUCCESS) {
 			noiseBusy=TRUE;
 			sendBlink();
+#ifdef DEBUGPRINTF
+	  		printf("noiseSNT\n");
+#endif			
 		}
 		else {
+#ifdef DEBUGPRINTF
+	  		printf("noiseERR %d\n", sendError);
+#endif			
 			dbg("Cannot send identify message");
 			post sendNoiseReading();	
 		}
@@ -1000,6 +1015,9 @@ module RssiBaseC @safe() {
    * Can meassure only when radio is not busy and there is some space on queue
    */
   error_t readNoiseFloor(){
+#ifdef DEBUGPRINTF
+	  printf("noiseR1\n");
+#endif	  	
       return call ReadRssi.read();
       
       //failBlink();
@@ -1011,6 +1029,9 @@ module RssiBaseC @safe() {
       if (error==SUCCESS){
       	noiseFresh = TRUE;
       	noiseData = data;
+#ifdef DEBUGPRINTF
+	    printf("noiseR2: %d\n", data);
+#endif	  	      	
       	post sendNoiseReading();
 	  } else {
 	  	// noise floor reading failed, start again
