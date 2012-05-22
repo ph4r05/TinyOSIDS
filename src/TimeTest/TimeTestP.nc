@@ -434,7 +434,7 @@ implementation {
   event void Control.startDone(error_t err) {
     if (err == SUCCESS) {
       // serial init successful, start sending status reports 
-      //call MilliTimer.startPeriodic(1000);
+      //call MilliTimer.startPeriodic(20);
     }
   }
   event void Control.stopDone(error_t err) {}
