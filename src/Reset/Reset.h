@@ -63,7 +63,7 @@ void resetMote()
   	while (1) { 
   		__asm__ __volatile__("nop" "\n\t" ::);
   	}
-#elif defined(PLATFORM_TELOS) || defined(PLATFORM_TELOSB) || defined(PLATFORM_EPIC)
+#elif defined(PLATFORM_TELOS) || defined(PLATFORM_TELOSB) || defined(PLATFORM_EPIC) || defined(PLATFORM_WSN430V14) || defined(PLATFORM_WSN430V13) || defined(MSP430ADC12_H)
         WDTCTL = 0;
         while (1) { 
 	  		__asm__ __volatile__("nop" "\n\t" ::);

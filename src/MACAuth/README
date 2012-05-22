@@ -1,0 +1,15 @@
+This components helps to determine whether was received message correctly authenticated or not.
+
+In tinyos 2.1.1 there is no check implemented on message authenticity! Message can be sent 
+authenticated, auth check is performed in HW (CC2420 case), but result of such check is just ignored
+and MIC bytes are stripped off. As a consequence, unauthenticated message will pass to upper layer 
+with no problem. 
+
+This is specifically intended for CC2420 chip. Since there is no support for authenticity checking
+in lower layers, this is only for this particular chip. There are some assumptions on
+packet format (see CC2420 data sheet, MIC section) that probably does not hold with different
+radio chip.
+
+For more information see MACAuth interface, it is well documented and usage should be 
+straightforward.
+

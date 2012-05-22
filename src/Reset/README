@@ -1,0 +1,5 @@
+This component should provide simple service - HW reset of node.
+
+This should work for multiple platforms. Principle is easy - after calling reset,
+100ms timer is launched (to provide some delay between reset request and real reset),
+and then is launched simple code that will cause watchdog to restart node.

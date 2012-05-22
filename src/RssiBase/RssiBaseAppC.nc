@@ -36,6 +36,7 @@
 #include "../RssiDemoMessages.h"
 #include "message.h"
 #include "../Reset/Reset.h"
+#include "Ctp.h"
 
 configuration RssiBaseAppC {
 } implementation {
@@ -46,7 +47,15 @@ configuration RssiBaseAppC {
   components SerialActiveMessageC as Serial;
   
   components ActiveMessageC, MainC, LedsC;  
+
+#ifdef CC2420_HW_SECURITY
+  components new SecAMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
+#else
   components new AMSenderC(AM_MULTIPINGRESPONSEMSG) as PingMsgSender;
+#endif
+
+  components new AMSenderC(AM_COMMANDMSG) as RadioCmdAMSend;
+
   //components new AMSenderC(AM_PINGMSG) as PingMsgSender;
   // RSSI report send timer
   components new TimerMilliC() as SendTimer;
@@ -67,6 +76,13 @@ configuration RssiBaseAppC {
 #ifdef __CC2420_H__
   components CC2420ActiveMessageC;
   App -> CC2420ActiveMessageC.CC2420Packet;
+//  App.CC2420PacketBody -> CC2420Packet.CC2420PacketBody;
+  
+#ifdef CC2420_HW_SECURITY 
+	components CC2420KeysC;
+	App.CC2420Security -> PingMsgSender;
+	App.CC2420Keys -> CC2420KeysC;
+#endif
   
    // setting channel
   components CC2420RadioC;
@@ -89,17 +105,17 @@ configuration RssiBaseAppC {
   
 // MultiPingRequest intercept from radio
   App.MultiPingRadioIntercept -> BaseStationC.RadioIntercept[AM_MULTIPINGMSG];
-  
 // MultiPingRequest intercept from serial
   App.MultiPingSerialIntercept -> BaseStationC.SerialIntercept[AM_MULTIPINGMSG];
 // serial interceptors - do not forward messages for myself
   App.SerialCommandIntercept->BaseStationC.SerialIntercept[AM_COMMANDMSG];
   
-  
 // sending reports to UART via queue
   App.UartAMSend -> BaseStationC.SerialSend[AM_MULTIPINGRESPONSEREPORTMSG];
 // sending commands and alive reports  
  App.UartCmdAMSend -> BaseStationC.SerialSend[AM_COMMANDMSG];
+// radio command senging
+ App.RadioCmdAMSend -> RadioCmdAMSend;
 // sending noise floor readings 
  App.UartNoiseAMSend -> BaseStationC.SerialSend[AM_NOISEFLOORREADINGMSG];
 // Quick serial sending by pushing to queue
@@ -121,6 +137,7 @@ configuration RssiBaseAppC {
   App.Leds -> LedsC;
   App.Packet -> PingMsgSender;
   App.AMPacket -> PingMsgSender;
+  App.Acks -> PingMsgSender;
   
   App.RadioPacket -> ActiveMessageC;
   App.RadioAMPacket -> ActiveMessageC;
@@ -134,4 +151,72 @@ configuration RssiBaseAppC {
   
   /**************** NOISE FLOOR READING ****************/
   App.NoiseFloorTimer -> NoiseFloorTimer;
+  
+  /**************** Collector ****************/   
+    components CollectionC as Collector, new CollectionSenderC(AM_CTPRESPONSEMSG);
+    
+    App.ForwardingControl -> Collector.StdControl;
+    App.RoutingInit -> Collector.RoutingInit;
+    App.ForwardingInit -> Collector.ForwardingInit;
+    App.LinkEstimatorInit -> Collector.LinkEstimatorInit;
+    
+    App.CtpSend -> CollectionSenderC;
+    App.RootControl -> Collector;
+  	App.CtpInfo -> Collector;
+//    App.CtpCongestion -> Collector;
+    App.CollectionPacket -> Collector;
+    App.CtpReceive -> Collector.Receive[AM_CTPRESPONSEMSG];
+
+    components RandomC;
+    App.Random -> RandomC;
+    
+    // send timer for repeated sending of CTP messages
+  	components new TimerMilliC() as CtpTimer;
+  	App.CtpTimer -> CtpTimer;
+  	
+  	// intercept requests for CTP sending
+  	App.CtpRequestSerialIntercept -> BaseStationC.SerialIntercept[AM_CTPSENDREQUESTMSG];
+  	
+  	// send collected reports
+    App.UartCtpReportDataAMSend -> BaseStationC.SerialSend[AM_CTPREPORTDATAMSG];
+  	
+  	// tapping interface
+  	App.AMTap -> BaseStationC.AMTap;
+  	
+  	// tapping interface from forged message
+  	// Since BaseStation does not support radioSending correctly now, we need
+  	// to hook send() calls by this way. Needed to set TX power for some messages
+  	components ForgedActiveMessageC as FAM;
+  	App.AMTapForg -> FAM.AMTap;
+  	
+  	// do not forward CTP messages, save UART bandwidth
+  	App.CtpRoutingIntercept -> BaseStationC.RadioIntercept[AM_CTP_ROUTING];
+  	App.CtpDataIntercept -> BaseStationC.RadioIntercept[AM_CTP_DATA];
+  	App.CtpDebugIntercept -> BaseStationC.RadioIntercept[AM_CTP_DEBUG];
+  	
+  	// LOGGER DISABLED TEMPORARILY
+  	// Logger produces intensive data streams, if everybody is set to listen to 
+  	// everything (snooping, addressDetection=false), it can cause UART queues to 
+  	// overflow very quickly, since debug message can be send plenty times for 
+  	// only 1 CTP message from 1 node (approx. each routing decision) 
+  	
+  	App.ForwardControl -> Collector.ForwardControl;
+  	
+  	// implement debug to see real CTP behavior and routing decisions
+  components UARTDebugSenderP as LoggerC;
+	LoggerC.UARTSend -> BaseStationC.SerialSend[AM_CTP_DEBUG];
+	LoggerC.Boot -> MainC;
+	
+	components new PoolC(message_t, 5) as CTPDbgPool;
+	components new QueueC(message_t*, 5) as CTPDbgQueue;
+	LoggerC.SendQueue -> CTPDbgQueue;
+	LoggerC.MessagePool -> CTPDbgPool;  	
+    Collector.CollectionDebug -> LoggerC;
+    App.CtpLoggerControl -> LoggerC.StdControl;
+    App.CtpLogger -> LoggerC.CollectionDebug;
+//  	
+//components DefaultLplC;
+
+//////// TIMESYNC
+//App.TimeSyncSend -> BaseStationC.SerialSend[AM_TIMESYNCMSG];
 }

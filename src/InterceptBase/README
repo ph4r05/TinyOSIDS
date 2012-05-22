@@ -1,0 +1,43 @@
+This component should ease to build complex application with keeping base station features.
+It enables to forward messages from radio to serial and vice versa. 
+
+Basic feature:
+ - one can define interceptor for specific message type. Thus one can process received message,
+ 	manipulate with it, control forwarding (whether received message will be forwarded or dropped).
+
+Some additional features were added:
+ - radio start and stop process is tuned for telosb, micaz, senslab(wsn430v14, weird hack 
+ 	was needed in order to compile successfully, but it works), 
+ 	iris platform (there was problem with fast radio start after serial start)
+ - ability to turn on/off default message types forwarding (without defined interceptor - forward or not?)
+ 	see InterceptBaseConfig interface
+ - determine serial and radio queues free space
+ 	see InterceptBaseConfig interface
+ - provides AMSend interface for SerialSending - as normal interface, but message to send is
+ 	stored to common serial queue (common with basestation queues)
+ - provides Queue<serialqueue_element_t *> interface. This interface is Queue but acts as
+ 	message sender. Its original purpose is to ease sending report messages via serial.
+ 	One pushes message to this interface and doesn't care about sendDone and blocking.
+ 	This queue absorbs some amount of messages. Can push more messages in one call. Messages
+ 	are sent via serialQueue (common with basestation queue) ASAP.
+ - provides specialized AMTap interface designed for this component.
+ - provides Receive and Snoop interfaces for radio communication - works with shared queues.
+  - provides AMSend interface for Radio sending, but beware, this particular interface is not well
+ 	tested, there is probably a bug in implementation. Avoid using this interface. Better use AMSenderC.
+ 	I tested this interface with CTP and it didn't worked properly.
+
+In order to do BaseStation job correctly, this component directly receives and sends 
+messages via ActiveMessageC and SerialActiveMessageC thus there can be some problems
+with fairness of requests to send message with abstraction AMSenderC and SerialAMSenderC.
+This basic limitation is required since base station forwards arbitrary message types
+so it cannot wire directly to some particular message type to AMSenderC or AMReceiverC.
+
+Another detail needs to be taken to account - fan out problem when application based on
+InterceptBase component sends message with particular message type (thus is wired to 
+particular message type to AMSenderC). Problem could occur when InterceptBase wants to
+send message with same message type (from serial to radio). InterceptBase sends messages
+directly via ActiveMessageC thus when it sends that message, fan out occurs and sendDone
+could be called on applications AMSenderC. Thus it is needed to check returned message pointer
+whether confirmed message is that one that I sent. Otherwise sendDone notification can be
+ignored.   
+

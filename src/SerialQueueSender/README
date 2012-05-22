@@ -1,0 +1,8 @@
+This component is used to ease sending report messages to serial (uart). 
+
+It is message queue where message can be pushed. Component tries to send message
+several times until is message sent correctly. User don't have to bother with
+re-sending, sendDone handling, locking and busy checking stuff. 
+
+Messages in queue are sent as soon as possible.
+

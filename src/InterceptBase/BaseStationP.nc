@@ -54,10 +54,14 @@
 
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
-#define CC2420_NO_ACKNOWLEDGEMENTS 1
+//#define CC2420_NO_ACKNOWLEDGEMENTS 1
 #include "AM.h"
 #include "Serial.h"
 #include "../RssiDemoMessages.h"
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
 
 module BaseStationP @safe() {
     uses
@@ -109,20 +113,27 @@ module BaseStationP @safe() {
     	
     	// more complex BS configuration
     	interface InterceptBaseConfig;
+    	
+    	interface AMSend[am_id_t id];
+    	interface Receive[am_id_t id];
+    	interface Receive as Snoop[am_id_t id];
+    	
+    	interface AMTap;
     }
 }
 
 implementation
 {  
     enum {
-        UART_QUEUE_LEN = 32,
-        RADIO_QUEUE_LEN = 16,
+        UART_QUEUE_LEN = 24,
+        RADIO_QUEUE_LEN = 8,
         TIME_TO_RESET=10000,
         UART_TIME=3,
         RADIO_TIME=3,
         RESET_TIME=400,
         
         UART_RESET_THRESHOLD=30,
+        RADIO_RETRY_COUNT=10,
     };
 
     // serial queue & management
@@ -134,12 +145,12 @@ implementation
     message_t uartQueueBufs[UART_QUEUE_LEN];
     // array of pointers to messages in queue. Messages are really stored 
     // in buffs or in 1 message queue in receive buffer.
-    message_t * uartQueue[UART_QUEUE_LEN];
+    message_t * ONE uartQueue[UART_QUEUE_LEN];
     // queue for external packets. If not null, then packet on specified position is
     // from external source
     //  a) keeps message original pointer for messageSent notif
     //  b) signalization purposes for special handling with external messages
-    message_t * uartQueueExternal[UART_QUEUE_LEN];
+    message_t * ONE_NOK uartQueueExternal[UART_QUEUE_LEN];
     uint8_t uartIn, uartOut;
     bool uartBusy, uartFull;
     // indicator - if 1 then packet in uart queue 
@@ -153,9 +164,22 @@ implementation
     // radioQueue = queue of received uart packets 
     // waiting to be send over radio    
     message_t radioQueueBufs[RADIO_QUEUE_LEN];
-    message_t * radioQueue[RADIO_QUEUE_LEN];
+    message_t * ONE radioQueue[RADIO_QUEUE_LEN];
+    // queue for external packets. If not null, then packet on specified position is
+    // from external source
+    //  a) keeps message original pointer for messageSent notif
+    //  b) signalization purposes for special handling with external messages
+    message_t * ONE_NOK radioQueueExternal[RADIO_QUEUE_LEN];
     uint8_t radioIn, radioOut;
     bool radioBusy, radioFull;
+    // source, destination...
+    uint8_t radioPacketSerial[RADIO_QUEUE_LEN/8+1];
+    // signalizes whether packet is enqueued from queue
+    uint8_t radioPacketExternal[RADIO_QUEUE_LEN/8+1];
+    // retrycounts
+    uint8_t radioPacketRetry[RADIO_QUEUE_LEN];
+    // cancel map
+    uint8_t radioPacketCancelMap[RADIO_QUEUE_LEN/8+1];
 
 	// is TRUE then forward by default
 	bool globalRadioForward=TRUE;
@@ -176,7 +200,9 @@ implementation
     task void uartSendTask();
     task void radioSendTask();
     void timedUartSendTask();
-    message_t * receive(message_t* msg, void* payload, uint8_t len, am_id_t id);
+    error_t getRadioMsgExternalIndex(message_t * msg, uint8_t * idx);
+    error_t getRadioMsgIndex(message_t * msg, uint8_t * idx);
+    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id, bool snoop, message_t * scndMsg);
 
     void sucBlink() {
         // no blibking on sucess
@@ -390,12 +416,19 @@ implementation
     // perform init tasks
     // prepare queues, starts interfaces
     event void Boot.booted() {
-        uint8_t i;
+        uint8_t i=0;
+        
+        // always 0, workaround for wsn430v14 compile bug:
+        // Internal compiler error in gen_lowpart, at emit-rtl.c:1197
+        // without [i+j] does not work... stupid
+        uint8_t j=0;
 
         // serial queue init
         for (i = 0; i < UART_QUEUE_LEN; i++) {
-            uartQueue[i] = &uartQueueBufs[i];
+            uartQueue[i] = &uartQueueBufs[i+j];
             uartQueueExternal[i] = NULL;
+            uartPacketExternal[i/8] = 0;
+            uartPacketSerial[i/8] = 0xff;
         }
         uartIn = uartOut = 0;
         uartBusy = FALSE;
@@ -403,7 +436,10 @@ implementation
 
         // radio queue init
         for (i = 0; i < RADIO_QUEUE_LEN; i++) {
-            radioQueue[i] = &radioQueueBufs[i];
+            radioQueue[i] = &radioQueueBufs[i+j];
+            radioPacketExternal[i/8] = 0x0;
+            radioPacketSerial[i/8] = 0x0;
+            radioPacketCancelMap[i/8] = 0x0;
         }
         radioIn = radioOut = 0;
         radioBusy = FALSE;
@@ -424,14 +460,15 @@ implementation
 
     // event handler, radio start done
     event void RadioControl.startDone(error_t error) {
-        uint8_t i;
+        uint8_t i=0;
+        uint8_t j=0;
         
         // sucessfull starting
         if (error == SUCCESS || error == EALREADY) {
             sucBlink();
             atomic {
                 for (i = 0; i < RADIO_QUEUE_LEN; i++) {
-                    radioQueue[i] = &radioQueueBufs[i];
+                    radioQueue[i] = &radioQueueBufs[i+j];
                 }
                 radioIn = radioOut = 0;
                 radioBusy = FALSE;
@@ -439,8 +476,9 @@ implementation
                 
                 // sucessfull reset, move to next phase
                 ++resetPhase;
-                call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            call ResetTimer.startOneShot(RESET_TIME);
             
             // signalize 
             signal BSRadioControl.startDone(error);
@@ -455,13 +493,14 @@ implementation
 
     // event handler, serial start done
     event void SerialControl.startDone(error_t error) {
-        uint8_t i;
+        uint8_t i=0;
+        uint8_t j=0;
         if (error == SUCCESS || error == EALREADY) {
             sucBlink();
-            atomic {
+            atomic {	
                 // serial queue init
                 for (i = 0; i < UART_QUEUE_LEN; i++) {
-                    uartQueue[i] = &uartQueueBufs[i];
+                    uartQueue[i] = &(uartQueueBufs[i+j]);
                     uartQueueExternal[i] = NULL;
                 }
                 uartIn = uartOut = 0;
@@ -470,8 +509,9 @@ implementation
                 
                 // sucessfull reset, move to next phase
                 ++resetPhase;
-                call ResetTimer.startOneShot(RESET_TIME);
             }
+            
+            call ResetTimer.startOneShot(RESET_TIME);
             
             // signalize 
             signal BSSerialControl.startDone(error);
@@ -527,21 +567,73 @@ implementation
 
 	// event handler - message snooped on radio interface, passing to general function receive
     event message_t * RadioSnoop.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
+    	message_t * retMsg;
     	if (radioSnooping==FALSE){
     		return msg;	
     	}
     	
-        return receive(msg, payload, len, id);
+    	// tapping interface
+    	retMsg = signal AMTap.snoop(id, msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
+    	if (retMsg!=msg){
+    		return retMsg;
+    	}
+    	
+    	// normal snoop interface
+    	retMsg = signal Snoop.receive[id](msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
+    	
+    	if (retMsg!=msg){
+    		return retMsg;
+    	}
+    	
+    	// forward to default receive
+        return receive(msg, payload, len, id, TRUE, retMsg);
     }
 
-	// event handler - message snooped on radio interface, passing to general function receive
+	/**
+	 * event handler - message snooped on radio interface, passing to general function receive
+	 * To preserve queue logic for buffering, need to throw packet away if receive will return
+	 * another message pointer. It does not mean because this message was intended for me directly
+	 * 
+	 * 
+	 */
     event message_t * RadioReceive.receive[am_id_t id](message_t *msg, void *payload, uint8_t len) {
-        return receive(msg, payload, len, id);
+    	message_t * retMsg;
+    	
+    	// tapping interface
+    	retMsg = signal AMTap.receive(id, msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
+    	if (retMsg!=msg){
+    		return retMsg;
+    	}
+    	
+    	// normal receive interface
+    	retMsg = signal Receive.receive[id](msg, payload, len);
+    	if (retMsg==NULL){
+    		// ignore message according to specification of AMTap
+    		return msg;
+    	}
+    	if (retMsg!=msg){
+    		return retMsg;
+    	}
+    	
+    	// forward to default receive
+        return receive(msg, payload, len, id, FALSE, retMsg);
     }
 
     // message received from radio here
     // decide whether to forward it to serial port
-    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id) {
+    message_t * receive(message_t *msg, void *payload, uint8_t len, am_id_t id, bool snoop, message_t * scndMsg) {
         message_t *ret = msg;
         
         // if in reset do nothing for now
@@ -552,7 +644,6 @@ implementation
         if (globalRadioForward==FALSE){
         	return ret;
         }
-        
         
         atomic
         {
@@ -578,6 +669,7 @@ implementation
                 uartQueueExternal[uartIn] = NULL;
                 // packet is from radio
 				uartPacketSerial[uartIn/8] &= ~(1<<(uartIn%8));
+				
 				// next slot in queue - cyclic buffer, move
                 uartIn = (uartIn + 1) % UART_QUEUE_LEN;
 				// cyclic queue is full - 1bit signalization
@@ -603,7 +695,8 @@ implementation
             }
         }
 
-        return ret;
+		// return another buffer - suggested by call parent
+        return (scndMsg == msg) ? ret : scndMsg;
     }
 
 	// starts timer for UART message sending if applicable
@@ -709,10 +802,7 @@ implementation
     }
 
     // event handler, serial send done
-    event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {
-    	// ph4r05 edit, set uartBusy to false
-        uartBusy = FALSE;
-            
+    event void UartSend.sendDone[am_id_t id](message_t* msg, error_t error) {            
         if (error != SUCCESS){
             failBlink();
             //++uartFailCounter;
@@ -722,13 +812,14 @@ implementation
         	// pointer
             uint8_t uartOutPrev = uartOut;
         	
-            uartFailCounter=0;
-            sucBlink();
-            
-            // CO AK TOTO NIE JE SPRAVA KTORA SA ODOSLALA? NEZAPLNI FRONTU?
-            // 
             atomic {
+            	// if there is any specific parametrized sender, this could be its message
 	            if (msg == uartQueue[uartOut]) {
+	            	uartFailCounter=0;
+		            sucBlink();
+            
+	            	uartBusy = FALSE;
+	            	
 	            	// can signalize external out
 					signalizeExternal=uartQueueExternal[uartOut]!=NULL;
 	            	
@@ -775,6 +866,14 @@ implementation
 	            reflectToken = TRUE;
 	            ret = radioQueue[radioIn];
 	            radioQueue[radioIn] = msg;
+	            
+	            // signalize that this message is internal
+                radioQueueExternal[radioIn] = NULL;
+                // packet is from serial
+				radioPacketSerial[radioIn/8] |= (1<<(radioIn%8));
+	            radioPacketCancelMap[radioIn/8] &= ~(1<<(radioIn%8));
+	            radioPacketRetry[radioIn] = RADIO_RETRY_COUNT;
+	            
 	            if (++radioIn >= RADIO_QUEUE_LEN)
 	                radioIn = 0;
 	            if (radioIn == radioOut)
@@ -805,8 +904,9 @@ implementation
     task void radioSendTask() {
         uint8_t len;
         am_id_t id;
-        am_addr_t addr;
+        am_addr_t addr, src;
         message_t* msg;
+        bool signalizeExternal=FALSE;
 
 		if (radioBusy){
 			post radioSendTask();
@@ -819,13 +919,47 @@ implementation
         }
 
         msg = radioQueue[radioOut];
-        len = call UartPacket.payloadLength(msg);
-        addr = call UartAMPacket.destination(msg);
-        id = call UartAMPacket.type(msg);
         
+        // depending on packet type
+        if ((radioPacketSerial[radioOut/8] & (1<<(radioOut%8)))>0) {
+        	// packet is serial - pushed by amsend or enqueued
+        	tmpLen = len = call UartPacket.payloadLength(msg);
+        	id = call UartAMPacket.type(msg);
+        	addr = call UartAMPacket.destination(msg);
+        	src = call UartAMPacket.source(msg);
+        } else {
+        	// otherwise packet is radio type and came from radio interface
+        	tmpLen = len = call RadioPacket.payloadLength(msg);
+        	id = call RadioAMPacket.type(msg);
+        	addr = call RadioAMPacket.destination(msg);
+        	src = call RadioAMPacket.source(msg);
+        }
+        
+        // set packet source, ok
+	    call RadioAMPacket.setSource(msg, src);
+	    
+	    // tap message if external -> added via amsend interface
+	    // does not allow to tap forwarded messages from serial
+	    signalizeExternal=radioQueueExternal[radioOut]!=NULL;
+	    if (signalizeExternal 
+	    	&& (radioPacketCancelMap[radioOut/8] & (1<<(radioOut%8))) > 0 ){
+	    	// signal canceled packet
+	    	signal AMSend.sendDone[id](radioQueueExternal[radioOut], ECANCEL);
+	    	// move on next packet in queue
+	    	if (++radioOut >= RADIO_QUEUE_LEN)
+                radioOut = 0;
+            if (radioFull)
+                radioFull = FALSE;
+	    	post radioSendTask();
+	    	return;
+	    }
+	    
+	    if (signalizeExternal){
+	    	signal AMTap.send(id, msg, len);
+	    }
+	    
         if (call RadioSend.send[id](addr, msg, len) == SUCCESS){
         	radioBusy=TRUE;
-            //sucRadioBlink();
         }
         else {
             failBlink();
@@ -838,30 +972,58 @@ implementation
 
     // event handler, radio send done, remove from queue if successfull
     event void RadioSend.sendDone[am_id_t id](message_t* msg, error_t error) {
-		radioBusy=FALSE;    	
-   
-        if (error != SUCCESS){
-            failBlink();
+        if (error != SUCCESS){        	
+			failBlink();       
+        	if (msg == radioQueue[radioOut]) {
+				radioPacketRetry[radioOut]-=1;
+				
+				if (radioPacketRetry[radioOut]<=0){
+					// can signalize external out		
+					if (radioQueueExternal[radioOut]!=NULL){
+            			// signalize with original message address pointer - for reciever to be able 
+            			// to pair this event with action
+            			signal AMSend.sendDone[id](radioQueueExternal[radioOut], FAIL);
+            		}
+            
+					if (++radioOut >= RADIO_QUEUE_LEN)
+	                    radioOut = 0;
+	                if (radioFull)
+	                    radioFull = FALSE;            
+				}
+        	}
+			
+			post radioSendTask();
+			return;
         }
         else {
-            // blink on success transmission
-            sucRadioBlink();
+        	// signalize exernal message sent?
+        	bool signalizeExternal=FALSE;
+        	// pointer
+            uint8_t radioOutPrev = radioOut;
+
+            atomic{
+            	// here we could receive message from different parametrized sender
+	            if (msg == radioQueue[radioOut]) {
+	            	radioBusy=FALSE;
+	            	
+	            	// blink on success transmission
+            		sucRadioBlink();
+	            	
+	            	// can signalize external out
+					signalizeExternal=radioQueueExternal[radioOut]!=NULL;
+						
+	                if (++radioOut >= RADIO_QUEUE_LEN)
+	                    radioOut = 0;
+	                if (radioFull)
+	                    radioFull = FALSE;
+	            }
+	        }
             
-            atomic
-            if (msg == radioQueue[radioOut]) {
-                if (++radioOut >= RADIO_QUEUE_LEN)
-                    radioOut = 0;
-                if (radioFull)
-                    radioFull = FALSE;
-
-/*
-                if (uartFull || radioFull){
-                    call ResetTimer.startOneShot(TIME_TO_RESET);
-                } else {
-                    call ResetTimer.stop(); 
-                }
-*/
-
+             // signalize external, outside of atomic block
+            if (signalizeExternal){
+            	// signalize with original message address pointer - for reciever to be able 
+            	// to pair this event with action
+            	signal AMSend.sendDone[id](radioQueueExternal[radioOutPrev], SUCCESS);
             }
         }
 
@@ -943,6 +1105,7 @@ implementation
 		        	   len);
                 // assumes that packet is serial
                 uartPacketSerial[uartIn/8] |= (1<<(uartIn%8));
+                
                 // set fields as radio packet - BaseStation assumes that radio 
                 // packets are in this queue -> no problem, next calls will
                 // consider message as radio message and puts correct fields
@@ -1101,8 +1264,8 @@ implementation
 	        	call UartPacket.setPayloadLength(ret, newVal->len);
 	        }
 	        
-	        // store external message pointer - indicates externality, provides binding
-	        // for messageSent event
+	        // store external message pointer - when enqueueing new messages then do not
+	        // signal sendDone, massive sending. 
 	        uartQueueExternal[uartIn] = NULL;
 	        // to current free place in queue is stored actualy received 
 	        // message from radio.
@@ -1206,4 +1369,180 @@ implementation
 	command uint8_t InterceptBaseConfig.getSerialFailed(){
 		return uartFailCounter;
 	}		
+
+    default event message_t* Receive.receive[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	return msg;
+    }
+    
+    default event message_t* Snoop.receive[am_id_t amid](message_t* msg, void* payload, uint8_t len){
+    	return msg;
+    }    
+
+	command void * AMSend.getPayload[am_id_t id](message_t *msg, uint8_t len){
+		return call RadioPacket.getPayload(msg, len);
+	}
+
+	command uint8_t AMSend.maxPayloadLength[am_id_t id](){
+		return call RadioPacket.maxPayloadLength();
+	}
+
+	error_t getRadioMsgIndex(message_t * msg, uint8_t * idx){
+		// search for message here, iterate only over queue
+		uint8_t curQueue = radioOut;
+		uint8_t t=0; 
+		//uartPacketCancelMap
+		
+		// null msg
+		if (msg==NULL){
+			return FAIL;
+		}
+		
+		for(t=0; t<RADIO_QUEUE_LEN; t++){
+			// we want to cacnel this particular message
+			if (radioQueue[curQueue] == msg){
+				*idx = curQueue;
+				return SUCCESS;
+			}
+			
+			// move next
+			curQueue = (curQueue + 1) % RADIO_QUEUE_LEN;
+			
+			// if no next valid message in queue, quit
+	        if (radioIn == curQueue){
+	        	return FAIL;
+	        }
+        }
+		
+		return FAIL;
+	}
+	
+	error_t getRadioMsgExternalIndex(message_t * msg, uint8_t * idx){
+		// search for message here, iterate only over queue
+		uint8_t curQueue = radioOut;
+		uint8_t t=0; 
+		//uartPacketCancelMap
+		
+		// null msg
+		if (msg==NULL){
+			return FAIL;
+		}
+		
+		for(t=0; t<RADIO_QUEUE_LEN; t++){
+			// we want to cacnel this particular message
+			if (radioQueueExternal[curQueue] == msg){
+				*idx = curQueue;
+				return SUCCESS;
+			}
+			
+			// move next
+			curQueue = (curQueue + 1) % RADIO_QUEUE_LEN;
+			
+			// if no next valid message in queue, quit
+	        if (radioIn == curQueue){
+	        	return FAIL;
+	        }
+        }
+
+		return FAIL;
+	}
+
+	command error_t AMSend.cancel[am_id_t id](message_t *msg){
+		uint8_t idx=0;
+		error_t succ = getRadioMsgExternalIndex(msg, &idx);
+		
+		if (succ==SUCCESS){
+			radioPacketCancelMap[idx/8] |= (1<<(idx%8));
+			return SUCCESS;
+		} else {
+			return FAIL;
+		}
+	}
+
+	command error_t AMSend.send[am_id_t id](am_addr_t addr, message_t *msg, uint8_t len){
+		message_t * ret;        
+        // if in reset do nothing for now
+        if (inReset==TRUE){
+        	// cannot send anything
+        	return EBUSY;
+        } 
+	
+		// queue manipulation has to be atomic to preserve pointers/counters consistency
+        atomic
+        {
+            // if serial queue is not full, we can put message to it
+            // as consequence message received from radio is forwarded to
+            // radio queue to be sent over radio to application
+            if (!radioFull) {
+            	// pointer to free memory block. copy here message passed for sending
+                ret = radioQueue[radioIn];
+                // copy whole message to defines address, preserve my addresses for 
+                // future - N+1 cycling queue for receive
+                //memcpy(ret, msg, sizeof(message_t));
+//                memcpy(call RadioPacket.getPayload(ret, len), 
+//		        	   call RadioPacket.getPayload(msg, len), 
+//		        	   len);
+
+		        // copy whole message with payload, may contain txpower settings
+		        memcpy((void*)ret, (void*)msg, sizeof(message_t));	   
+                // assumes that packet is from radio
+                radioPacketSerial[radioIn/8] &= ~(1<<(radioIn%8));
+                // set fields as radio packet - BaseStation assumes that radio 
+                // packets are in this queue -> no problem, next calls will
+                // consider message as radio message and puts correct fields
+                call RadioAMPacket.setDestination(ret, addr);
+                call RadioAMPacket.setType(ret, id);
+                call RadioAMPacket.setSource(ret, TOS_NODE_ID);
+                call RadioPacket.setPayloadLength(ret, len);
+                
+                // store external message pointer - indicates externality, provides binding
+                // for messageSent event
+                radioQueueExternal[radioIn] = msg;
+                radioPacketCancelMap[radioIn/8] &= ~(1<<(radioIn%8));
+                radioPacketRetry[radioIn] = RADIO_RETRY_COUNT; 
+                
+                // to current free place in queue is stored actualy received 
+                // message from radio.
+                radioQueue[radioIn] = ret;
+				// next slot in queue - cyclic buffer, move
+                radioIn = (radioIn + 1) % RADIO_QUEUE_LEN;
+
+				// cyclic queue is full - 1bit signalization
+                if (radioIn == radioOut){
+                    radioFull = TRUE;
+                }
+
+                // timer replaced
+                // start timed message sending - better performance in event driven OS
+                post radioSendTask();
+            } else {
+                // serial queue full       
+                failBlink();
+                dropBlink();
+                
+                post radioSendTask();             
+                return ENOMEM;
+            }
+        }
+
+        return SUCCESS;
+	}
+	
+	default event void AMSend.sendDone[uint8_t id](message_t* msg, error_t err) {
+		return;
+	}
+	
+	/* Packet receive */
+  	default event message_t* AMTap.receive(uint8_t type, message_t* msg, void *payload, uint8_t len){
+  		return msg;
+  	}
+  
+  	/* Snoop */
+  	default event message_t* AMTap.snoop(uint8_t type, message_t* msg, void *payload, uint8_t len){
+ 		return msg;		
+  	}
+ 
+  	/* Send */
+  	default event message_t* AMTap.send(uint8_t type, message_t* msg, uint8_t len){
+  		return msg;
+  	}  	
 }
