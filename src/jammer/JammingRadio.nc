@@ -4,11 +4,15 @@
 interface JammingRadio {
 
   /**
-   * Returns if the queue is empty.
+   * Enables/disabled radio jamming
    *
    * @param enabled enabled
-   * @return Whether the queue is empty.
+   * @return void
    */
   command void setJamming(bool enabled);
 
+  /**
+   * Timeout after message was sent
+   */
+  command void setJammingTimeout(uint16_t timeout);
 }

@@ -175,6 +175,7 @@ implementation {
   norace bool jammingNOW=FALSE;
   norace message_t jam_msg;
   uint32_t jamCounter=0;
+  uint16_t jammingTimeout=0;
   /***************** Prototypes ****************/
   error_t send( message_t * ONE p_msg, bool cca );
   error_t resend( bool cca );
@@ -567,13 +568,7 @@ implementation {
    * we should have gotten one.
    */
   async event void BackoffTimer.fired() {
-    atomic {
-#ifdef BJAM    	
-    	if (jamming){
-    		startjamNow();
-    		return;
-    	}
-#endif    
+    atomic { 
       switch( m_state ) {
         
         case S_JAM:
@@ -624,7 +619,6 @@ implementation {
 #ifdef PFO
 			printf(":");
 #endif	
-			//startjamNow();
         	post startjam();
         	return;
         } else {
@@ -1016,7 +1010,10 @@ implementation {
 	}
   }
 
-	
+	command void JammingRadio.setJammingTimeout(uint16_t timeout){
+		jammingTimeout = timeout;
+		
+	}
 	
 	// if true set immediatelly jamming
 	command void JammingRadio.setJamming(bool enabled){
@@ -1079,6 +1076,8 @@ implementation {
 		header->length = 60;
 		// broadcast - everyone should hear
 		header->dest = 0xffff;
+		//header->dest = 0xeeee;
+		
 		header->src = 1;
 		header->type = 100;
 		header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
@@ -1114,7 +1113,12 @@ implementation {
 	
 	// starts real jamming
 	task void startjam(){
-		startjamNow();
+		if (jammingTimeout==0){
+			startjamNow();
+		} else {
+			// TODO: add delay here, now directly
+			startjamNow();
+		}
 	}
 }
 
