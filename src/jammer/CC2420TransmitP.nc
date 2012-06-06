@@ -44,7 +44,7 @@
 #include "message.h"
 
 
-#define PFO
+//#define PFO
 //#define BJAM
 
 #ifdef PFO
@@ -895,7 +895,7 @@ implementation {
         	jamCounter=0;
         	
         	m_state=S_JAM;
-        	call BackoffTimer.start(100);
+        	call BackoffTimer.start(400);
         	//post startjam();
         	return;
 		}
@@ -999,8 +999,8 @@ implementation {
 #endif    	
     	// start jamming again
     	jammingNOW=FALSE;
-    	//post startjam();
-    	startjamNow();
+    	post startjam();
+    	//startjamNow();
     	return;
     } else {
     	call ChipSpiResource.attemptRelease();
@@ -1070,8 +1070,6 @@ implementation {
 //#endif      		
 	      	return;
 		}
-			
-		
 		
 		//tx_power = CC2420_DEF_RFPOWER;
 		header->length = 4;//TOSH_DATA_LENGTH;
@@ -1102,7 +1100,7 @@ implementation {
 #endif	      
 		  
 //	      call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
-		  call TXFIFO.write(TCAST(uint8_t *, header), header->length+30);
+		  call TXFIFO.write(TCAST(uint8_t *, header), header->length);
 	    }
 	}
 	
