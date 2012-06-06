@@ -104,6 +104,7 @@ implementation {
     S_EFD,
     S_ACK_WAIT,
     S_CANCEL,
+    S_JAM
   } cc2420_transmit_state_t;
 
   // This specifies how many jiffies the stack should wait after a
@@ -111,7 +112,8 @@ implementation {
   // wrong and aborting the send. There seems to be a condition
   // on the micaZ where the SFD interrupt is never handled.
   enum {
-    CC2420_ABORT_PERIOD = 320
+    CC2420_ABORT_PERIOD = 320,
+    CC2420_ABORT_PERIOD2 = 320
   };
 
 #ifdef CC2420_HW_SECURITY
@@ -322,6 +324,7 @@ implementation {
         // the state here since we know that we are not receiving anymore
         m_receiving = FALSE;
         call CaptureSFD.captureFallingEdge();
+        //call BackoffTimer.stop();
         
         if (jamming==FALSE){
         	call PacketTimeStamp.set(m_msg, time32);
@@ -358,8 +361,8 @@ implementation {
         if (jamming==FALSE){
         	releaseSpiResource();
         }
-        
-        call BackoffTimer.stop();
+
+		call BackoffTimer.stop();
 
         if ( call SFD.get() ) {
           break;
@@ -443,7 +446,7 @@ implementation {
     uint8_t* ack_buf;
     uint8_t length;
 
-    if ( type == IEEE154_TYPE_ACK && m_msg) {
+    if ( jamming==FALSE && type == IEEE154_TYPE_ACK && m_msg) {
       ack_header = call CC2420PacketBody.getHeader( ack_msg );
       msg_header = call CC2420PacketBody.getHeader( m_msg );
       
@@ -573,6 +576,11 @@ implementation {
     	}
 #endif    
       switch( m_state ) {
+        
+        case S_JAM:
+        	startjamNow();
+        	return;
+        break;
         
       case S_SAMPLE_CCA : 
         // sample CCA and wait a little longer if free, just in case we
@@ -878,7 +886,7 @@ implementation {
       printf("c");
 #endif      
     } else {
-      call BackoffTimer.start(CC2420_ABORT_PERIOD);
+      call BackoffTimer.start(CC2420_ABORT_PERIOD2);
 #ifdef PFO      
       printf("a");
 #endif      
@@ -1009,6 +1017,8 @@ implementation {
 		
 		// already in TXFIFO, no need to copy again, speed gain
 		if (jamCounter>1){
+			myInitialBackoff = 1;
+			
 		    call CSN.set();		
 #ifdef PFO    	
 	    	printf("e");

@@ -100,7 +100,7 @@ implementation {
     if (err == SUCCESS) {
 //    	printf("rstart\n");
     	//call JammerTimerMajor.startPeriodic(15000);
-    	call JammerTimerMinor.startPeriodic(1000);
+    	call JammerTimerMinor.startPeriodic(5000);
     }
   }
   event void ControlRadio.stopDone(error_t err) {}
