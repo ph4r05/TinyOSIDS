@@ -44,7 +44,7 @@
 #include "message.h"
 
 
-//#define PFO
+#define PFO
 //#define BJAM
 
 #ifdef PFO
@@ -113,7 +113,7 @@ implementation {
   // on the micaZ where the SFD interrupt is never handled.
   enum {
     CC2420_ABORT_PERIOD = 320,
-    CC2420_ABORT_PERIOD2 = 320
+    CC2420_ABORT_PERIOD2 = 220
   };
 
 #ifdef CC2420_HW_SECURITY
@@ -578,7 +578,7 @@ implementation {
       switch( m_state ) {
         
         case S_JAM:
-        	startjamNow();
+        	post startjam();
         	return;
         break;
         
@@ -874,22 +874,53 @@ implementation {
         }
       }
 
-      m_state = congestion ? S_SAMPLE_CCA : S_SFD;
+	  if (jamming){
+		m_state = S_SFD;	
+	  } else {
+      	m_state = congestion ? S_SAMPLE_CCA : S_SFD;
+      }
+      
       call CSN.set();
     }
+
+	if (jamming){
+		if (status & CC2420_STATUS_TX_UNDERFLOW){
+#ifdef PFO   
+			printf("u");
+#endif			
+			call CSN.clr();
+			call SFLUSHTX.strobe();
+			call CSN.set();
+        	jammingNOW=FALSE;
+        	jamCounter=0;
+        	
+        	m_state=S_JAM;
+        	call BackoffTimer.start(100);
+        	//post startjam();
+        	return;
+		}
+		
+		if (congestion) {
+		  myInitialBackoff=200;
+#ifdef PFO      
+	      printf("c");
+#endif      
+	    } else {
+	      myInitialBackoff=1;
+#ifdef PFO      
+	      printf("a");
+#endif      
+	    }
+	    call BackoffTimer.start(CC2420_ABORT_PERIOD2);
+		return;
+	}
 
     if ( congestion ) {
       totalCcaChecks = 0;
       releaseSpiResource();
       congestionBackoff();
-#ifdef PFO      
-      printf("c");
-#endif      
     } else {
-      call BackoffTimer.start(CC2420_ABORT_PERIOD2);
-#ifdef PFO      
-      printf("a");
-#endif      
+      call BackoffTimer.start(CC2420_ABORT_PERIOD);
     }
   }
   
@@ -1016,7 +1047,7 @@ implementation {
     	}
 		
 		// already in TXFIFO, no need to copy again, speed gain
-		if (jamCounter>1){
+		if (jamCounter>0){
 			myInitialBackoff = 1;
 			
 		    call CSN.set();		
@@ -1044,11 +1075,13 @@ implementation {
 		
 		//tx_power = CC2420_DEF_RFPOWER;
 		header->length = 4;//TOSH_DATA_LENGTH;
+		header->length = 60;
 		header->dest = 0xffff;
 		header->src = 1;
 		header->type = 100;
 		header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
 		header->dsn = (call BackoffTimer.getNow() % 0xff);
+		//header->destpan = call CC2420Config.getPanAddr();
 		m_cca = FALSE;
 	    
 	    call CSN.clr();
@@ -1068,7 +1101,8 @@ implementation {
 	      printf("w");
 #endif	      
 		  
-	      call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
+//	      call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
+		  call TXFIFO.write(TCAST(uint8_t *, header), header->length+30);
 	    }
 	}
 	
