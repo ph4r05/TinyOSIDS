@@ -358,6 +358,7 @@ implementation {
           abortSpiRelease = TRUE;
         }
         
+        // do not release SPI resource when jamming :)
         if (jamming==FALSE){
         	releaseSpiResource();
         }
@@ -511,15 +512,13 @@ implementation {
    */
   async event void TXFIFO.writeDone( uint8_t* tx_buf, uint8_t tx_len,
                                      error_t error ) {
-
+	// need to set CSN pin high to signalize finished writing to TXFIFO
     call CSN.set();
-#ifdef PFO    
-    printf("+");
-#endif    
     if (jamming){
 #ifdef PFO    	
     	printf("!");
 #endif    	
+		// everything is prepared, strobe STXON via attemptSend()
 		jamCounter+=1;
     	m_state = S_BEGIN_TRANSMIT;
       	attemptSend();
@@ -874,32 +873,39 @@ implementation {
         }
       }
 
+	  // don't take care about any CCA stuff when in jamming mode
 	  if (jamming){
 		m_state = S_SFD;	
 	  } else {
       	m_state = congestion ? S_SAMPLE_CCA : S_SFD;
       }
       
+      // setting high - send STXON command via SPI to CC2420
       call CSN.set();
     }
 
 	if (jamming){
+		// underflow check - trouble situation, TXFIFO needs to be reseted
+		// and jam packet re-written, after than, jamming can continue
 		if (status & CC2420_STATUS_TX_UNDERFLOW){
 #ifdef PFO   
 			printf("u");
 #endif			
+			// separate FLUSH command with CSN low-high
 			call CSN.clr();
 			call SFLUSHTX.strobe();
 			call CSN.set();
         	jammingNOW=FALSE;
         	jamCounter=0;
         	
+        	// kind of backoff, after 400jiffies jamming task is posted in backoffTimer.fired()
         	m_state=S_JAM;
         	call BackoffTimer.start(400);
-        	//post startjam();
         	return;
 		}
 		
+		// congesion occurred? => TX_ACTIVE bit was not set after STXON
+		// thus something went wrong, set backoff period (called after returning from this function)
 		if (congestion) {
 		  myInitialBackoff=200;
 #ifdef PFO      
@@ -912,6 +918,9 @@ implementation {
 #endif      
 	    }
 	    call BackoffTimer.start(CC2420_ABORT_PERIOD2);
+	    
+	    // if everything was OK, we now wait for event CaptureSFD.captured(),
+	    // for SFD pin HIHG signalling that packet is being transmitted
 		return;
 	}
 
@@ -997,10 +1006,9 @@ implementation {
 #ifdef PFO    	
     	printf("x");
 #endif    	
-    	// start jamming again
+    	// jamming message was successfully sent, start new jamming cycle
     	jammingNOW=FALSE;
     	post startjam();
-    	//startjamNow();
     	return;
     } else {
     	call ChipSpiResource.attemptRelease();
@@ -1029,7 +1037,9 @@ implementation {
 	
 	void startjamNow(){
 		cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
-	    uint8_t tx_power = CC2420_DEF_RFPOWER; //(call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power;
+	    uint8_t tx_power = CC2420_DEF_RFPOWER;
+	    
+	    // "concurrent" call to this function, skip if already in processing
 	    if (jammingNOW==TRUE){
 #ifdef PFO	    	
 	    	printf("b");
@@ -1038,6 +1048,7 @@ implementation {
 			return;	
 		}
 		
+		// SPI resource is busy, try to gain
 		if (call SpiResource.isOwner() == FALSE && acquireSpiResource() != SUCCESS) {
 #ifdef PFO			
       		printf("@");
@@ -1047,6 +1058,7 @@ implementation {
     	}
 		
 		// already in TXFIFO, no need to copy again, speed gain
+		// send directly
 		if (jamCounter>0){
 			myInitialBackoff = 1;
 			
@@ -1054,34 +1066,28 @@ implementation {
 #ifdef PFO    	
 	    	printf("e");
 #endif    	
-
-//#ifdef BJAM
-			// direct strobe
-//			call CSN.clr();    
-//		    call STXON.strobe();
-//		    m_state = S_SFD;
-//		    call CSN.set();
-//		    call BackoffTimer.start(5);
-//#else
-	    	
+			// call attemptSend() which leads to strobe on STXON
 	      	m_state = S_BEGIN_TRANSMIT;
       		attemptSend();
-      		call BackoffTimer.start(myInitialBackoff);
-//#endif      		
+      		call BackoffTimer.start(myInitialBackoff);    		
 	      	return;
 		}
 		
-		//tx_power = CC2420_DEF_RFPOWER;
+		// in order to gain high efficiency in channel jamming, large packet 
+		// length 60 seems to be OK
 		header->length = 4;//TOSH_DATA_LENGTH;
 		header->length = 60;
+		// broadcast - everyone should hear
 		header->dest = 0xffff;
 		header->src = 1;
 		header->type = 100;
 		header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
 		header->dsn = (call BackoffTimer.getNow() % 0xff);
-		//header->destpan = call CC2420Config.getPanAddr();
+
+		// we don't want any CCA check at all
 		m_cca = FALSE;
 	    
+	    // set CSN low before packet write 
 	    call CSN.clr();
 	    if ( m_tx_power != tx_power ) {
 	      call TXCTRL.write( ( 2 << CC2420_TXCTRL_TXMIXBUF_CUR ) |
@@ -1101,6 +1107,8 @@ implementation {
 		  
 //	      call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
 		  call TXFIFO.write(TCAST(uint8_t *, header), header->length);
+		  
+		  // see TXFIFO.writeDone() for more logic after packet was copied to buffer 
 	    }
 	}
 	
