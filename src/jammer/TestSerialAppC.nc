@@ -68,6 +68,9 @@ implementation {
 
   components CC2420TransmitC as Transmit;
   App.JammingRadio -> Transmit;
+  
+  components CC2420ControlC as Control;
+  App.Config -> Control;
 }
 
 

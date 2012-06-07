@@ -54,7 +54,9 @@ module TestSerialC {
     
     interface JammingRadio;
     interface Timer<TMilli> as JammerTimerMajor;
-    interface Timer<TMilli> as JammerTimerMinor;    
+    interface Timer<TMilli> as JammerTimerMinor;
+    
+    interface CC2420Config as Config;
   }
 }
 implementation {
@@ -98,6 +100,11 @@ implementation {
 
   event void ControlRadio.startDone(error_t err) {
     if (err == SUCCESS) {
+    	// at first disable AUTO CRC generation - this may help to 
+    	// speed up jamming thus chip is not calculating CRC of packets
+    	//call Config.setAutoCRC(FALSE);
+    	//call Config.sync();
+    	
 //    	printf("rstart\n");
     	//call JammerTimerMajor.startPeriodic(15000);
     	call JammerTimerMinor.startPeriodic(5000);
@@ -119,6 +126,10 @@ implementation {
 //		printf("[s]\n");
 		call JammingRadio.setJamming(TRUE);
 //		printfflush();
+	}
+
+	event void Config.syncDone(error_t error){
+		// TODO Auto-generated method stub
 	}
 }
 
