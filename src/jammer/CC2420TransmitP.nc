@@ -915,6 +915,9 @@ implementation {
 	    
 	    // if everything was OK, we now wait for event CaptureSFD.captured(),
 	    // for SFD pin HIHG signalling that packet is being transmitted
+	    // (The SFD pin goes high when the SFD field has been completely transmitted.
+	    // It goes low again when the complete MPDU (as defined by the length field) 
+	    // has been transmitted or if an underflow is detected.)
 		return;
 	}
 
@@ -1033,9 +1036,6 @@ implementation {
 	}
 	
 	void startjamNow(){
-		cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
-	    uint8_t tx_power = CC2420_DEF_RFPOWER;
-	    
 	    // "concurrent" call to this function, skip if already in processing
 	    if (jammingNOW==TRUE){
 #ifdef PFO	    	
@@ -1070,44 +1070,50 @@ implementation {
 	      	return;
 		}
 		
-		// in order to gain high efficiency in channel jamming, large packet 
-		// length 60 seems to be OK
-		header->length = 4;//TOSH_DATA_LENGTH;
-		header->length = 60;
-		// broadcast - everyone should hear
-		header->dest = 0xffff;
-		//header->dest = 0xeeee;
-		
-		header->src = 1;
-		header->type = 100;
-		header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
-		header->dsn = (call BackoffTimer.getNow() % 0xff);
-
-		// we don't want any CCA check at all
-		m_cca = FALSE;
-	    
-	    // set CSN low before packet write 
-	    call CSN.clr();
-	    if ( m_tx_power != tx_power ) {
-	      call TXCTRL.write( ( 2 << CC2420_TXCTRL_TXMIXBUF_CUR ) |
-	                         ( 3 << CC2420_TXCTRL_PA_CURRENT ) |
-	                         ( 1 << CC2420_TXCTRL_RESERVED ) |
-	                         ( (tx_power & 0x1F) << CC2420_TXCTRL_PA_LEVEL ) );
-	    }
-	    
-	    m_tx_power = tx_power;
-	    
-	    {
-	      uint8_t tmpLen __DEPUTY_UNUSED__ = header->length - 1;
-	      jammingNOW=TRUE;
+		// block for writing packet to TXFIFO
+		{
+			cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
+		    uint8_t tx_power = CC2420_DEF_RFPOWER;
+		    
+			// in order to gain high efficiency in channel jamming, large packet 
+			// length 60 seems to be OK
+			header->length = 4;//TOSH_DATA_LENGTH;
+			header->length = 60;
+			// broadcast - everyone should hear
+			header->dest = 0xffff;
+			//header->dest = 0xeeee;
+			
+			header->src = 1;
+			header->type = 100;
+			header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
+			header->dsn = (call BackoffTimer.getNow() % 0xff);
+	
+			// we don't want any CCA check at all
+			m_cca = FALSE;
+		    
+		    // set CSN low before packet write 
+		    call CSN.clr();
+		    if ( m_tx_power != tx_power ) {
+		      call TXCTRL.write( ( 2 << CC2420_TXCTRL_TXMIXBUF_CUR ) |
+		                         ( 3 << CC2420_TXCTRL_PA_CURRENT ) |
+		                         ( 1 << CC2420_TXCTRL_RESERVED ) |
+		                         ( (tx_power & 0x1F) << CC2420_TXCTRL_PA_LEVEL ) );
+		    }
+		    
+		    m_tx_power = tx_power;
+		    
+		    {
+		      uint8_t tmpLen __DEPUTY_UNUSED__ = header->length - 1;
+		      jammingNOW=TRUE;
 #ifdef PFO	      
-	      printf("w");
+		      printf("w");
 #endif	      
-		  
-//	      call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
-		  call TXFIFO.write(TCAST(uint8_t *, header), header->length);
-		  
-		  // see TXFIFO.writeDone() for more logic after packet was copied to buffer 
+			  
+//	      	  call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
+			  call TXFIFO.write(TCAST(uint8_t *, header), header->length);
+			  
+			  // see TXFIFO.writeDone() for more logic after packet was copied to buffer 
+		    }
 	    }
 	}
 	
