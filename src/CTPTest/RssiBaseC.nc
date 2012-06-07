@@ -38,6 +38,8 @@
 #include <message.h>
 #include <AM.h>
 
+//#define REPORT_NEW_DELAY
+
 //Defining the preprocessor variable CC2420_NO_ACKNOWLEDGEMENTS will disable all forms of acknowledgments at compile time.
 //Defining the preprocessor variable CC2420_HW_ACKNOWLEDGEMENTS will enable hardware acknowledgments and disable software acknowledgments.
 //#define CC2420_NO_ACKNOWLEDGEMENTS 1
@@ -155,6 +157,16 @@ module RssiBaseC @safe() {
   		DBG_CTP_NEWDELAY=0x63,
   	};
   	
+  	// config structure
+  	typedef struct config_t {
+  		uint8_t ctpTxData;
+  		uint8_t ctpTxRoute;
+  		nx_struct CtpSendRequestMsg ctpSendRequest;
+  		bool sendingCTP;
+  		 
+	} config_t;
+  	config_t bconf;
+  	
   	uint16_t ctpGetNewDelay();
   	void task sendCtpMsg();
   	void ctpMessageSend(message_t *msg, void *payload);
@@ -228,6 +240,21 @@ module RssiBaseC @safe() {
 	
 	/************************ INITIALIZATION ************************/
 	event void Boot.booted() {
+		// hard wired configuration
+		bconf.ctpTxData=7;
+		bconf.ctpTxRoute=7;
+		bconf.sendingCTP=TRUE;
+		bconf.ctpSendRequest.packets=100;
+		bconf.ctpSendRequest.delay=10000;
+		bconf.ctpSendRequest.delayVariability=5000;
+		bconf.ctpSendRequest.flags |= CTP_SEND_REQUEST_COUNTER_STRATEGY_SUCCESS;
+		bconf.ctpSendRequest.flags |= CTP_SEND_REQUEST_PACKETS_UNLIMITED;
+		bconf.ctpSendRequest.flags &= ~(CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC);
+		// apply config		
+		ctpTxData=bconf.ctpTxData;
+		ctpTxRoute=bconf.ctpTxRoute;
+		//==========================================================
+		
 		// prepare radio init 500ms after boot
 		call InitTimer.startOneShot(500);
 		
@@ -257,8 +284,22 @@ module RssiBaseC @safe() {
   
   	event void RadioControl.startDone(error_t error){
 		busy=FALSE;
-		
+			
+		// start forwarding
 		call ForwardingControl.start();
+		
+		// apply loaded config - prevents suddenly node reset and
+		// destroying txpower-down-scaled tree with full power transmission
+		if (bconf.sendingCTP){
+			// start sending each X seconds
+			memcpy((uint8_t*) &ctpSendRequest, (uint8_t*) &(bconf.ctpSendRequest), sizeof(nx_struct CtpSendRequestMsg));
+
+			// one-shot timer only, add some time for CTP tree stabilization at boot
+			call CtpTimer.startOneShot(ctpGetNewDelay()+3000);
+			
+			// send report about sending
+			sendCtpInfoMsg(0, 0);
+		}
 	}
 
 	event void RadioControl.stopDone(error_t error){
@@ -881,10 +922,13 @@ module RssiBaseC @safe() {
 	    	r %= (2 * ctpSendRequest.delayVariability);
 	    	r -= ctpSendRequest.delayVariability;
 	    	newDelay = ctpSendRequest.delay + r;
-	    	
+#ifdef REPORT_NEW_DELAY	    	
 	    	call CtpLogger.logEventDbg(DBG_CTP_NEWDELAY, newDelay, r, 1);
+#endif	    	
 		} else {
+#ifdef REPORT_NEW_DELAY			
 			call CtpLogger.logEventSimple(DBG_CTP_NEWDELAY, newDelay);
+#endif			
 		}
 		
 		return newDelay;
