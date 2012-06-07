@@ -108,4 +108,11 @@ interface CC2420Config {
    * @return TRUE if auto acks are enabled
    */
   async command bool isAutoAckEnabled();
+  
+  /**
+   * Sync must be called for changes to take effect
+   * @param enableAutoCRC TRUE to enable auto CRC generation at message 
+   * 	transmit and auto CRC check when at message reception 
+   */
+  command void setAutoCRC(bool enableAutoCRC);
 }

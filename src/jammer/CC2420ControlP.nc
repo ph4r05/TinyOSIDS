@@ -106,6 +106,9 @@ implementation {
   /** TRUE if address recognition should also be performed in hardware */
   bool hwAddressRecognition;
   
+  /** TRUE if AutoCRC is enabled in CC2420 */
+  bool autoCRCEnabled=TRUE;
+  
   norace cc2420_control_state_t m_state = S_VREG_STOPPED;
   
   /***************** Prototypes ****************/
@@ -367,6 +370,16 @@ implementation {
     atomic return autoAckEnabled;
   }
   
+  
+  /**
+   * Sync must be called for changes to take effect
+   * @param enableAutoCRC TRUE to enable auto CRC generation at message 
+   * 	transmit and auto CRC check when at message reception 
+   */
+  command void CC2420Config.setAutoCRC(bool enableAutoCRC){
+		atomic autoCRCEnabled = enableAutoCRC;
+   }
+   
   /***************** ReadRssi Commands ****************/
   command error_t ReadRssi.read() { 
     return call RssiResource.request();
@@ -476,7 +489,7 @@ implementation {
           ( (addressRecognition && hwAddressRecognition) << CC2420_MDMCTRL0_ADR_DECODE ) |
           ( 2 << CC2420_MDMCTRL0_CCA_HYST ) |
           ( 3 << CC2420_MDMCTRL0_CCA_MOD ) |
-          ( 1 << CC2420_MDMCTRL0_AUTOCRC ) |
+          ( (autoCRCEnabled) << CC2420_MDMCTRL0_AUTOCRC ) |
           ( (autoAckEnabled && hwAutoAckDefault) << CC2420_MDMCTRL0_AUTOACK ) |
           ( 0 << CC2420_MDMCTRL0_AUTOACK ) |
           ( 2 << CC2420_MDMCTRL0_PREAMBLE_LENGTH ) );
@@ -508,5 +521,4 @@ implementation {
 
   default event void ReadRssi.readDone(error_t error, uint16_t data) {
   }
-  
 }
