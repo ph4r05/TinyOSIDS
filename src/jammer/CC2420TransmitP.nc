@@ -45,7 +45,9 @@
 
 
 //#define PFO
-//#define BJAM
+
+// report statistics about underflows, timeouts via printf() 
+//#define STATREPORT
 
 #ifdef PFO
 #include <printf.h>
@@ -113,7 +115,9 @@ implementation {
   // on the micaZ where the SFD interrupt is never handled.
   enum {
     CC2420_ABORT_PERIOD = 320,
-    CC2420_ABORT_PERIOD2 = 220
+    CC2420_ABORT_PERIOD2 = 220,
+    UNDERFLOW_BACKOFF=30,
+    CONGESTION_BACKOFF=200
   };
 
 #ifdef CC2420_HW_SECURITY
@@ -176,6 +180,16 @@ implementation {
   norace message_t jam_msg;
   uint32_t jamCounter=0;
   uint16_t jammingTimeout=0;
+  // count how many underflow occurred
+  uint32_t jamUnderflow=0;
+  // how many restarted due to SPI busy
+  uint32_t jamSPINotMine=0;
+  // how many times backoff timer expired when waiting for SFD pin
+  uint32_t jamTimeouted=0;
+  // how many times occurred congestion when strobed to STXON
+  uint32_t jamCongestion=0;
+  // timer to know when to post report messages
+  uint16_t jamReportTimer=0;
   /***************** Prototypes ****************/
   error_t send( message_t * ONE p_msg, bool cca );
   error_t resend( bool cca );
@@ -619,6 +633,9 @@ implementation {
 #ifdef PFO
 			printf(":");
 #endif	
+			// collect stats of timeout
+			jamTimeouted+=1;
+
         	post startjam();
         	return;
         } else {
@@ -885,6 +902,9 @@ implementation {
 #ifdef PFO   
 			printf("u");
 #endif			
+			// collect statistics
+			jamUnderflow+=1;
+
 			// separate FLUSH command with CSN low-high
 			call CSN.clr();
 			call SFLUSHTX.strobe();
@@ -892,16 +912,17 @@ implementation {
         	jammingNOW=FALSE;
         	jamCounter=0;
         	
-        	// kind of backoff, after 400jiffies jamming task is posted in backoffTimer.fired()
+        	// kind of backoff, after UNDERFLOW_BACKOFF jiffies jamming task is posted in backoffTimer.fired()
         	m_state=S_JAM;
-        	call BackoffTimer.start(400);
+        	call BackoffTimer.start(UNDERFLOW_BACKOFF);
         	return;
 		}
 		
 		// congesion occurred? => TX_ACTIVE bit was not set after STXON
 		// thus something went wrong, set backoff period (called after returning from this function)
 		if (congestion) {
-		  myInitialBackoff=200;
+		  myInitialBackoff=CONGESTION_BACKOFF;
+		  jamCongestion+=1;
 #ifdef PFO      
 	      printf("c");
 #endif      
@@ -1032,10 +1053,24 @@ implementation {
 		 } else {
 		 	jamCounter=0;
 		 	jammingNOW=FALSE;
+		 	
+		 	jammingTimeout=0;
+		 	jamReportTimer=0;
+		 	jamSPINotMine=0;
+		 	jamUnderflow=0;
+		 	jamCongestion=0;
 		 }
 	}
 	
 	void startjamNow(){
+#ifdef STATREPORT
+		jamReportTimer+=1;
+		if (jamReportTimer>=1000){
+			jamReportTimer=0;
+			printf("u:%d;c:%d;t:%d;sp:%d\n", jamUnderflow, jamCongestion, jamTimeouted, jamSPINotMine);
+			printfflush();
+		}
+#endif		
 	    // "concurrent" call to this function, skip if already in processing
 	    if (jammingNOW==TRUE){
 #ifdef PFO	    	
@@ -1050,6 +1085,7 @@ implementation {
 #ifdef PFO			
       		printf("@");
 #endif      		
+			jamSPINotMine+=1;
       		post startjam();
       		return;
     	}
@@ -1076,9 +1112,9 @@ implementation {
 		    uint8_t tx_power = CC2420_DEF_RFPOWER;
 		    
 			// in order to gain high efficiency in channel jamming, large packet 
-			// length 60 seems to be OK
+			// length 30 seems to be OK
 			header->length = 4;//TOSH_DATA_LENGTH;
-			header->length = 60;
+			header->length = 30;
 			// broadcast - everyone should hear
 			header->dest = 0xffff;
 			//header->dest = 0xeeee;
