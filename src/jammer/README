@@ -1,0 +1,30 @@
+Simple radio jammer application.
+
+Jammer sends IEEE 802.15.4 compliant frames as fast as possible. Using fast retransmissions
+without repeatedly acquiring/releasing SPI bus, TXFIFO filling and another packet send overhead.
+
+Jammer uses modified low level radio stack files to operate well. It was designed to be able to 
+switch jamming on/off and to be able to send normal radio frames as well (disable jamming).
+
+== Optimization ==
+
+There are still some problems with optimality. Sometimes occurs TXFIFO underflow, then
+transmission fails, TXFIFO needs to be re-filled and packet retransmitted. This causes
+gap in jamming. 
+
+Another problem is with transmission fail. After strobing STXON Backofftimer is started
+to wait for SFD pin goes high signalling that SFD was transmitted. When no SFD high event 
+occurs in backoff timer period, timeout occurs and packet needs to be retransmitted.
+
+One may enable debugging for this application - printf statistics to tune packet size,
+backoff times to achieve best possible configuration for optimal jamming. 
+
+Packet size and backoff timers has strong relation for jammer effectivity (longer frame 
+needs more time to trasmit). Too short frame occupies radio channel only for a short period
+of time.
+
+== Effectivity ==
+
+For nearby nodes is current effectivity of jammer 99.73% (means that nearby node can 
+see clear channel only 0.27% of total time).
+
