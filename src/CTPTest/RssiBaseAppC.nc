@@ -49,6 +49,10 @@ configuration RssiBaseAppC {
 
   // keep alive send timer
   components new TimerMilliC() as AliveTimer;
+  
+  // dumps actual CTP structure to application
+  components new TimerMilliC() as TreeTimer;
+  
   components ResetC;
   
   /**************** NOISE FLOOR READING ****************/
@@ -92,6 +96,7 @@ configuration RssiBaseAppC {
   App.Boot -> MainC;
   App.InitTimer -> InitTimer;
   App.AliveTimer -> AliveTimer;
+  App.TreeTimer -> TreeTimer;
   
   //App.RadioControl -> ActiveMessageC;
   App.Leds -> LedsC;

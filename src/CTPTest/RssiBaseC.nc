@@ -71,6 +71,7 @@ module RssiBaseC @safe() {
         interface CtpInfo;
         interface CollectionDebug;
         interface Timer<TMilli> as CtpTimer;
+        interface Timer<TMilli> as TreeTimer;
         
         interface Receive as UartCtpSendRequestReceiver;
         
@@ -174,6 +175,10 @@ module RssiBaseC @safe() {
   		bool sendingCTP;
   		// static CTP root address, only 1 node can be root here
   		uint16_t rootAddress;
+  		// if tree dumping is enabled
+  		bool treeDumping;
+  		// tree dumping interval
+  		uint16_t treeDumpingInterval;
 	} config_t;
   	config_t bconf;
   	
@@ -255,6 +260,10 @@ module RssiBaseC @safe() {
 		bconf.ctpTxRoute=7;
 		bconf.sendingCTP=TRUE;
 		bconf.rootAddress=50;
+		
+		bconf.treeDumping=TRUE;
+		bconf.treeDumpingInterval=2000;
+		
 		bconf.ctpSendRequest.packets=100;
 		bconf.ctpSendRequest.delay=10000;
 		bconf.ctpSendRequest.delayVariability=5000;
@@ -281,6 +290,11 @@ module RssiBaseC @safe() {
 		call RadioControl.stop();
 	}
 
+	// dump tree structure
+	event void TreeTimer.fired(){
+		sendCtpInfoMsg(0, 0);
+	}
+
 	event void InitTimer.fired() {
 		radioOn = ! radioOn;
 		radioInitCn += 1;
@@ -298,6 +312,11 @@ module RssiBaseC @safe() {
 			
 		// start forwarding
 		call ForwardingControl.start();
+		
+		// tree dumping?
+		if (bconf.treeDumping){
+			call TreeTimer.startPeriodic(bconf.treeDumpingInterval);
+		}
 		
 		// apply loaded config - prevents suddenly node reset and
 		// destroying txpower-down-scaled tree with full power transmission
@@ -1061,13 +1080,13 @@ module RssiBaseC @safe() {
 	 * Send CTP info message - global status / particular neigh info
 	 */
 	void sendCtpInfoMsg(uint8_t type, uint8_t arg){
-		atomic {
+		CtpInfoMsg infoBuff;
+		CtpInfoMsg * btrpkt = &infoBuff;	
+	
+		{
 			// queue is full?
 			if(call UartCtpInfoMsgSender.full()==FALSE) {
 				// dequeue from RSSI QUEUE, Build message, add to serial queue
-				CtpInfoMsg infoBuff;
-				CtpInfoMsg * btrpkt = &infoBuff;		
-
 				btrpkt->type = type;
 				if(type==0){
 					am_addr_t parent = 0;
@@ -1096,11 +1115,13 @@ module RssiBaseC @safe() {
 					return;
 				}
 				
-				if (call UartCtpInfoMsgSender.enqueueData(btrpkt, sizeof(CtpInfoMsg))==SUCCESS){
-					return;
-				} else {
-					// message add failed, try again later
-					return;
+				atomic {
+					if (call UartCtpInfoMsgSender.full()==FALSE && call UartCtpInfoMsgSender.enqueueData(btrpkt, sizeof(CtpInfoMsg))==SUCCESS){
+						return;
+					} else {
+						// message add failed, try again later
+						return;
+					}
 				}
 			}
 		}
