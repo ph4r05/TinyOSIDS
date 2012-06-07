@@ -157,13 +157,23 @@ module RssiBaseC @safe() {
   		DBG_CTP_NEWDELAY=0x63,
   	};
   	
-  	// config structure
+  	// Config structure
+  	// This configuration structure can be stored to flash memory
+  	// in order to be configurable at runtime and to survive node
+  	// restart/power-cycle. 
+  	// Now it is hardwired in boot, but can be easily modiffied
+  	// to be configurable at runtime with config commands. 
+  	// Each config command should change this config structure,
+  	// it would be then saved to flash memory like in http://docs.tinyos.net/tinywiki/index.php/Storage
   	typedef struct config_t {
   		uint8_t ctpTxData;
   		uint8_t ctpTxRoute;
+  		// send request wired to configuration structure
   		nx_struct CtpSendRequestMsg ctpSendRequest;
+  		// if YES then after boot is launched CTP send according to ctpSendRequest
   		bool sendingCTP;
-  		 
+  		// static CTP root address, only 1 node can be root here
+  		uint16_t rootAddress;
 	} config_t;
   	config_t bconf;
   	
@@ -244,6 +254,7 @@ module RssiBaseC @safe() {
 		bconf.ctpTxData=7;
 		bconf.ctpTxRoute=7;
 		bconf.sendingCTP=TRUE;
+		bconf.rootAddress=50;
 		bconf.ctpSendRequest.packets=100;
 		bconf.ctpSendRequest.delay=10000;
 		bconf.ctpSendRequest.delayVariability=5000;
@@ -293,6 +304,11 @@ module RssiBaseC @safe() {
 		if (bconf.sendingCTP){
 			// start sending each X seconds
 			memcpy((uint8_t*) &ctpSendRequest, (uint8_t*) &(bconf.ctpSendRequest), sizeof(nx_struct CtpSendRequestMsg));
+			
+			// set correct root if this node ID is root
+			if (TOS_NODE_ID==bconf.rootAddress){
+				call RootControl.setRoot();
+			}
 
 			// one-shot timer only, add some time for CTP tree stabilization at boot
 			call CtpTimer.startOneShot(ctpGetNewDelay()+3000);
