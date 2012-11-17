@@ -88,7 +88,6 @@ enum {
   AM_NOISEFLOORREADINGMSG = 18,
   AM_IDENTIFYMSG=40,
  
-  AM_TIMESYNCMSG = 0xea,
   AM_CTPINFOMSG = 0xec,
   AM_CTPSENDREQUESTMSG = 0xee,
   AM_CTPRESPONSEMSG = 0xef,
@@ -121,16 +120,7 @@ typedef struct queueSenderQueue_element{
 
 
 // serial timesync
-// timesync messages are sent over serial to synchronize global time according to 
-// application
-typedef nx_struct TimeSyncMsg{
-    nx_uint8_t counter;
-    // offset to real time that was set here (due to RTT, delays)
-    nx_uint16_t offset;
-    nx_uint32_t high;
-    nx_uint32_t low;
-    nx_uint8_t flags;
-}  TimeSyncMsg;
+#include "timeSync.h"
 
 // ping response
 // RssiMeassured

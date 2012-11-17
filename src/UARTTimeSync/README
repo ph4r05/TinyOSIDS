@@ -1,0 +1,9 @@
+This component is used to synchronize all nodes on global system time via UART.
+Whole component is based on FloodTimeSynchronizationProtocol (ftsp) [1] with difference whole 
+communication is made by UART and server is root node that synchronizes every node
+in network. 
+
+Node listens to messages on UART interface, when TimeSyncMessage is received, it stores data to table.
+Linear regression is used to compute clock skew.
+
+[1] http://www.tinyos.net/tinyos-2.x/tos/lib/ftsp/
