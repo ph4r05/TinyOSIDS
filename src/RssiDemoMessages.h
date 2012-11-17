@@ -44,17 +44,29 @@
 #endif
 
 /**
+ * Prinf is useful for us, for debugging
+ */
+#include "printf.h"
+
+/**
  * Warning!
  * If you want to generate Java Messages by MIG (genJavaMsgs.sh) you need to comment line
  * #include <Ctp.h>
- * and uncomment line
- * #include <Ctp.h>
  * 
- * MIG has trouble to include some needed header files, so they are included in MUGhlp.h.
+ * MIG has trouble to include some needed header files, so they are included in MIGhlp.h.
  */
+#ifndef MIG
+#ifndef CTP_H
 #include <Ctp.h>
-#include "printf.h"
-//#include "MIGhlp.h"
+#endif
+#endif
+
+/**
+ * Include local header file in case no CTP was included 
+ */
+#ifndef CTP_H
+#include "MIGhlp.h"
+#endif
 
 #ifndef NULL
 #define NULL ((void*)0)
@@ -109,13 +121,15 @@ typedef struct queueSenderQueue_element{
 
 
 // serial timesync
-// timesync messages are sent over serial to sycnhronize global time according to 
+// timesync messages are sent over serial to synchronize global time according to 
 // application
 typedef nx_struct TimeSyncMsg{
-	nx_uint8_t counter;
-	nx_uint32_t high;
-	nx_uint32_t low;
-	nx_uint8_t flags;
+    nx_uint8_t counter;
+    // offset to real time that was set here (due to RTT, delays)
+    nx_uint16_t offset;
+    nx_uint32_t high;
+    nx_uint32_t low;
+    nx_uint8_t flags;
 }  TimeSyncMsg;
 
 // ping response
