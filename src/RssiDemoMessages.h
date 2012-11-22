@@ -120,7 +120,7 @@ typedef struct queueSenderQueue_element{
 
 
 // serial timesync
-#include "timeSync.h"
+#include "UARTtimeSync.h"
 
 // ping response
 // RssiMeassured

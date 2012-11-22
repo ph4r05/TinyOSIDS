@@ -33,7 +33,7 @@
  * @author Dimas Abreu Dutra
  */
 
-#include "TestSerial.h"
+#include "TestSerial2.h"
 #include "message.h"
 #include "../Reset/Reset.h"
 
@@ -75,7 +75,7 @@ configuration TimeTestC {
 
   components new TimerMilliC() as InitTimer;
   App.InitTimer -> InitTimer;
-
+  
   App.UartCmdAMSend -> UartCmdAMSend;
   App.RadioCmdAMSend -> RadioCmdAMSend;
   App.Acks -> RadioCmdAMSend;
@@ -84,4 +84,13 @@ configuration TimeTestC {
   App.RadioCmdRecv -> RadioCmdRecv;
 
   App.Reset -> ResetC;
+  
+  // UART time synchronizer
+  components TimeUARTSyncC as TimeUartSync;
+  TimeUartSync.Boot -> MainC.Boot;
+  App.GlobalTime -> TimeUartSync;
+  App.TimeUARTSyncInfo -> TimeUartSync;
+  
+  components new SerialAMSenderC(AM_TIME_SYNC_REPORT) as TimeSyncReportAMSend;
+  App.TimeSyncReportAMSend -> TimeSyncReportAMSend;
 }

@@ -14,10 +14,10 @@ typedef nx_struct TimeSyncMsg{
 
 // AMId
 enum {
-  AM_TIMESYNCMSG = 0xea,
+  AM_UARTTIMESYNCMSG = 0xEA,
   TIMESYNCMSG_LEN = sizeof(TimeSyncMsg) - sizeof(nx_uint32_t),
-    TS_TIMER_MODE = 0,      // see TimeSyncMode interface
-    TS_USER_MODE = 1,       // see TimeSyncMode interface
+  TS_TIMER_MODE = 0,      // see TimeSyncMode interface
+  TS_USER_MODE = 1,       // see TimeSyncMode interface
 };
 
 #endif // TIMESYNC_H__

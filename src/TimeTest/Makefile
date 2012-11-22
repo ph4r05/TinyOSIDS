@@ -3,6 +3,7 @@ COMPONENT=TimeTestC
 ##INCLUDES= -I..               		\
 
 INCLUDES= -I../Reset		 		\
+          -I../UARTTimeSync \
           -I$(TOSDIR)/lib/net 		\
           -I$(TOSDIR)/lib/net/le	\
           -I$(TOSDIR)/lib/net/ctp	

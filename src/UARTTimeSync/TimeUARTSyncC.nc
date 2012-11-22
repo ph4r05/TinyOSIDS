@@ -23,8 +23,7 @@
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  */
 
-#include "../timeSync.h"
-
+#include "../UARTtimeSync.h"
 configuration TimeUARTSyncC
 {
   uses interface Boot;
@@ -50,7 +49,7 @@ implementation
   TimeSyncMode     =   TimeUARTSyncP;
   TimeSyncNotify   =   TimeUARTSyncP;
 
-  components new SerialAMReceiverC(AM_TIMESYNCMSG) as SerialTestRecv;
+  components new SerialAMReceiverC(AM_UARTTIMESYNCMSG) as SerialTestRecv;
   TimeUARTSyncP.Receive         ->  SerialTestRecv;
 
   components SerialActiveMessageC as SerialAM;

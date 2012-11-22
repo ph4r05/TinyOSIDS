@@ -20,6 +20,8 @@
  *
  * @author: Miklos Maroti, Brano Kusy (kusy@isis.vanderbilt.edu)
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
+ * 
+ * DO NOT USE THIS DEPRECATED HEADER FILE
  */
 
 #if defined(TIMESYNCMSG_H)
@@ -43,7 +45,7 @@ typedef nx_struct TimeSyncMsg
 } TimeSyncMsg;
 
 enum {
-    AM_TIMESYNCMSG = 0x3E,
+    AM_UARTTIMESYNCMSG = 0x3F,
     TIMESYNCMSG_LEN = sizeof(TimeSyncMsg) - sizeof(nx_uint32_t),
     TS_TIMER_MODE = 0,      // see TimeSyncMode interface
     TS_USER_MODE = 1,       // see TimeSyncMode interface

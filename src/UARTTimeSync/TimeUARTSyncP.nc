@@ -22,8 +22,10 @@
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  * Modified to UARTSync version: 17/11/2012 Dusan (Ph4r05) Klinec (ph4r05@gmail.com)
  */
-#include "../timeSync.h"
-
+#include "../UARTtimeSync.h"
+#ifdef TUARTSYNC
+#include "printf.h"
+#endif
 generic module TimeUARTSyncP(typedef precision_tag)
 {
     provides
@@ -105,14 +107,14 @@ implementation
     message_t* processedMsg;
         
     uint64_t localTimeProcessedMsg=0; // local time from moment TimeSyncMessage arrived
-    uint32_t highLocalTime; // high 32bit part of localtime.
+    uint64_t highLocalTime; // high 32bit part of localtime.
 
-    uint8_t heartBeats; // the number of successfully sent messages
-                        // since adding a new entry with lower beacon id than ours
+    uint8_t heartBeats=0; // the number of successfully sent messages
+                          // since adding a new entry with lower beacon id than ours
 
     async command uint64_t GlobalUARTTime.getLocalTime()
     {
-        return ((call LocalTime.get()) | (highLocalTime<<32));
+        return ((call LocalTime.get()) | (((uint64_t)highLocalTime)<<32));
     }
 
     async command error_t GlobalUARTTime.getGlobalTime(uint64_t *time)
@@ -245,7 +247,7 @@ implementation
         tableEntries = 0;
 
         // assemble local time from received message
-        msgGlobalTime=msg->low | ((msg->high)<<32);
+        msgGlobalTime=msg->low | (((uint64_t)(msg->high))<<32);
 
         // clear table if the received entry's been inconsistent for some time
         timeError = localTimeProcessedMsg;
@@ -260,8 +262,15 @@ implementation
         if( (is_synced() == SUCCESS) &&
             (timeError > ENTRY_THROWOUT_LIMIT || timeError < -ENTRY_THROWOUT_LIMIT))
         {
-            if (++numErrors>3)
+#ifdef TUARTSYNC
+        printf("MsgIgn\n");
+#endif
+            if (++numErrors>3){
+#ifdef TUARTSYNC
+                printf("ClearTbl\n");
+#endif
                 clearTable();
+            }
         }
         else
             numErrors = 0;
@@ -294,13 +303,24 @@ implementation
         table[freeItem].state = ENTRY_FULL;
         table[freeItem].localTime = localTimeProcessedMsg;
         table[freeItem].timeOffset = msgGlobalTime - localTimeProcessedMsg;
+        
+        // increase heartbeats
+        atomic{
+            heartBeats+=1;
+        }
+        
+#ifdef TUARTSYNC
+        printf("TimeAdded:%d; loc: %ld; glob: %ld\n", freeItem, localTimeProcessedMsg, msgGlobalTime);
+#endif
     }
 
     void task processMsg()
     {
         TimeSyncMsg* msg = (TimeSyncMsg*)(call Packet.getPayload(processedMsg, sizeof(TimeSyncMsg)));
         call Leds.led0Toggle();
-
+#ifdef TUARTSYNC
+        printf("SRecv\n");
+#endif
         addNewEntry(msg);
         calculateConversion();
         signal TimeSyncNotify.msg_received();
@@ -318,11 +338,13 @@ implementation
             // workaround: set millisecond timer with very large timeout (e.g. 2^20) to watch for localTime 
             // overflows...
             if ((localTimeProcessedMsg & 0xFFFFFFFF) > curTime){
-            	highLocalTime+=1;
+            	atomic{
+            	   highLocalTime+=1;
+            	}
             }
             
             processedMsg = msg;
-            localTimeProcessedMsg = curTime | (highLocalTime<<32);
+            localTimeProcessedMsg = curTime | (((uint64_t)highLocalTime)<<32);
 
             state |= STATE_PROCESSING;
             post processMsg();
@@ -359,6 +381,7 @@ implementation
             skew = 0.0;
             localAverage = 0;
             offsetAverage = 0;
+            heartBeats = 0;
         };
 
         clearTable();

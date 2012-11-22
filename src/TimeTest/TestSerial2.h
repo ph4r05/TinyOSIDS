@@ -16,9 +16,20 @@ typedef nx_struct test_serial_msg {
   nx_uint16_t radioRecv;
   nx_uint16_t radioSent;
   
-  
-
 } test_serial_msg_t;
+
+typedef nx_struct timeSyncReport {
+  nx_uint64_t localTime;
+  nx_uint64_t globalTime;
+  
+  nx_uint64_t lastSync;
+  nx_uint64_t offset;
+  nx_float skew;
+  
+  nx_uint8_t hbeats;
+  nx_uint8_t entries;
+	
+} timeSyncReport;
 
 typedef nx_struct CommandMsg {
 	nx_uint8_t command_code;
@@ -34,6 +45,7 @@ typedef nx_struct CommandMsg {
 enum {
   AM_TEST_SERIAL_MSG = 0x89,
   AM_COMMANDMSG = 14,
+  AM_TIME_SYNC_REPORT = 0x68,
 };
 
 enum {

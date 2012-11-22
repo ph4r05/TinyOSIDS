@@ -10,7 +10,7 @@
  **/
 
 #include "Timer.h"
-#include "TestSerial.h"
+#include "TestSerial2.h"
 
 module TimeTestP {
   uses {
@@ -30,6 +30,7 @@ module TimeTestP {
 
     interface AMSend as UartCmdAMSend;
     interface AMSend as RadioCmdAMSend;
+    interface AMSend as TimeSyncReportAMSend;
 
     interface Reset as Reset;
 
@@ -38,6 +39,9 @@ module TimeTestP {
     interface Timer<TMilli> as InitTimer;
 
     interface PacketAcknowledgements as Acks;
+    
+    interface GlobalUARTTime<TMilli> as GlobalTime;
+    interface TimeUARTSyncInfo;
   }
 }
 implementation {
@@ -82,6 +86,12 @@ implementation {
 
   uint16_t aliveCounter=0;
   bool serialBusy=FALSE;
+  
+  // time sync
+  message_t timeSyncResponseBuffer;
+  timeSyncReport * timeSyncResponse;
+  bool timeSyncUartBusy=FALSE;
+  uint16_t timeSyncSendError=0;
   /********** Forward declarations **********/
   void CommandReceived(message_t * msg, void * payload, uint8_t len);
   void task sendCommandRadio();
@@ -89,6 +99,7 @@ implementation {
   void task sendAlive();
   void task startRadio();
   void task stopRadio();
+  void task sendTimeSyncReportMsg();
 
   /************** MAIN CODE BELOW ***********/
   void setAck(message_t *msg, bool status){
@@ -220,7 +231,24 @@ implementation {
 			
 			// timesync request, send time global right now to serial
 			case COMMAND_TIMESYNC_GETGLOBAL:
-					
+			    // get this time ASAP
+			    {
+			     uint64_t localTime = call GlobalTime.getLocalTime();
+			     uint64_t globalTime = call GlobalTime.getGlobalTime(&localTime);
+			     
+			     // now prepare message body
+			     timeSyncResponse = (nx_struct timeSyncReport*) call TimeSyncReportAMSend.getPayload(&timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport));
+			     timeSyncResponse->localTime = localTime;
+			     timeSyncResponse->globalTime = globalTime;
+			     timeSyncResponse->hbeats = call TimeUARTSyncInfo.getHeartBeats();
+			     timeSyncResponse->entries = call TimeUARTSyncInfo.getNumEntries();
+			     timeSyncResponse->lastSync = call TimeUARTSyncInfo.getSyncPoint();
+			     timeSyncResponse->offset = call TimeUARTSyncInfo.getOffset();
+			     timeSyncResponse->skew = call TimeUARTSyncInfo.getSkew();
+			     
+			     // body completed, send to server  
+			     post sendTimeSyncReportMsg();
+			     }
 				break;
 			
 			// send timesync request to broadcast radio
@@ -243,7 +271,41 @@ implementation {
 
 		return;
 	}
-
+  
+  void task sendTimeSyncReportMsg(){
+  	if (timeSyncUartBusy){
+  		if (++timeSyncSendError > 4){
+  		    call TimeSyncReportAMSend.cancel(&timeSyncResponseBuffer);
+  		}
+  		return;
+  	}
+  	
+  	timeSyncSendError=FALSE;
+  	
+  	// send to base directly
+    // sometimes node refuses to send too large packet. it will always end with fail
+    // depends of buffers size.
+    if (call TimeSyncReportAMSend.send(AM_BROADCAST_ADDR, &timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport)) == SUCCESS) {
+        timeSyncUartBusy=TRUE;
+    }
+    else {
+        dbg("Cannot send message");
+        post sendTimeSyncReportMsg();
+    }
+  } 
+    
+  event void TimeSyncReportAMSend.sendDone(message_t *bufPtr, error_t error){
+	if (&timeSyncResponseBuffer==bufPtr){
+	    timeSyncUartBusy=FALSE;
+	    if (error!=SUCCESS){
+	        if (++timeSyncSendError > 4){
+                call TimeSyncReportAMSend.cancel(&timeSyncResponseBuffer);
+            }
+	    } else {
+	    	timeSyncSendError=FALSE;
+	    }
+	}
+   }
 
   /**
    * Send defined command to radio
@@ -466,7 +528,6 @@ implementation {
 		call InitTimer.startOneShot(5000);
 	}
 	}
-
 }
 
 
