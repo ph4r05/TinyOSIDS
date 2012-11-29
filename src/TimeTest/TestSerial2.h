@@ -45,7 +45,7 @@ typedef nx_struct CommandMsg {
 enum {
   AM_TEST_SERIAL_MSG = 0x89,
   AM_COMMANDMSG = 14,
-  AM_TIME_SYNC_REPORT = 0x68,
+  AM_TIMESYNCREPORT = 0x68,
 };
 
 enum {

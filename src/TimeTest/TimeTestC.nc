@@ -92,6 +92,6 @@ configuration TimeTestC {
   App.GlobalTime -> TimeUartSync;
   App.TimeUARTSyncInfo -> TimeUartSync;
   
-  components new SerialAMSenderC(AM_TIME_SYNC_REPORT) as TimeSyncReportAMSend;
+  components new SerialAMSenderC(AM_TIMESYNCREPORT) as TimeSyncReportAMSend;
   App.TimeSyncReportAMSend -> TimeSyncReportAMSend;
 }
