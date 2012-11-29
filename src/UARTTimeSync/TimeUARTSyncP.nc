@@ -399,8 +399,13 @@ implementation
 
     command error_t StdControl.start()
     {
-        mode = TS_TIMER_MODE;
-        heartBeats = 0;
+    	atomic {
+            mode = TS_TIMER_MODE;
+            heartBeats = 0;
+        }
+        
+        // initialize on start
+        call Init.init();
 
         return SUCCESS;
     }

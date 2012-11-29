@@ -42,6 +42,7 @@ module TimeTestP {
     
     interface GlobalUARTTime<TMilli> as GlobalTime;
     interface TimeUARTSyncInfo;
+    interface StdControl as TimeUARTCtl;
   }
 }
 implementation {
@@ -495,6 +496,9 @@ implementation {
    */ 
   event void Control.startDone(error_t err) {
     if (err == SUCCESS) {
+    	// initialize time sync
+        call TimeUARTCtl.start();
+        
       // serial init successful, start sending status reports 
       //call MilliTimer.startPeriodic(20);
     }

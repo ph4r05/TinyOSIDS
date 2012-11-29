@@ -88,6 +88,7 @@ configuration TimeTestC {
   // UART time synchronizer
   components TimeUARTSyncC as TimeUartSync;
   TimeUartSync.Boot -> MainC.Boot;
+  App.TimeUARTCtl -> TimeUartSync;
   App.GlobalTime -> TimeUartSync;
   App.TimeUARTSyncInfo -> TimeUartSync;
   
