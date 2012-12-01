@@ -15,26 +15,41 @@ typedef uint32_t timestamp_t;
 typedef int32_t  timestamp_diff_t;
 #endif
 
-
 // serial timesync
 // timesync messages are sent over serial to synchronize global time according to 
 // application
-typedef nx_struct LowlvlTimeSyncMsg{
-	nx_uint8_t counter;
-	nx_uint8_t flags;
-	nx_uint16_t offset;
-	
-#ifdef TSTAMP64
+
+// since in Java we need both messages, we define messages separately and 
+// then according to currently selected type we decide which to use
+// TODO: force messages to has same length with union with single array
+typedef nx_struct LowlvlTimeSyncMsg32{
+    nx_uint8_t counter;
+    nx_uint8_t flags;
+    nx_uint16_t offset;
+    
+    nx_uint32_t high;
+    nx_uint32_t low;
+}  LowlvlTimeSyncMsg32;
+
+typedef nx_struct LowlvlTimeSyncMsg64{
+    nx_uint8_t counter;
+    nx_uint8_t flags;
+    nx_uint16_t offset;
+    
     nx_uint64_t globalTime;
+}  LowlvlTimeSyncMsg64;
+
+#ifdef TSTAMP64
+typedef nx_struct LowlvlTimeSyncMsg64 LowlvlTimeSyncMsg;
 #else
-	nx_uint32_t high;
-	nx_uint32_t low;
+typedef nx_struct LowlvlTimeSyncMsg32 LowlvlTimeSyncMsg;
 #endif
-}  LowlvlTimeSyncMsg;
 
 // AMId
 enum {
   AM_LOWLVLTIMESYNCMSG = 0xEA,
+  AM_LOWLVLTIMESYNCMSG32 = 0xEA,
+  AM_LOWLVLTIMESYNCMSG64 = 0xEA,
   TIMESYNCMSG_LEN = sizeof(LowlvlTimeSyncMsg),
   TS_TIMER_MODE = 0,      // see TimeSyncMode interface
   TS_USER_MODE = 1,       // see TimeSyncMode interface

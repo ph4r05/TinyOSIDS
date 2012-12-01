@@ -13,4 +13,5 @@ mig java -target=telosb -java-classname=CtpReportDataMsg Messages4mig.h CtpRepor
 mig java -target=telosb -java-classname=CollectionDebugMsg Messages4mig.h CollectionDebugMsg -o CollectionDebugMsg.java
 mig java -target=telosb -java-classname=CtpInfoMsg Messages4mig.h CtpInfoMsg -o CtpInfoMsg.java
 mig java -target=telosb -java-classname=PrintfMsg Messages4mig.h printf_msg -o PrintfMsg.java
-mig java -target=telosb -java-classname=LowlvlTimeSyncMsg Messages4mig.h LowlvlTimeSyncMsg -o LowlvlTimeSyncMsg.java
+mig java -target=telosb -java-classname=LowlvlTimeSyncMsg32 Messages4mig.h LowlvlTimeSyncMsg32 -o LowlvlTimeSyncMsg32.java
+mig java -target=telosb -java-classname=LowlvlTimeSyncMsg64 Messages4mig.h LowlvlTimeSyncMsg64 -o LowlvlTimeSyncMsg64.java
