@@ -2,9 +2,7 @@
 #ifndef TEST_SERIAL_H
 #define TEST_SERIAL_H
 
-#define CC2420_CHANNEL 17
-
-
+#include "../UARTtimeSync.h"
 typedef nx_struct test_serial_msg {
   nx_uint16_t counter;
   nx_uint16_t received;
@@ -19,11 +17,11 @@ typedef nx_struct test_serial_msg {
 } test_serial_msg_t;
 
 typedef nx_struct timeSyncReport {
-  nx_uint64_t localTime;
-  nx_uint64_t globalTime;
+  nx_timestamp_t localTime;
+  nx_timestamp_t globalTime;
   
-  nx_uint64_t lastSync;
-  nx_uint64_t offset;
+  nx_timestamp_t lastSync;
+  nx_timestamp_t offset;
   nx_float skew;
   
   nx_uint8_t hbeats;

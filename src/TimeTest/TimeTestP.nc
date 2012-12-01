@@ -9,9 +9,10 @@
  *
  **/
 
+#define TUARTSYNC 1
 #include "Timer.h"
 #include "TestSerial2.h"
-
+#include "printf.h"
 module TimeTestP {
   uses {
     interface SplitControl as Control;
@@ -170,13 +171,15 @@ implementation {
 		if(len != sizeof(CommandMsg)) {
 			// invalid length - cannot process
 			return;
-		}		
+		}
 	
 		cmdReceived+=1;
 		recv+=1;
 
 		// get received message
 		btrpkt = (CommandMsg * ) payload;
+		
+		printf("cmdRec c:%d\n", btrpkt->command_code);
 
 		// get local message, prepare it
 		//btrpktresponse = (CommandMsg * )(call UartCmdAMSend.getPayload(&cmdPktResponse, sizeof(CommandMsg)));
@@ -233,13 +236,23 @@ implementation {
 			// timesync request, send time global right now to serial
 			case COMMAND_TIMESYNC_GETGLOBAL:
 			    // get this time ASAP
+			    printf("[!tget %d]\n", TOS_NODE_ID);
+			    printfflush();
 			    {
-			     uint64_t localTime = call GlobalTime.getLocalTime();
-			     uint64_t globalTime = call GlobalTime.getGlobalTime(&localTime);
+			     timestamp_t globalTime;
+			     timestamp_t localTime = call GlobalTime.getLocalTime();
+			     
+			     printf("[!1hasLoc %ld %ld]\n", localTime, globalTime);
+			     printfflush();
+			     
+			     call GlobalTime.getGlobalTime(&globalTime);
+			     
+			     printf("[!2hasLoc %ld %ld]\n", localTime, globalTime);
+                 printfflush();
 			     
 			     // now prepare message body
 			     timeSyncResponse = (nx_struct timeSyncReport*) call TimeSyncReportAMSend.getPayload(&timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport));
-			     timeSyncResponse->localTime = localTime;
+			     /*timeSyncResponse->localTime = localTime;
 			     timeSyncResponse->globalTime = globalTime;
 			     timeSyncResponse->hbeats = call TimeUARTSyncInfo.getHeartBeats();
 			     timeSyncResponse->entries = call TimeUARTSyncInfo.getNumEntries();
@@ -247,13 +260,18 @@ implementation {
 			     timeSyncResponse->offset = call TimeUARTSyncInfo.getOffset();
 			     timeSyncResponse->skew = call TimeUARTSyncInfo.getSkew();
 			     
+			     printf("[!2msgPrepared]\n");
+                 printfflush();
+			     
 			     // body completed, send to server  
-			     post sendTimeSyncReportMsg();
+			     post sendTimeSyncReportMsg();*/
 			     }
 				break;
 			
 			// send timesync request to broadcast radio
 			case COMMAND_TIMESYNC_GETGLOBAL_BCAST:
+			    printf("[tsb %d]\n", TOS_NODE_ID);
+			    
 				commandDest = AM_BROADCAST_ADDR;
 				btrpktresponse->command_code = COMMAND_TIMESYNC_GETGLOBAL;
 				post sendCommandRadio();
@@ -281,6 +299,7 @@ implementation {
   		return;
   	}
   	
+  	printf("[sendingReport]");
   	timeSyncSendError=FALSE;
   	
   	// send to base directly
@@ -288,11 +307,13 @@ implementation {
     // depends of buffers size.
     if (call TimeSyncReportAMSend.send(AM_BROADCAST_ADDR, &timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport)) == SUCCESS) {
         timeSyncUartBusy=TRUE;
+        printf("reportSent");
     }
     else {
         dbg("Cannot send message");
         post sendTimeSyncReportMsg();
     }
+    printfflush();
   } 
     
   event void TimeSyncReportAMSend.sendDone(message_t *bufPtr, error_t error){
@@ -313,7 +334,13 @@ implementation {
    */
   void task sendCommandRadio(){
 	CommandMsg* btrpkt = NULL;
+	if(!sendIt){
+		return;
+	}
+	
 	 if (cmdRadioBusy){
+	 	printf("[rbusy]");
+	 	//printfflush();
 		post sendCommandRadio();
 		return;
 	 }
@@ -335,11 +362,13 @@ implementation {
 	if (call RadioCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPktResponseRadio, sizeof(CommandMsg)) == SUCCESS) {
 	    cmdRadioBusy=TRUE;
 	    radioSent+=1;
+	    printf("[rsent:%d]", radioSent);
 	}
 	else {
-		dbg("Cannot send message");
 		post sendCommandRadio();
-	}	
+	}
+	
+	//printfflush();	
   }
 
 
@@ -378,6 +407,8 @@ implementation {
    * Command received on uart
    */
   event message_t* UartCmdRecv.receive(message_t* bufPtr, void* payload, uint8_t len) {
+    printf("[rU]");
+    printfflush();
 	CommandReceived(bufPtr, payload, len);
 
 	return bufPtr;
@@ -388,6 +419,9 @@ implementation {
    */ 
   event message_t* RadioCmdRecv.receive(message_t* bufPtr, void* payload, uint8_t len) {
 	radioRecv+=1;
+	
+	printf("[rRRRRRRRRRRRR!!]");
+	printfflush();
 	CommandReceived(bufPtr, payload, len);
 
 	return bufPtr;
@@ -399,7 +433,9 @@ implementation {
   event void RadioCmdAMSend.sendDone(message_t *msg, error_t error){
 	radioSent+=1;
 	radioErr = (uint16_t) error;
+	printf("[sendDone %d]", error);
 	if (&cmdPktResponseRadio==msg){
+		printf("[pktresposne %d]", error);
 		cmdRadioBusy=FALSE;
 		if (error!=SUCCESS){
 			radioErrCn+=1;
@@ -422,10 +458,11 @@ implementation {
   event void AliveTimer.fired(){
 	// first 10 messages are sent quickly
 	if (aliveCounter>10){
-		call AliveTimer.startPeriodic(10000);
+		call AliveTimer.startPeriodic(1000);
 	}
 	
 	post sendAlive();
+	post sendCommandRadio();
   }
 
   // sends alive packet to application to know that node is OK
@@ -481,8 +518,12 @@ implementation {
         radioInitCn+=1;
 	 	
 	if (radioOn){
+		printf("radiostart");
+		printfflush();
 		post startRadio();
 	} else {
+		printf("radiostop");
+		printfflush();
 		post stopRadio();
 	}
   }
@@ -499,6 +540,8 @@ implementation {
     	// initialize time sync
         call TimeUARTCtl.start();
         
+        printf("[BOOTED]");
+        printfflush();
       // serial init successful, start sending status reports 
       //call MilliTimer.startPeriodic(20);
     }
@@ -512,22 +555,30 @@ implementation {
     if (err == SUCCESS || err==EALREADY) {
         radioRealOn=TRUE;
         // radio initialized  
-	if (radioInitCn<RADIO_CYCLE){
-		// re-init radio
-		call InitTimer.startOneShot(5000);
-	} else {
-		// radio init finished
-		sendIt = TRUE;
-	}
-
+		if (radioInitCn<RADIO_CYCLE){
+			// re-init radio
+			printf("[rcycle<]\n");
+			
+			call InitTimer.startOneShot(5000);
+		} else {
+			// radio init finished
+			sendIt = TRUE;
+			printf("[rinitOK]\n");
+			
+			call AliveTimer.startPeriodic(1000);
+		}
     } else {
-	radioRealOn=FALSE;
-	call InitTimer.startOneShot(5000);
+    	printf("[rinitErr: %d]\n", err);
+	   radioRealOn=FALSE;
+	   call InitTimer.startOneShot(5000);
     }
+    printfflush();
   }
 
   event void ControlRadio.stopDone(error_t err) {
 	radioRealOn=FALSE;
+	printf("[rStopDone %d]", err);
+	printfflush();
 	if (radioInitCn<RADIO_CYCLE){
 		call InitTimer.startOneShot(5000);
 	}
