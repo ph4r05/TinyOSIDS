@@ -23,6 +23,7 @@
  * Modified to UARTSync version: 17/11/2012 Dusan (Ph4r05) Klinec (ph4r05@gmail.com)
  */
 #include "../UARTtimeSync.h"
+
 #ifdef TUARTSYNC
 #include "printf.h"
 #endif
@@ -67,8 +68,8 @@ implementation
     typedef struct TableItem
     {
         uint8_t     state;
-        uint64_t    localTime;
-        int64_t     timeOffset; // GlobalTime - localTime
+        timestamp_t    localTime;
+        timestamp_diff_t     timeOffset; // GlobalTime - localTime
     } TableItem;
 
     enum {
@@ -99,25 +100,29 @@ implementation
 */
 
     float       skew;
-    uint64_t    localAverage;
-    int64_t     offsetAverage;
+    timestamp_t         localAverage;
+    timestamp_diff_t    offsetAverage;
     uint8_t     numEntries; // the number of full entries in the table
 
     message_t processedMsgBuffer;
     message_t* processedMsg;
         
-    uint64_t localTimeProcessedMsg=0; // local time from moment TimeSyncMessage arrived
-    uint64_t highLocalTime; // high 32bit part of localtime.
+    timestamp_t localTimeProcessedMsg=0; // local time from moment TimeSyncMessage arrived
+    timestamp_t highLocalTime; // high 32bit part of localtime.
 
     uint8_t heartBeats=0; // the number of successfully sent messages
                           // since adding a new entry with lower beacon id than ours
 
-    async command uint64_t GlobalUARTTime.getLocalTime()
+    async command timestamp_t GlobalUARTTime.getLocalTime()
     {
-        return ((call LocalTime.get()) | (((uint64_t)highLocalTime)<<32));
+#ifdef TSTAMP64
+        return ((uint64_t)(call LocalTime.get()) | (((uint64_t)highLocalTime)<<32));
+#else
+        return call LocalTime.get();
+#endif        
     }
 
-    async command error_t GlobalUARTTime.getGlobalTime(uint64_t *time)
+    async command error_t GlobalUARTTime.getGlobalTime(timestamp_t *time)
     {
         *time = call GlobalUARTTime.getLocalTime();
         return call GlobalUARTTime.local2Global(time);
@@ -132,16 +137,16 @@ implementation
     }
 
 
-    async command error_t GlobalUARTTime.local2Global(uint64_t *time)
+    async command error_t GlobalUARTTime.local2Global(timestamp_t *time)
     {
-        *time += offsetAverage + (int64_t)(skew * (int64_t)(*time - localAverage));
+        *time += offsetAverage + (timestamp_diff_t)(skew * (timestamp_diff_t)(*time - localAverage));
         return is_synced();
     }
 
-    async command error_t GlobalUARTTime.global2Local(uint64_t *time)
+    async command error_t GlobalUARTTime.global2Local(timestamp_t *time)
     {
-        uint64_t approxLocalTime = *time - offsetAverage;
-        *time = approxLocalTime - (int64_t)(skew * (int64_t)(approxLocalTime - localAverage));
+        timestamp_t approxLocalTime = *time - offsetAverage;
+        *time = approxLocalTime - (timestamp_diff_t)(skew * (timestamp_diff_t)(approxLocalTime - localAverage));
         return is_synced();
     }
 
@@ -151,11 +156,11 @@ implementation
     void calculateConversion()
     {
         float newSkew = skew;
-        uint64_t newLocalAverage;
-        int64_t newOffsetAverage;
+        timestamp_t newLocalAverage;
+        timestamp_diff_t newOffsetAverage;
 
-        int64_t localSum;
-        int64_t offsetSum;
+        timestamp_diff_t localSum;
+        timestamp_diff_t offsetSum;
 
         int8_t i;
 
@@ -188,8 +193,8 @@ implementation
 
         while( ++i < MAX_ENTRIES )
             if( table[i].state == ENTRY_FULL ) {
-                localSum += (int64_t)(table[i].localTime - newLocalAverage) / tableEntries;
-                offsetSum += (int64_t)(table[i].timeOffset - newOffsetAverage) / tableEntries;
+                localSum  += (timestamp_diff_t)(table[i].localTime - newLocalAverage) / tableEntries;
+                offsetSum += (timestamp_diff_t)(table[i].timeOffset - newOffsetAverage) / tableEntries;
             }
 
         newLocalAverage += localSum;
@@ -201,11 +206,11 @@ implementation
         localSum = offsetSum = 0;
         for(i = 0; i < MAX_ENTRIES; ++i)
             if( table[i].state == ENTRY_FULL ) {
-                int64_t a = table[i].localTime - newLocalAverage;
-                int64_t b = table[i].timeOffset - newOffsetAverage;
+                timestamp_diff_t a = table[i].localTime - newLocalAverage;
+                timestamp_diff_t b = table[i].timeOffset - newOffsetAverage;
 
-                localSum += (int64_t)a * a;
-                offsetSum += (int64_t)a * b;
+                localSum  += (timestamp_diff_t)a * a;
+                offsetSum += (timestamp_diff_t)a * b;
             }
 
         /**
@@ -238,24 +243,42 @@ implementation
     }
 
     uint8_t numErrors=0;
-    void addNewEntry(TimeSyncMsg *msg)
+    void addNewEntry(LowlvlTimeSyncMsg *msg)
     {
         int8_t i, freeItem = -1, oldestItem = 0;
-        uint64_t age, oldestTime = 0, msgGlobalTime=0;
-        int64_t timeError=0;
+        timestamp_t age, oldestTime = 0, msgGlobalTime=0;
+        timestamp_diff_t timeError=0;
 
         tableEntries = 0;
 
         // assemble local time from received message
-        msgGlobalTime=msg->low | (((uint64_t)(msg->high))<<32);
+#ifdef TSTAMP64
+        msgGlobalTime=msg->globalTime;
+#else
+        msgGlobalTime=msg->low;
+#endif        
 
         // clear table if the received entry's been inconsistent for some time
         timeError = localTimeProcessedMsg;
-        call GlobalUARTTime.local2Global((uint64_t*)(&timeError));
+        call GlobalUARTTime.local2Global((timestamp_t*)(&timeError));
+#ifdef TUARTSYNC
+#ifdef TSTAMP64        
+        printf("[G: %lld; l2g: %lld]\n", msgGlobalTime, timeError); 
+#else
+        printf("[l: %ld; h: %ld]\n", msg->low, msg->high);  
+        printf("[G: %ld; l2g: %ld]\n", msgGlobalTime, timeError);
+#endif
+#endif           
         timeError -= msgGlobalTime;
         
+     
         // time error logic changed - root is server, thus no time error, except zero time is provided
-        if (msg->high==0 && msg->low==0){
+#ifdef TSTAMP64   
+        if (msg->globalTime)//
+#else
+        if (msg->high==0 && msg->low==0)//
+#endif        
+        {
         	timeError=ENTRY_THROWOUT_LIMIT+1;
         }
         
@@ -263,7 +286,11 @@ implementation
             (timeError > ENTRY_THROWOUT_LIMIT || timeError < -ENTRY_THROWOUT_LIMIT))
         {
 #ifdef TUARTSYNC
-        printf("MsgIgn\n");
+#ifdef TSTAMP64
+        printf("[MsgIgn %d; Err: %lld]\n", numErrors, timeError);
+#else
+        printf("[MsgIgn %d; Err: %ld]\n", numErrors, timeError);
+#endif        
 #endif
             if (++numErrors>3){
 #ifdef TUARTSYNC
@@ -310,16 +337,25 @@ implementation
         }
         
 #ifdef TUARTSYNC
-        printf("TimeAdded:%d; loc: %ld; glob: %ld\n", freeItem, localTimeProcessedMsg, msgGlobalTime);
+#ifdef TSTAMP64
+        printf("[TimeAdded:%d;h:%d; loc: %lld; glob: %lld]\n", freeItem, heartBeats, localTimeProcessedMsg, msgGlobalTime);
+#else
+        printf("[TimeAdded:%d;h:%d; loc: %ld; glob: %ld]\n", freeItem, heartBeats, localTimeProcessedMsg, msgGlobalTime);
+#endif        
 #endif
     }
 
     void task processMsg()
     {
-        TimeSyncMsg* msg = (TimeSyncMsg*)(call Packet.getPayload(processedMsg, sizeof(TimeSyncMsg)));
+        LowlvlTimeSyncMsg* msg = (LowlvlTimeSyncMsg*)(call Packet.getPayload(processedMsg, sizeof(LowlvlTimeSyncMsg)));
         call Leds.led0Toggle();
+        
 #ifdef TUARTSYNC
-        printf("SRecv\n");
+#ifdef TSTAMP64
+        printf("SRecv; g:%lld #%d\n", msg->globalTime, msg->counter);
+#else
+        printf("SRecv; h:%ld l:%ld #%d\n", msg->high, msg->low, msg->counter);
+#endif        
 #endif
         addNewEntry(msg);
         calculateConversion();
@@ -329,6 +365,10 @@ implementation
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
+        #ifdef TUARTSYNC
+        printf("[R %d]", TOS_NODE_ID);
+        #endif
+        
         if( (state & STATE_PROCESSING) == 0 ) {
             message_t* old = processedMsg;
             uint32_t curTime = call LocalTime.get();
@@ -344,12 +384,21 @@ implementation
             }
             
             processedMsg = msg;
-            localTimeProcessedMsg = curTime | (((uint64_t)highLocalTime)<<32);
+
+#ifdef TSTAMP64
+            localTimeProcessedMsg = (uint64_t)curTime | (((uint64_t)highLocalTime)<<32);
+#else            
+            localTimeProcessedMsg = curTime;
+#endif
 
             state |= STATE_PROCESSING;
             post processMsg();
 
             return old;
+        } else {
+        	#ifdef TUARTSYNC
+            printf("[BUSY]");
+            #endif
         }
 
         return msg;
@@ -416,8 +465,8 @@ implementation
     }
 
     async command float     TimeUARTSyncInfo.getSkew() { return skew; }
-    async command uint64_t  TimeUARTSyncInfo.getOffset() { return offsetAverage; }
-    async command uint64_t  TimeUARTSyncInfo.getSyncPoint() { return localAverage; }
+    async command timestamp_t  TimeUARTSyncInfo.getOffset() { return offsetAverage; }
+    async command timestamp_t  TimeUARTSyncInfo.getSyncPoint() { return localAverage; }
     async command uint16_t  TimeUARTSyncInfo.getRootID() { return 0; }
     async command uint8_t   TimeUARTSyncInfo.getSeqNum() { return 0; }
     async command uint8_t   TimeUARTSyncInfo.getNumEntries() { return numEntries; }

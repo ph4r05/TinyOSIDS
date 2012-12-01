@@ -22,20 +22,20 @@
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  */
 #include "Timer.h"
-
+#include "../UARTtimeSync.h"
 interface GlobalUARTTime<precision_tag>
 {
 	/**
 	 * Returns the current local time of this mote.
 	 */
-	async command uint64_t getLocalTime();
+	async command timestamp_t getLocalTime();
 
 	/**
 	 * Reads the current global time. This method is a combination
 	 * of <code>getLocalTime</code> and <code>local2Global</code>.
 	 * @return SUCCESS if this mote is synchronized, FAIL otherwise.
 	 */
-	async command error_t getGlobalTime(uint64_t *time);
+	async command error_t getGlobalTime(timestamp_t *time);
 
 	/**
 	 * Converts the local time given in <code>time</code> into the
@@ -52,7 +52,7 @@ interface GlobalUARTTime<precision_tag>
 	 *
 	 * @return SUCCESS if this mote is synchronized, FAIL otherwise.
 	 */
-	async command error_t local2Global(uint64_t *time);
+	async command error_t local2Global(timestamp_t *time);
 
 	/**
 	 * Converts the global time given in <code>time</code> into the
@@ -62,5 +62,5 @@ interface GlobalUARTTime<precision_tag>
 	 *
 	 * @return SUCCESS if this mote is synchronized, FAIL otherwise.
 	 */
-	async command error_t global2Local(uint64_t *time);
+	async command error_t global2Local(timestamp_t *time);
 }

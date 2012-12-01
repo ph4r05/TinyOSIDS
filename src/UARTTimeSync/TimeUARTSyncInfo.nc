@@ -21,13 +21,13 @@
  * @author: Miklos Maroti, Brano Kusy (kusy@isis.vanderbilt.edu)
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  */
-
+#include "../UARTtimeSync.h"
 interface TimeUARTSyncInfo
 {
 	/**
 	 * Returns current offset of the local time wrt global time.
 	 */
-	async command uint64_t getOffset();
+	async command timestamp_t getOffset();
 
 	/**
 	 * Returns current skew of the local time wrt global time.
@@ -41,7 +41,7 @@ interface TimeUARTSyncInfo
 	 * value is close to the current local time and updated when a new
 	 * time synchronization message arrives.
 	 */
-	async command uint64_t getSyncPoint();
+	async command timestamp_t getSyncPoint();
 
 	/**
 	 * Returns the current root to which this node is synchronized. 

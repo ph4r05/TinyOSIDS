@@ -49,7 +49,7 @@ implementation
   TimeSyncMode     =   TimeUARTSyncP;
   TimeSyncNotify   =   TimeUARTSyncP;
 
-  components new SerialAMReceiverC(AM_UARTTIMESYNCMSG) as SerialTestRecv;
+  components new SerialAMReceiverC(AM_LOWLVLTIMESYNCMSG) as SerialTestRecv;
   TimeUARTSyncP.Receive         ->  SerialTestRecv;
 
   components SerialActiveMessageC as SerialAM;

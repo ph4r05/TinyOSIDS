@@ -56,7 +56,7 @@
 #endif
 #endif
 #include "message.h"
-//int printfflush();
+int printfflush();
 
 #ifndef PRINTF_MSG_LENGTH
 #define PRINTF_MSG_LENGTH	28
