@@ -12,7 +12,13 @@
 #define TUARTSYNC 1
 #include "Timer.h"
 #include "TestSerial2.h"
+
+// enable printf debug?
+#define TESTDEBUG
+
+#ifdef TESTDEBUG 
 #include "printf.h"
+#endif
 module TimeTestP {
   uses {
     interface SplitControl as Control;
@@ -36,9 +42,7 @@ module TimeTestP {
     interface Reset as Reset;
 
     interface Timer<TMilli> as AliveTimer;
-    
     interface Timer<TMilli> as InitTimer;
-
     interface PacketAcknowledgements as Acks;
     
     interface GlobalUARTTime<TMilli> as GlobalTime;
@@ -178,9 +182,9 @@ implementation {
 
 		// get received message
 		btrpkt = (CommandMsg * ) payload;
-		
+#ifdef TESTDEBUG		
 		printf("cmdRec c:%d\n", btrpkt->command_code);
-
+#endif		
 		// get local message, prepare it
 		//btrpktresponse = (CommandMsg * )(call UartCmdAMSend.getPayload(&cmdPktResponse, sizeof(CommandMsg)));
 		btrpktresponse = (CommandMsg * )(&cmdMsgPayload);
@@ -236,41 +240,41 @@ implementation {
 			// timesync request, send time global right now to serial
 			case COMMAND_TIMESYNC_GETGLOBAL:
 			    // get this time ASAP
-			    printf("[!tget %d]\n", TOS_NODE_ID);
+                #ifdef TESTDEBUG			    
+			    printf("[!tget %d]\n", TOS_NODE_ID);			    
 			    printfflush();
+			    #endif
 			    {
 			     timestamp_t globalTime;
 			     timestamp_t localTime = call GlobalTime.getLocalTime();
-			     
-			     printf("[!1hasLoc %ld %ld]\n", localTime, globalTime);
-			     printfflush();
-			     
 			     call GlobalTime.getGlobalTime(&globalTime);
-			     
+                 #ifdef TESTDEBUG			     
 			     printf("[!2hasLoc %ld %ld]\n", localTime, globalTime);
                  printfflush();
-			     
+                 #endif                 
 			     // now prepare message body
 			     timeSyncResponse = (nx_struct timeSyncReport*) call TimeSyncReportAMSend.getPayload(&timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport));
-			     /*timeSyncResponse->localTime = localTime;
+			     timeSyncResponse->localTime = localTime;
 			     timeSyncResponse->globalTime = globalTime;
 			     timeSyncResponse->hbeats = call TimeUARTSyncInfo.getHeartBeats();
 			     timeSyncResponse->entries = call TimeUARTSyncInfo.getNumEntries();
 			     timeSyncResponse->lastSync = call TimeUARTSyncInfo.getSyncPoint();
 			     timeSyncResponse->offset = call TimeUARTSyncInfo.getOffset();
 			     timeSyncResponse->skew = call TimeUARTSyncInfo.getSkew();
-			     
+			     #ifdef TESTDEBUG
 			     printf("[!2msgPrepared]\n");
                  printfflush();
-			     
+			     #endif
 			     // body completed, send to server  
-			     post sendTimeSyncReportMsg();*/
+			     post sendTimeSyncReportMsg();
 			     }
 				break;
 			
 			// send timesync request to broadcast radio
 			case COMMAND_TIMESYNC_GETGLOBAL_BCAST:
+			    #ifdef TESTDEBUG
 			    printf("[tsb %d]\n", TOS_NODE_ID);
+			    #endif
 			    
 				commandDest = AM_BROADCAST_ADDR;
 				btrpktresponse->command_code = COMMAND_TIMESYNC_GETGLOBAL;
@@ -299,7 +303,10 @@ implementation {
   		return;
   	}
   	
+  	#ifdef TESTDEBUG
   	printf("[sendingReport]");
+  	#endif
+  	
   	timeSyncSendError=FALSE;
   	
   	// send to base directly
@@ -307,17 +314,24 @@ implementation {
     // depends of buffers size.
     if (call TimeSyncReportAMSend.send(AM_BROADCAST_ADDR, &timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport)) == SUCCESS) {
         timeSyncUartBusy=TRUE;
+        #ifdef TESTDEBUG
         printf("reportSent");
+        #endif
     }
     else {
         dbg("Cannot send message");
         post sendTimeSyncReportMsg();
     }
+    #ifdef TESTDEBUG
     printfflush();
+    #endif
   } 
     
   event void TimeSyncReportAMSend.sendDone(message_t *bufPtr, error_t error){
 	if (&timeSyncResponseBuffer==bufPtr){
+		#ifdef TESTDEBUG
+		printf("[ReportSentDone %d]", error);
+		#endif
 	    timeSyncUartBusy=FALSE;
 	    if (error!=SUCCESS){
 	        if (++timeSyncSendError > 4){
@@ -339,8 +353,9 @@ implementation {
 	}
 	
 	 if (cmdRadioBusy){
+	 	#ifdef TESTDEBUG
 	 	printf("[rbusy]");
-	 	//printfflush();
+	 	#endif
 		post sendCommandRadio();
 		return;
 	 }
@@ -362,13 +377,14 @@ implementation {
 	if (call RadioCmdAMSend.send(AM_BROADCAST_ADDR, &cmdPktResponseRadio, sizeof(CommandMsg)) == SUCCESS) {
 	    cmdRadioBusy=TRUE;
 	    radioSent+=1;
+	    
+	    #ifdef TESTDEBUG
 	    printf("[rsent:%d]", radioSent);
+	    #endif
 	}
 	else {
 		post sendCommandRadio();
 	}
-	
-	//printfflush();	
   }
 
 
@@ -407,10 +423,12 @@ implementation {
    * Command received on uart
    */
   event message_t* UartCmdRecv.receive(message_t* bufPtr, void* payload, uint8_t len) {
+  	#ifdef TESTDEBUG
     printf("[rU]");
     printfflush();
+    #endif
+    
 	CommandReceived(bufPtr, payload, len);
-
 	return bufPtr;
   }
 
@@ -420,8 +438,11 @@ implementation {
   event message_t* RadioCmdRecv.receive(message_t* bufPtr, void* payload, uint8_t len) {
 	radioRecv+=1;
 	
-	printf("[rRRRRRRRRRRRR!!]");
+	#ifdef TESTDEBUG
+	printf("[rRRRRR!! %d]", radioRecv);
 	printfflush();
+	#endif
+	
 	CommandReceived(bufPtr, payload, len);
 
 	return bufPtr;
@@ -433,9 +454,16 @@ implementation {
   event void RadioCmdAMSend.sendDone(message_t *msg, error_t error){
 	radioSent+=1;
 	radioErr = (uint16_t) error;
+	
+	#ifdef TESTDEBUG
 	printf("[sendDone %d]", error);
+	#endif
+	
 	if (&cmdPktResponseRadio==msg){
+		#ifdef TESTDEBUG
 		printf("[pktresposne %d]", error);
+		#endif
+		
 		cmdRadioBusy=FALSE;
 		if (error!=SUCCESS){
 			radioErrCn+=1;
@@ -462,7 +490,6 @@ implementation {
 	}
 	
 	post sendAlive();
-	post sendCommandRadio();
   }
 
   // sends alive packet to application to know that node is OK
@@ -518,12 +545,18 @@ implementation {
         radioInitCn+=1;
 	 	
 	if (radioOn){
+		#ifdef TESTDEBUG
 		printf("radiostart");
 		printfflush();
+		#endif
+		
 		post startRadio();
 	} else {
+		#ifdef TESTDEBUG
 		printf("radiostop");
 		printfflush();
+		#endif
+		
 		post stopRadio();
 	}
   }
@@ -540,8 +573,11 @@ implementation {
     	// initialize time sync
         call TimeUARTCtl.start();
         
+        #ifdef TESTDEBUG
         printf("[BOOTED]");
         printfflush();
+        #endif
+        
       // serial init successful, start sending status reports 
       //call MilliTimer.startPeriodic(20);
     }
@@ -557,34 +593,45 @@ implementation {
         // radio initialized  
 		if (radioInitCn<RADIO_CYCLE){
 			// re-init radio
+			#ifdef TESTDEBUG
 			printf("[rcycle<]\n");
+			#endif
 			
 			call InitTimer.startOneShot(5000);
 		} else {
 			// radio init finished
 			sendIt = TRUE;
+			
+			#ifdef TESTDEBUG
 			printf("[rinitOK]\n");
+			#endif
 			
 			call AliveTimer.startPeriodic(1000);
 		}
     } else {
+    	#ifdef TESTDEBUG
     	printf("[rinitErr: %d]\n", err);
-	   radioRealOn=FALSE;
-	   call InitTimer.startOneShot(5000);
+    	#endif
+    	
+	    radioRealOn=FALSE;
+	    call InitTimer.startOneShot(5000);
     }
+    
+    #ifdef TESTDEBUG
     printfflush();
+    #endif
   }
 
   event void ControlRadio.stopDone(error_t err) {
 	radioRealOn=FALSE;
+	
+	#ifdef TESTDEBUG
 	printf("[rStopDone %d]", err);
 	printfflush();
+	#endif
+	
 	if (radioInitCn<RADIO_CYCLE){
 		call InitTimer.startOneShot(5000);
 	}
 	}
 }
-
-
-
-
