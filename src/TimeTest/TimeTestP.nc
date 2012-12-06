@@ -9,12 +9,13 @@
  *
  **/
 
-#define TUARTSYNC 1
+//#define TUARTSYNC 1
+
 #include "Timer.h"
 #include "TestSerial2.h"
 
 // enable printf debug?
-#define TESTDEBUG
+//#define TESTDEBUG
 
 #ifdef TESTDEBUG 
 #include "printf.h"
@@ -117,14 +118,17 @@ implementation {
   }
 
   event void Boot.booted() {
-    // initialize radio 7 seconds after boot
+    // initialize radio 7 seconds after boot - proved to be good strategy
+    // because with direct initialization without delay, some problems
+    // occurred (reboots, freezes).
     call InitTimer.startOneShot(7000);
     // initialize serial communication right now
+    // serial line works fine with direct initialization.
     call Control.start();
   }
  
-  // status sending 
-  // should be fired every second
+  // Status sending - message and error statistics.
+  // Should be fired every second.
   event void MilliTimer.fired() {
     counter++;
     if (locked) {
@@ -237,22 +241,30 @@ implementation {
 				post sendCommandACK();
 				break;
 			
-			// timesync request, send time global right now to serial
+			// time synchronization report request, send time global right now to serial.
+			// enables to calculate accuracy of UART time synchronization among other nodes
+			// since every node in near range should process incoming message (this) in the
+			// same time - radio broadcast advantage  
 			case COMMAND_TIMESYNC_GETGLOBAL:
-			    // get this time ASAP
                 #ifdef TESTDEBUG			    
 			    printf("[!tget %d]\n", TOS_NODE_ID);			    
 			    printfflush();
 			    #endif
 			    {
+			     // get this time ASAP, important here is that every node should do this
+			     // in the same time, approximately.
 			     timestamp_t globalTime;
 			     timestamp_t localTime = call GlobalTime.getLocalTime();
 			     call GlobalTime.getGlobalTime(&globalTime);
+			     
                  #ifdef TESTDEBUG			     
 			     printf("[!2hasLoc %ld %ld]\n", localTime, globalTime);
                  printfflush();
-                 #endif                 
-			     // now prepare message body
+                 #endif       
+                           
+			     // now prepare message body, extracting another statistics from
+			     // component. It is not time critical now, every statistic is static
+			     // and it is not needed to compute it. 
 			     timeSyncResponse = (nx_struct timeSyncReport*) call TimeSyncReportAMSend.getPayload(&timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport));
 			     timeSyncResponse->localTime = localTime;
 			     timeSyncResponse->globalTime = globalTime;
@@ -261,16 +273,24 @@ implementation {
 			     timeSyncResponse->lastSync = call TimeUARTSyncInfo.getSyncPoint();
 			     timeSyncResponse->offset = call TimeUARTSyncInfo.getOffset();
 			     timeSyncResponse->skew = call TimeUARTSyncInfo.getSkew();
+			     
 			     #ifdef TESTDEBUG
 			     printf("[!2msgPrepared]\n");
                  printfflush();
 			     #endif
-			     // body completed, send to server  
+			     
+			     // Body completed, send to server, by posting a task.
+			     // Warning! this is weak point, tasks are maintained by scheduler,
+			     // if some problems occur this would be needed to re-progam somehow.
+			     // But if node is idle, it should be processed ASAP
+			     // Global time is set above, to the message. So only time measurement
+			     // of message arrival to server can be affected by posting this task.
 			     post sendTimeSyncReportMsg();
 			     }
 				break;
 			
-			// send timesync request to broadcast radio
+			// broadcast time synchronization report request to radio - as described above. 
+			// This message is supposed to be processed by nearby nodes in the same time.
 			case COMMAND_TIMESYNC_GETGLOBAL_BCAST:
 			    #ifdef TESTDEBUG
 			    printf("[tsb %d]\n", TOS_NODE_ID);
@@ -570,7 +590,8 @@ implementation {
    */ 
   event void Control.startDone(error_t err) {
     if (err == SUCCESS) {
-    	// initialize time sync
+    	// initialize time sync component - when serial is started.
+    	// it works over UART so this is right place to do initialization.
         call TimeUARTCtl.start();
         
         #ifdef TESTDEBUG
@@ -606,7 +627,10 @@ implementation {
 			printf("[rinitOK]\n");
 			#endif
 			
-			call AliveTimer.startPeriodic(1000);
+			// alive timer is disabled during time sync test.
+			// we don't want another UART activity to block 
+			// time sync report since it is time sensitive.
+			//call AliveTimer.startPeriodic(1000);
 		}
     } else {
     	#ifdef TESTDEBUG
