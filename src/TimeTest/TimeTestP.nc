@@ -39,6 +39,7 @@ module TimeTestP {
     interface AMSend as UartCmdAMSend;
     interface AMSend as RadioCmdAMSend;
     interface AMSend as TimeSyncReportAMSend;
+    interface AMPacket as SerialAMPacket;
 
     interface Reset as Reset;
 
@@ -328,11 +329,13 @@ implementation {
   	#endif
   	
   	timeSyncSendError=FALSE;
+  	// set source node ID
+  	call SerialAMPacket.setType(&timeSyncResponseBuffer, TOS_NODE_ID);
   	
   	// send to base directly
     // sometimes node refuses to send too large packet. it will always end with fail
     // depends of buffers size.
-    if (call TimeSyncReportAMSend.send(AM_BROADCAST_ADDR, &timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport)) == SUCCESS) {
+    if (call TimeSyncReportAMSend.send(TOS_NODE_ID, &timeSyncResponseBuffer, sizeof(nx_struct timeSyncReport)) == SUCCESS) {
         timeSyncUartBusy=TRUE;
         #ifdef TESTDEBUG
         printf("reportSent");

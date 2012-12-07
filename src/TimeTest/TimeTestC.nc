@@ -94,4 +94,5 @@ configuration TimeTestC {
   
   components new SerialAMSenderC(AM_TIMESYNCREPORT) as TimeSyncReportAMSend;
   App.TimeSyncReportAMSend -> TimeSyncReportAMSend;
+  App.SerialAMPacket -> TimeSyncReportAMSend;
 }
