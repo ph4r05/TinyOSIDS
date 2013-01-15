@@ -1,0 +1,4 @@
+<volume_table>
+	<volume name="SHAREDDATA" size="65536"/>
+	<volume name="LOG" size="458751"/>
+</volume_table>
