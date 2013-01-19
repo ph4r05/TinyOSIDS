@@ -86,6 +86,7 @@ configuration CtpP {
     interface Init as ForwardingInit;
     interface Init as LinkEstimatorInit;
     interface ForwardControl;
+    interface FixedTopology;
   }
 
   uses {
@@ -143,6 +144,7 @@ implementation {
   StdControl = Router;
   StdControl = Estimator;
   RootControl = Router;
+  FixedTopology = Router; 
   MainC.SoftwareInit -> Router.Init;
   Router.BeaconSend -> Estimator.Send;
   Router.BeaconReceive -> Estimator.Receive;

@@ -42,7 +42,7 @@ configuration RssiBaseAppC {
   
   // need to have this component to be able to work with commands send via serial
   components SerialActiveMessageC as Serial;
-  components ActiveMessageC, MainC, LedsC;  
+  components ActiveMessageC, MainC, LedsC;
 
   // init timer (radio init)
   components new TimerMilliC() as InitTimer;

@@ -102,6 +102,7 @@ generic module CtpRoutingEngineP(uint8_t routingTableSize, uint32_t minInterval,
         interface CtpRoutingPacket;
         interface Init;
         interface Init as Reinit;
+        interface FixedTopology;
     } 
     uses {
         interface AMSend as BeaconSend;
@@ -161,6 +162,9 @@ implementation {
     uint32_t currentInterval = minInterval;
     uint32_t t; 
     bool tHasPassed;
+
+    /* Is topology fixed here ? */
+    bool fixedTopology=FALSE;
 
     void chooseAdvertiseTime() {
        t = currentInterval;
@@ -272,8 +276,13 @@ implementation {
         uint16_t minEtx;
         uint16_t currentEtx;
         uint16_t linkEtx, pathEtx;
-
+        
+        // root does not need to update route
         if (state_is_root)
+            return;
+       
+        // ignore if we have fixed topology
+        if (fixedTopology)
             return;
        
         best = NULL;
@@ -444,7 +453,7 @@ implementation {
     }
       
     event void BeaconTimer.fired() {
-      if (radioOn && running) {
+      if (radioOn && running && !fixedTopology) {
         if (!tHasPassed) {
           post updateRouteTask(); //always send the most up to date info
           post sendBeaconTask();
@@ -478,6 +487,12 @@ implementation {
                      (int)sizeof(ctp_routing_header_t));
               
           return msg;
+        }
+        
+        // ignore beacon packets if topology is fixed
+        if (fixedTopology){
+        	dbg("LITest", "Topology is fixed, ignoring received beacon packet");
+        	return msg;
         }
         
         //need to get the am_addr_t of the source
@@ -716,7 +731,12 @@ implementation {
         uint8_t idx;
         uint16_t  linkEtx;
         linkEtx = call LinkEstimator.getLinkQuality(from);
-
+        
+        // sorry, no updates with fixed topology
+        if (fixedTopology){
+        	return SUCCESS;
+        }
+        
         idx = routingTableFind(from);
         if (idx == routingTableSize) {
             //not found and table is full
@@ -832,4 +852,45 @@ implementation {
       return (n < routingTableActive)? routingTable[n].neighbor:AM_BROADCAST_ADDR;
     }
     
+    
+    command void FixedTopology.setFixedTopologyParent(am_addr_t parentNode){
+        fixedTopology=TRUE;
+        // now force to use fixed parent somehow
+        
+        if (parentNode==AM_BROADCAST_ADDR){
+        	// this node is root - root control will take care about it 
+        	// => route control ignores fixedTopology information
+        	call RootControl.setRoot();
+        } else {
+            // this node is not root - set root fixed
+            routeInfo.parent = parentNode;
+            // lower the etx the better - link quality
+            routeInfo.etx = 1;
+            routeInfo.haveHeard=TRUE;
+            routeInfo.congested=FALSE;	
+        }
+    }
+    
+    /**
+     * Disables fixed topology, routing is enabled again
+     */
+    command void FixedTopology.disableFixedTopology(){
+        fixedTopology=FALSE;
+        
+        // set invalid parent
+        atomic {
+            state_is_root = 0;
+            routeInfoInit(&routeInfo);
+        }
+        
+        // call to recompute routing tables
+        post updateRouteTask();
+    }
+    
+    /**
+     * Returns whether topology is fixed
+     */
+    command bool FixedTopology.isTopologyFixed(){
+        return fixedTopology;	
+    }  
 } 
