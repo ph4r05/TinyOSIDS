@@ -116,7 +116,10 @@ generic module CtpForwardingEngineP() {
     interface CollectionPacket;
     interface CtpPacket;
     interface CtpCongestion;
+    
+    // added interfaces
     interface ForwardControl;
+    interface ForwarderAttacker;
   }
   uses {
     // These five interfaces are used in the forwarding path
@@ -214,6 +217,21 @@ implementation {
      
   message_t loopbackMsg;
   message_t* ONE_NOK loopbackMsgPtr;
+  
+#ifdef CTP_FORWARD_ATTACKER_DROPPING
+    enum {
+    	CTP_ATTACKER_DROPPING_DISABLED = 0,
+    	CTP_ATTACKER_DROPPING_FLAT = 1,
+    	CTP_ATTACKER_DROPPING_CALLBACK = 2
+    };
+    
+    uint8_t attacker_dropping_type = CTP_ATTACKER_DROPPING_DISABLED;
+    float attacker_dropping_flat_rate = 0.0;
+#endif
+
+#ifdef CTP_FORWARD_ATTACKER_DELAY
+#warning CTP_FORWARD_ATTACKER_DELAY: Not implemented yet
+#endif
 
   command error_t Init.init() {
     int i;
@@ -817,8 +835,27 @@ implementation {
 			return msg;
 		}
 
+        // message checked for duplicity, now drop message if dropping attacker is active
+#ifdef CTP_FORWARD_ATTACKER_DROPPING
+        if (attacker_dropping_type == CTP_ATTACKER_DROPPING_FLAT){
+            // Flat dropping rate - drop packet with probability <p>.	
+            // For this define window = 10000 and drop packet if number from this window is
+            // less then (p * 10000).
+        	uint16_t r = (call Random.rand32() % 10000) + 1;
+        	if (r <= attacker_dropping_flat_rate * 10000){
+        	   dbg("Attack", "Dropping packet from %hu.\n", getHeader(msg)->origin);
+                call CollectionDebug.logEventMsg(0x77, 
+	                call CollectionPacket.getSequenceNumber(msg), 
+	                call CollectionPacket.getOrigin(msg), 
+	                0);
+        		
+        		return msg;
+        	}
+        }
+#endif
+
 		// If I'm the root, signal receive. 
-		else if(call RootControl.isRoot()) 
+		if(call RootControl.isRoot()) 
 			return signal Receive.receive[collectid](msg, call Packet.getPayload(msg,
 					call Packet.payloadLength(msg)), call Packet.payloadLength(msg));
 		// I'm on the routing path and Intercept indicates that I
@@ -1011,6 +1048,45 @@ implementation {
 	    while(call SendQueue.empty()==FALSE){
 	    	call SendQueue.dequeue();
 	    }
+	}
+
+	command error_t ForwarderAttacker.enableFlatPacketDelay(uint16_t milli){
+		return FAIL;
+	}
+
+    command error_t ForwarderAttacker.disableFlatPacketDelay(){
+    	return FAIL;
+   	}
+    
+	command bool ForwarderAttacker.isFlatPacketDelayEnabled(){
+		return FALSE;
+	}
+
+	command error_t ForwarderAttacker.enableFlatPacketDropping(float p){
+#ifndef CTP_FORWARD_ATTACKER_DROPPING
+		return FAIL;
+#else
+        attacker_dropping_type = CTP_ATTACKER_DROPPING_FLAT;
+        attacker_dropping_flat_rate = p;
+        return SUCCESS;
+#endif
+	}
+
+    command error_t ForwarderAttacker.disableFlatPacketDropping(){
+#ifndef CTP_FORWARD_ATTACKER_DROPPING  
+        return FAIL;
+#else
+        attacker_dropping_type = CTP_ATTACKER_DROPPING_DISABLED;
+        return SUCCESS;
+#endif        
+    }
+
+	command bool ForwarderAttacker.isFlatPacketDroppingEnabled(){
+#ifndef CTP_FORWARD_ATTACKER_DROPPING		
+		return FALSE;
+#else
+        return attacker_dropping_type == CTP_ATTACKER_DROPPING_FLAT;
+#endif		
 	}
 }
 
