@@ -52,6 +52,24 @@ interface ForwarderAttacker {
     */
    command uint8_t getAttackPacketDelayType(); 
 
+  /**
+   * Signals that a message has been received, which is supposed to be
+   * forwarded to another destination. User logic should decide whether this packet
+   * should be subject to probabilistic dropping or not.
+   *
+   * @param 'message_t* ONE msg' The complete message received.
+   *
+   * @param 'void* COUNT(len) payload' The payload portion of the packet for this
+   * protocol layer.
+   *
+   * @param len The length of the payload buffer.
+   *
+   * @return TRUE indicates the packet should be considered for dropping, 
+   *    FALSE means that this packet should be forwarder normally.
+   *
+   */
+    event bool attackPacketDropCallback(message_t* msg, void* payload, uint8_t len, am_id_t type);
+
     /**
      * Enabled packet dropping attack. 
      * Each incoming packet will be dropped with probability p.

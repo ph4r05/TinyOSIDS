@@ -868,16 +868,20 @@ implementation {
             // Flat dropping rate - drop packet with probability <p>.	
             // For this define window = 10000 and drop packet if number from this window is
             // less then (p * 10000).
-        	uint16_t r = (call Random.rand32() % 10000) + 1;
-        	if (r <= attacker_dropping_flat_rate * 10000){
-        	   dbg("Attack", "Dropping packet from %hu.\n", getHeader(msg)->origin);
-                call CollectionDebug.logEventMsg(0x77, 
-	                call CollectionPacket.getSequenceNumber(msg), 
-	                call CollectionPacket.getOrigin(msg), 
-	                0);
-        		
-        		return msg;
-        	}
+            if (signal ForwarderAttacker.attackPacketDropCallback(msg, call Packet.getPayload(msg, 
+                        call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid)){
+                
+	        	uint16_t r = (call Random.rand32() % 10000) + 1;
+	        	if (r <= attacker_dropping_flat_rate * 10000){
+	        	   dbg("Attack", "Dropping packet from %hu.\n", getHeader(msg)->origin);
+	               call CollectionDebug.logEventMsg(0x77, 
+		                call CollectionPacket.getSequenceNumber(msg), 
+		                call CollectionPacket.getOrigin(msg), 
+		                0);
+	        		
+	        		return msg;
+	        	}
+	        }
         }
 #endif
 
@@ -1402,6 +1406,10 @@ implementation {
 	}
 	
 	default event bool ForwarderAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+        return FALSE;
+    }
+    
+    default event bool ForwarderAttacker.attackPacketDropCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
         return FALSE;
     }
 	
