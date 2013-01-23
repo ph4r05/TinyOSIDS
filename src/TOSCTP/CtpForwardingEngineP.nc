@@ -864,13 +864,20 @@ implementation {
 
         // message checked for duplicity, now drop message if dropping attacker is active
 #ifdef CTP_FORWARD_ATTACKER_DROPPING
-        if (attacker_dropping_type == CTP_ATTACKER_DROPPING_FLAT){
+        if (attacker_dropping_type != CTP_ATTACKER_DROPPING_DISABLED){
             // Flat dropping rate - drop packet with probability <p>.	
             // For this define window = 10000 and drop packet if number from this window is
             // less then (p * 10000).
-            if (signal ForwarderAttacker.attackPacketDropCallback(msg, call Packet.getPayload(msg, 
-                        call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid)){
-                
+            bool probDrop = TRUE;
+            
+            // callback type for packet dropping, let user logic to decide whethet
+            // message is subject to probabilistic dropping or not
+            if (attacker_dropping_type == CTP_ATTACKER_DROPPING_CALLBACK){
+            	probDrop =  signal ForwarderAttacker.attackPacketDropCallback(msg, call Packet.getPayload(msg, 
+                        call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid);
+            }
+             
+            if (probDrop){   
 	        	uint16_t r = (call Random.rand32() % 10000) + 1;
 	        	if (r <= attacker_dropping_flat_rate * 10000){
 	        	   dbg("Attack", "Dropping packet from %hu.\n", getHeader(msg)->origin);
@@ -1399,7 +1406,7 @@ implementation {
     
 	command uint8_t ForwarderAttacker.getAttackPacketDelayType(){
 #ifndef CTP_FORWARD_ATTACKER_DELAY
-		return CTP_ATTACKER_DELAY_DISABLED;
+		return 0;
 #else
         return attacker_delay_type;
 #endif
@@ -1413,17 +1420,27 @@ implementation {
         return FALSE;
     }
 	
-	command error_t ForwarderAttacker.enableFlatPacketDropping(float p){
+	command error_t ForwarderAttacker.enablePacketDropping(uint8_t type, float p){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING
 		return FAIL;
 #else
-        attacker_dropping_type = CTP_ATTACKER_DROPPING_FLAT;
-        attacker_dropping_flat_rate = p;
+        if (type==CTP_ATTACKER_DROPPING_DISABLED){
+            call ForwarderAttacker.disablePacketDropping();
+        } else if (type==CTP_ATTACKER_DROPPING_CALLBACK){
+            attacker_dropping_type = type;
+            attacker_dropping_flat_rate = p;
+        } else if (type==CTP_ATTACKER_DROPPING_FLAT){
+        	attacker_dropping_type = CTP_ATTACKER_DROPPING_FLAT;
+        	attacker_dropping_flat_rate = p;
+        } else {
+        	return FAIL;
+        }
+        
         return SUCCESS;
 #endif
 	}
 
-    command error_t ForwarderAttacker.disableFlatPacketDropping(){
+    command error_t ForwarderAttacker.disablePacketDropping(){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING  
         return FAIL;
 #else
@@ -1432,11 +1449,11 @@ implementation {
 #endif        
     }
 
-	command bool ForwarderAttacker.isFlatPacketDroppingEnabled(){
+	command bool ForwarderAttacker.getPacketDroppingType(){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING		
-		return FALSE;
+		return 0;
 #else
-        return attacker_dropping_type == CTP_ATTACKER_DROPPING_FLAT;
+        return attacker_dropping_type;
 #endif		
 	}
 }

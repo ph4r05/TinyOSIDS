@@ -75,17 +75,17 @@ interface ForwarderAttacker {
      * Each incoming packet will be dropped with probability p.
      * @param p
      */
-   command error_t enableFlatPacketDropping(float p);
+   command error_t enablePacketDropping(uint8_t type, float p);
    
    /**
     * Disables flat packet dropping attack.
     * If was flat dropping attack enabled, after this call packets won't
     * be subject to packet dropping with (specified probability) anymore.
     */
-   command error_t disableFlatPacketDropping();
+   command error_t disablePacketDropping();
    
    /**
     * Determines state of flat packet dropping attack.
     */
-   command bool isFlatPacketDroppingEnabled();    
+   command uint8_t getPacketDroppingType();    
 }
