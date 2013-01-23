@@ -87,6 +87,7 @@ configuration CtpP {
     interface Init as LinkEstimatorInit;
     interface ForwardControl;
     interface FixedTopology;
+    interface ForwarderAttacker;
   }
 
   uses {
@@ -98,10 +99,19 @@ configuration CtpP {
 implementation {
   enum {
     CLIENT_COUNT = uniqueCount(UQ_CTP_CLIENT),
+#if defined(CTP_FORWARD_ATTACKER_DELAY)
+    FORWARD_COUNT = 32,
+#else    
     FORWARD_COUNT = 12,
+#endif    
     TREE_ROUTING_TABLE_SIZE = 10,
     QUEUE_SIZE = CLIENT_COUNT + FORWARD_COUNT,
     CACHE_SIZE = 4,
+#if defined(CTP_FORWARD_ATTACKER_DELAY)
+    DELAY_POOL_SIZE = 32,
+    DELAY_QUEUE_SIZE = DELAY_POOL_SIZE,
+#endif    
+    
   };
 
   components ActiveMessageC;
@@ -127,6 +137,22 @@ implementation {
   components new QueueC(fe_queue_entry_t*, QUEUE_SIZE) as SendQueueP;
   Forwarder.SendQueue -> SendQueueP;
 
+#if defined(CTP_FORWARD_ATTACKER_DELAY)
+  components new PoolC(message_t, DELAY_POOL_SIZE) as DelayMessagePoolP;
+  components new PoolC(fe_queue_entry_t, DELAY_POOL_SIZE) as DelayQEntryPoolP;
+  Forwarder.DelayQEntryPool -> DelayQEntryPoolP;
+  Forwarder.DelayMessagePool -> DelayMessagePoolP;
+
+  components new QueueC(fe_queue_entry_t*, DELAY_QUEUE_SIZE) as DelaySendQueueP;
+  Forwarder.DelaySendQueue -> DelaySendQueueP;
+  
+  components HilTimerMilliC;
+  Forwarder.LocalTime       ->  HilTimerMilliC;
+  
+  components new TimerMilliC() as DelayTimer;
+  Forwarder.DelayTimer -> DelayTimer;
+#endif
+
   components new LruCtpMsgCacheC(CACHE_SIZE) as SentCacheP;
   Forwarder.SentCache -> SentCacheP;
 
@@ -145,6 +171,7 @@ implementation {
   StdControl = Estimator;
   RootControl = Router;
   FixedTopology = Router; 
+  ForwarderAttacker = Forwarder;
   MainC.SoftwareInit -> Router.Init;
   Router.BeaconSend -> Estimator.Send;
   Router.BeaconReceive -> Estimator.Receive;

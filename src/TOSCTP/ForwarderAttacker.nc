@@ -3,11 +3,12 @@
  *  - Packet delay attack
  *      - flat packet delay attack - set number of milliseconds that ALL
  *      packets to be forwarded will be delayed
- *      - TODO: callback packet delay attack, decision about delay could be made
- *      based packet content
+ *      - callback packet delay attack, decision about delay could be made
+ *      based packet content - event is signalized.
  *  - Selective forwarder attack
  *      - flat packet dropping. User sets probability that packet will be dropped.
- *      - TODO: callback packet dropping, decision about packet drop could be made
+ *      - callback packet dropping can be easily implemented by wiring to Intercept 
+ *          interface of CtpForwardingEngine. 
  *      based on packet content
  */
 interface ForwarderAttacker {
@@ -15,21 +16,41 @@ interface ForwarderAttacker {
 	 * Enables flat packet delaying - each packet will be delayed by specified
 	 * amount of time.
 	 * 
+	 * @param type 
+	 *         0 = disabled
+	 *         1 = flat (for all)
+	 *         2 = callback (with signalizing event)
 	 * @param milli - number of milliseconds that each packet to be forwarded
 	 *     should be delayed
 	 */
-   command error_t enableFlatPacketDelay(uint16_t milli);
+   command error_t enablePacketDelay(uint8_t type, uint16_t milli);
+   
+  /**
+   * Signals that a message has been received, which is supposed to be
+   * forwarded to another destination. 
+   *
+   * @param 'message_t* ONE msg' The complete message received.
+   *
+   * @param 'void* COUNT(len) payload' The payload portion of the packet for this
+   * protocol layer.
+   *
+   * @param len The length of the payload buffer.
+   *
+   * @return TRUE indicates the packet should be forwarded, FALSE
+   * indicates that it should not be forwarded.
+   *
+   */
+  event bool attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type);
    
    /**
     * Disables flat packet delaying. Packets will not be subject to delay anymore.
     */
-   command error_t disableFlatPacketDelay();
+   command error_t disablePacketDelay();
    
    /**
     * Determines current state of packet delaying attack.
     */
-   command bool isFlatPacketDelayEnabled();
-
+   command uint8_t getAttackPacketDelayType(); 
 
     /**
      * Enabled packet dropping attack. 

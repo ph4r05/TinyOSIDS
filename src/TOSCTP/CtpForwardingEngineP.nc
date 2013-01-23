@@ -143,6 +143,14 @@ generic module CtpForwardingEngineP() {
     interface Pool<message_t> as MessagePool;
     interface Cache<message_t*> as SentCache;
     
+#ifdef CTP_FORWARD_ATTACKER_DELAY
+    interface Queue<fe_queue_entry_t*> as DelaySendQueue;
+    interface Pool<fe_queue_entry_t> as DelayQEntryPool;
+    interface Pool<message_t> as DelayMessagePool;
+    interface LocalTime<TMilli> as LocalTime;
+    interface Timer<TMilli> as DelayTimer;
+#endif
+    
     interface Receive as SubReceive;
     interface Receive as SubSnoop;
     interface CtpInfo;
@@ -230,7 +238,20 @@ implementation {
 #endif
 
 #ifdef CTP_FORWARD_ATTACKER_DELAY
-#warning CTP_FORWARD_ATTACKER_DELAY: Not implemented yet
+    enum {
+        CTP_ATTACKER_DELAY_DISABLED = 0,
+        CTP_ATTACKER_DELAY_FLAT = 1,
+        CTP_ATTACKER_DELAY_CALLBACK = 2,
+
+        // minimal size of window for timer to start in milliseconds.
+        CTP_ATTACKER_DELAY_MINIMAL_WINDOW = 10
+    };
+
+    uint8_t attacker_delay_type = CTP_ATTACKER_DELAY_DISABLED;
+    uint16_t attacker_delay_flat = 0;
+
+    void checkDelayQueue(bool dumpEverything);
+    message_t* ONE delayForward(message_t* ONE m);
 #endif
 
   command error_t Init.init() {
@@ -251,6 +272,12 @@ implementation {
     	call SendQueue.dequeue();
     }
     
+#ifdef CTP_FORWARD_ATTACKER_DELAY
+    // clear delay queue
+    while(call DelaySendQueue.empty()==FALSE){
+        call DelaySendQueue.dequeue();
+    }
+#endif
     return SUCCESS;
   }
 
@@ -870,8 +897,29 @@ implementation {
 				call CollectionPacket.getSequenceNumber(msg), 
 				call CollectionPacket.getOrigin(msg), 
 				0);
-				
+
+#ifdef CTP_FORWARD_ATTACKER_DELAY
+            if (attacker_delay_type==CTP_ATTACKER_DELAY_CALLBACK){
+            	// callback to user wired event to determine whether this message
+            	// should be delayed or not.
+	            if (signal ForwarderAttacker.attackPacketDelayCallback(msg, call Packet.getPayload(msg, 
+	                    call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid)){
+                    // it was signalized from user that this message should be delayed
+                    return delayForward(msg);
+	            } else {
+	            	// forward this message normally
+	            	return forward(msg); 
+	            }
+	        } else if (attacker_delay_type==CTP_ATTACKER_DELAY_FLAT){
+	        	// flat packet delay - delay everything
+	        	return delayForward(msg);
+	        } else {
+	            // no such attack should be done
+	           	return forward(msg);
+	        }
+#else
 			return forward(msg);
+#endif
 		}
 	}
 
@@ -1049,19 +1097,314 @@ implementation {
 	    	call SendQueue.dequeue();
 	    }
 	}
+	
+#ifdef CTP_FORWARD_ATTACKER_DELAY
+    /**
+     * Message is passed here to be delayed and enqueued to delay send queue.
+     * analogy of classical forward() call from message received.
+     * 
+     * Resources are allocated in DelayQeueuePool and DelayMessagePool, message structure 
+     * is initialized and enqueued to DelaySendQueue.
+     * 
+     * Message expiration time is computed form localtime + delay_time;
+     * 
+     * m is buffer from receive subsystem. If we process this message successfully, we have
+     * to return new buffer for messages. This is acquired from DelayMessagePool.
+     */
+    message_t* ONE delayForward(message_t* ONE m){
+    	bool duplicate=FALSE;
+    	fe_queue_entry_t * qe;
+    	uint16_t i=0;
+    	
+    	// null check by ph4r05
+        if (m == NULL || ((call CollectionPacket.getOrigin(m)) == 0 && (call CollectionPacket.getSequenceNumber(m))==0)){
+                // log null message - something went wrong
+                call CollectionDebug.logEventDbg(0x67, 653, call CollectionPacket.getOrigin(m), 0);
+        }
+    	
+    	// check the queue for duplicates in O(N)   ... :(
+        if(call DelaySendQueue.size() > 0) {
+            for (i = call DelaySendQueue.size(); i >0; i--) {
+                qe = call DelaySendQueue.element(i-1);
+                if(call CtpPacket.matchInstance(qe->msg, m)) {
+                    duplicate = TRUE;
+                    break;
+                }
+            }
+        }
+        
+        // maybe some reporting in future, now simply return
+        if (duplicate){
+        	return m;
+    	}
+    	
+	    // checking message pools for free space
+	    if (call DelayMessagePool.empty()) {
+	      dbg("Route", "%s cannot forward, message pool empty.\n", __FUNCTION__);
+	      call CollectionDebug.logEvent(NET_C_FE_MSG_POOL_EMPTY);
+	    }
+	    else if (call DelayQEntryPool.empty()) {
+	      dbg("Route", "%s cannot forward, queue entry pool empty.\n", __FUNCTION__);
+	      call CollectionDebug.logEvent(NET_C_FE_QENTRY_POOL_EMPTY);
+	    }
+	    else {
+	      message_t* newMsg;
+	      uint16_t gradient;
+	      uint32_t ltime;
+	      
+	      qe = call DelayQEntryPool.get();
+	      if (qe == NULL) {
+	        call CollectionDebug.logEvent(NET_C_FE_GET_MSGPOOL_ERR);
+	        return m;
+	      }
+	      
+	      // get new buffer for receive subsystem - swap with provided m.
+	      newMsg = call DelayMessagePool.get();
+	      if (newMsg == NULL) {
+	        call CollectionDebug.logEvent(NET_C_FE_GET_QEPOOL_ERR);
+	        return m;
+	      }
+	   
+	      // reset old message content
+	      memset((void*)newMsg, 0, sizeof(message_t));
+	      memset((void*)(m->metadata), 0, sizeof(message_metadata_t));
+	      
+	      // real time acquistion 
+          ltime = call LocalTime.get();
+	      
+	      qe->msg = m;
+	      qe->client = 0xff;
+	      qe->retries = MAX_RETRIES;
+	      // add time when message is allowed to be sent
+	      qe->timeTriggerSend = ltime + attacker_delay_flat;
+	      
+	      // another null check - incosistencies
+	      if (m == NULL || ((call CollectionPacket.getOrigin(m)) == 0 && (call CollectionPacket.getSequenceNumber(m))==0)){
+	            // log null message - something went wrong
+	            call CollectionDebug.logEventDbg(0x67, 686, call CollectionPacket.getOrigin(m), 0);
+	      }
+	      
+	      // enqueue to delay send queue
+	      if (call DelaySendQueue.enqueue(qe) == SUCCESS) {
+	        dbg("Forwarder,Route", "%s forwarding packet %p with queue size %hhu\n", __FUNCTION__, m, call SendQueue.size());
+	        // Loop-detection code - copied from forward():
+	        if (call CtpInfo.getEtx(&gradient) == SUCCESS) {
+	          // We only check for loops if we know our own metric
+	          if (call CtpPacket.getEtx(m) <= gradient) {
+	            // If our etx metric is less than or equal to the etx value
+	           // on the packet (etx of the previous hop node), then we believe
+	           // we are in a loop.
+	           // Trigger a route update and backoff.
+	            call CtpInfo.triggerImmediateRouteUpdate();
+	            startRetxmitTimer(LOOPY_WINDOW, LOOPY_OFFSET);
+	            call CollectionDebug.logEventMsg(NET_C_FE_LOOP_DETECTED,
+	                     call CollectionPacket.getSequenceNumber(m), 
+	                     call CollectionPacket.getOrigin(m), 
+	                     call AMPacket.destination(m));
+	          }
+	        }
+	
+	        if (!call RetxmitTimer.isRunning()) {
+	          // sendTask is only immediately posted if we don't detect a
+	          // loop.
+	          dbg("FHangBug", "%s: posted sendTask.\n", __FUNCTION__);
+	          post sendTask();
+	        }
+	        
+	        // everything went ok - check delay queue now
+	        checkDelayQueue(FALSE);
+	        
+	        // Successful function exit point
+	        return newMsg;
+	      } else {
+	        // There was a problem enqueuing to the send queue. Release all resources from pools.
+	        if (call DelayMessagePool.put(newMsg) != SUCCESS)
+	          call CollectionDebug.logEvent(NET_C_FE_PUT_MSGPOOL_ERR);
+	        if (call DelayQEntryPool.put(qe) != SUCCESS)
+	          call CollectionDebug.logEvent(NET_C_FE_PUT_QEPOOL_ERR);
+	      }
+	    }
+	
+	    // NB: at this point, we have a resource acquistion problem.
+	    // Log the event, and drop the
+	    // packet on the floor.
+	    call CollectionDebug.logEvent(NET_C_FE_SEND_QUEUE_FULL);
+	    
+	    // failed something, just try to check queue also
+        checkDelayQueue(FALSE);
+	    
+	    return m;
+    }
 
-	command error_t ForwarderAttacker.enableFlatPacketDelay(uint16_t milli){
-		return FAIL;
+    /**
+     * Checks delay queue for new messages to be forwarded to real destination.
+     * 
+     * If time expired for given message and it is prepared to be sent, it is removed from
+     * the DelayQueue and added to forward queue by calling normal forward() procedure, as during
+     * normal message reception.
+     * 
+     * If there is still at least one message in DelayQueue left to be forwarded later, DelayTimer will
+     * be triggered not to forget on this message.
+     * 
+     * message_t is not copied, buffers are swapped between pools instead. Normal forward() call is used
+     * and in case of success, new buffer returned from this function is added to DelayMessagePool.
+     * Analogically, message from my DelayMessagePool is then used in forward() call to store message.
+     * 
+     * @param dumpEverything - if TRUE, expire time for messages is ignored, message is forward()-ed.
+     *                          used when delaying attack is disabled to forward all messages correctly.  
+     */
+    void checkDelayQueue(bool dumpEverything){
+    	// extract local time, to compare with messages expire timers
+    	uint32_t ltime = 0;
+    	fe_queue_entry_t * qe;
+    	
+    	// check queue, if is empty, do nothing
+    	if (call DelaySendQueue.empty()){
+    		// nothing to do
+    		return;
+    	}
+    	
+    	// if DelayTimer is running, disable it right now.
+    	// It may interfere with this call. New CheckDelayQueue() could be called
+    	// in the middle of processing -> unwanted behavior.
+    	// 
+    	// If there is still at least one message in the DelayQueue to be sent, after finishing
+    	// this function DelayTimer will be triggered again, so we won't loose anything.
+        if (call DelayTimer.isRunning()){
+            call DelayTimer.stop();
+        }
+    	
+    	// real time acquistion 
+    	ltime = call LocalTime.get();
+    	// iterate over messages and check them
+    	while((call DelaySendQueue.empty()) == FALSE){
+    		// get first element from queue without dequeueing it
+            qe = call DelaySendQueue.head();
+            
+            // check time of message
+            if (dumpEverything || (qe->timeTriggerSend - CTP_ATTACKER_DELAY_MINIMAL_WINDOW) <= ltime){
+            	// message can be forwarded now, call normal forward on it and in case 
+            	// of success release it from DelayQueue and DelayQueuePool.
+            	// In case of success, forward() will return new message from its message pool,
+            	// this message I will put to my message pool.
+            	message_t * newMsg = forward(qe->msg);
+            	if (newMsg == qe->msg){
+            		// pointers are equal, forwarding was NOT successfull.
+            		// Decrement retry counter so as not message stucks in our queue
+            		// and blocks everything.
+            		qe->retries-=1;
+			        if (qe->retries<=0){
+			        	// drop message on floor. Queue iteration can normally continue
+			        	// after removing this message and freeing resources. 
+			        	
+			            // remove from queue
+			            call DelaySendQueue.dequeue();
+			            // release pool resources
+			            if(call DelayMessagePool.put(qe->msg) != SUCCESS) 
+			                call CollectionDebug.logEvent(NET_C_FE_PUT_MSGPOOL_ERR);
+			            if(call DelayQEntryPool.put(qe) != SUCCESS) 
+			                call CollectionDebug.logEvent(NET_C_FE_PUT_QEPOOL_ERR);
+			        } else {
+			            // message is failed, but still in acceptable retry interval.
+			            // => it should not be dropped. 
+			            
+			            // re-trigger timer in case of failure
+			            // timer should not be running
+	                    if (!(call DelayTimer.isRunning())){
+	                      // timer will fire in timeTrigger milliseconds and will check queue again.
+	                      // in time of triggering this timer, this message should be ready for sending
+	                      call DelayTimer.startOneShot(CTP_ATTACKER_DELAY_MINIMAL_WINDOW);
+	                    }
+	                
+	                    // break, unfortunately, we cannot skip one element in queue and
+	                    // try to forward another one. One by one.
+	                    break;
+	              }
+            	} else {
+            	   // message was successfully forwarded, it can be dequeued from queue
+            	   // and pool.	
+            	   // remove from queue
+                   call DelaySendQueue.dequeue();
+                   // release pool resources - release queue structure to my pool
+                   if(call DelayQEntryPool.put(qe) != SUCCESS) 
+                     call CollectionDebug.logEvent(NET_C_FE_PUT_QEPOOL_ERR);
+                   // beware here, we are returning message returned by forward() call to pool.
+                   // Message qe->msg is now used by forward()
+                   if(call DelayMessagePool.put(newMsg) != SUCCESS) 
+                     call CollectionDebug.logEvent(NET_C_FE_PUT_MSGPOOL_ERR);
+            	}
+            } else{
+            	// Current message still has to be delayed - end of queue iteration.
+            	// But timer can be set to be triggered on nearest message expiration time
+            	uint32_t timeTrigger = qe->timeTriggerSend - ltime;
+            	if (timeTrigger < CTP_ATTACKER_DELAY_MINIMAL_WINDOW){
+            		timeTrigger = CTP_ATTACKER_DELAY_MINIMAL_WINDOW;
+            	}
+            	
+            	// timer should not be running
+            	if (!(call DelayTimer.isRunning())){
+            		// timer will fire in timeTrigger milliseconds and will check queue again.
+            		// in time of triggering this timer, this message should be ready for sending
+            		call DelayTimer.startOneShot(timeTrigger);
+            	}
+            	// and finish iteration in queue finally
+            	break; 
+            }
+    	}
+    }
+    
+    /**
+     * DelayTimer fired - check delay queue again
+     */
+    event void DelayTimer.fired(){
+    	checkDelayQueue(FALSE);
+    }
+#endif	
+
+	command error_t ForwarderAttacker.enablePacketDelay(uint8_t type, uint16_t milli){
+#ifndef CTP_FORWARD_ATTACKER_DELAY
+        return FAIL;
+#else
+        if (type==CTP_ATTACKER_DELAY_DISABLED){
+        	return call ForwarderAttacker.disablePacketDelay();
+        } else if (type==CTP_ATTACKER_DELAY_CALLBACK){
+        	attacker_delay_type = type;
+        } else if (type==CTP_ATTACKER_DELAY_FLAT){
+        	if (milli < CTP_ATTACKER_DELAY_MINIMAL_WINDOW)
+        	   return FAIL;
+            attacker_delay_type = type;
+            attacker_delay_flat = milli;
+        } else {
+        	return FAIL;
+        }
+        
+		return SUCCESS;
+#endif
 	}
 
-    command error_t ForwarderAttacker.disableFlatPacketDelay(){
+    command error_t ForwarderAttacker.disablePacketDelay(){
+#ifndef CTP_FORWARD_ATTACKER_DELAY    	
     	return FAIL;
+#else
+        // dump everything from queues cleanly
+        checkDelayQueue(TRUE);
+        // end finally disable
+        attacker_delay_type = CTP_ATTACKER_DELAY_DISABLED;
+#endif
    	}
     
-	command bool ForwarderAttacker.isFlatPacketDelayEnabled(){
-		return FALSE;
+	command uint8_t ForwarderAttacker.getAttackPacketDelayType(){
+#ifndef CTP_FORWARD_ATTACKER_DELAY
+		return CTP_ATTACKER_DELAY_DISABLED;
+#else
+        return attacker_delay_type;
+#endif
 	}
-
+	
+	default event bool ForwarderAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+        return FALSE;
+    }
+	
 	command error_t ForwarderAttacker.enableFlatPacketDropping(float p){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING
 		return FAIL;
