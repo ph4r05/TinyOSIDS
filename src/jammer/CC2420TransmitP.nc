@@ -178,6 +178,7 @@ implementation {
   norace bool jamming=FALSE;
   norace bool jammingNOW=FALSE;
   norace message_t jam_msg;
+  norace bool usePreparedJamMsg=FALSE;
   uint32_t jamCounter=0;
   uint16_t jammingTimeout=0;
   // count how many underflow occurred
@@ -1048,37 +1049,55 @@ implementation {
 		
 	}
 	
+	void enableJamming(bool enabled, uint8_t tx_power, bool preparedMsg){
+		 usePreparedJamMsg=preparedMsg;
+		 jamming = enabled;
+         
+         // set wanted TX power to jam msg
+         (call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power = tx_power;
+         
+#ifdef PFO       
+         printf("p");
+#endif       
+         if (jamming){
+#ifdef PFO          
+            printf("j");
+#endif          
+            post startjam();
+         } else {
+            atomic {
+                jamCounter=0;
+                jammingNOW=FALSE;
+                
+                jammingTimeout=0;
+                jamReportTimer=0;
+                jamSPINotMine=0;
+                jamUnderflow=0;
+                jamCongestion=0;
+            }
+         }
+	}
+	
+	command void JammingRadio.setJammingMsgTX(uint8_t tx_power, message_t * msg, am_addr_t dst){
+		cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
+		
+		// prepare message - copy provided message to jam_msg
+		memcpy((void *) &jam_msg, (void *) msg, sizeof(message_t));
+		// set tx power and destination
+		(call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power = tx_power;        
+        // broadcast - everyone should hear
+        header->dest = dst;
+        
+        enableJamming(TRUE, CC2420_DEF_RFPOWER, TRUE);
+	}
+	
 	command void JammingRadio.setJamming(bool enabled){
-		call JammingRadio.setJammingTX(enabled, CC2420_DEF_RFPOWER);
+		enableJamming(enabled, CC2420_DEF_RFPOWER, FALSE);
 	}
 	
 	// if true set immediately jamming
 	command void JammingRadio.setJammingTX(bool enabled, uint8_t tx_power){
-		 jamming = enabled;
-		 
-		 // set wanted TX power to jam msg
-		 (call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power = tx_power;
-		 
-#ifdef PFO		 
-		 printf("p");
-#endif		 
-		 if (jamming){
-#ifdef PFO		 	
-		 	printf("j");
-#endif		 	
-		 	post startjam();
-		 } else {
-		 	atomic {
-			 	jamCounter=0;
-			 	jammingNOW=FALSE;
-			 	
-			 	jammingTimeout=0;
-			 	jamReportTimer=0;
-			 	jamSPINotMine=0;
-			 	jamUnderflow=0;
-			 	jamCongestion=0;
-		 	}
-		 }
+		 enableJamming(enabled, tx_power, FALSE);
 	}
 	
 	void startjamNow(){
@@ -1138,17 +1157,24 @@ implementation {
 			cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
 			uint8_t tx_power = (call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power;
 		    
-			// in order to gain high efficiency in channel jamming, large packet 
-			// length 30 seems to be OK
-			header->length = 4;//TOSH_DATA_LENGTH;
-			header->length = 30;
-			// broadcast - everyone should hear
-			header->dest = 0xffff;
-			//header->dest = 0xeeee;
+		    // set this defaults only if we are using default null message
+		    if (!usePreparedJamMsg){
+				// in order to gain high efficiency in channel jamming, large packet 
+				// length 30 seems to be OK
+				header->length = 4;//TOSH_DATA_LENGTH;
+				header->length = 30;
+				// broadcast - everyone should hear
+				header->dest = 0xffff;
+				//header->dest = 0xeeee;
+				
+				header->src = 1;
+				header->type = 100;
+			}
 			
-			header->src = 1;
-			header->type = 100;
+			// disable ACK on every message
 			header->fcf &= ~(1 << IEEE154_FCF_ACK_REQ);
+			
+			// generate unique DSN not to be message dropped to early
 			header->dsn = (call BackoffTimer.getNow() % 0xff);
 	
 			// we don't want any CCA check at all
@@ -1164,7 +1190,6 @@ implementation {
 		    }
 		    
 		    m_tx_power = tx_power;
-		    
 		    {
 		      uint8_t tmpLen __DEPUTY_UNUSED__ = header->length - 1;
 		      jammingNOW=TRUE;
@@ -1173,7 +1198,7 @@ implementation {
 #endif	      
 			  
 //	      	  call TXFIFO.write(TCAST(uint8_t * COUNT(tmpLen), header), header->length - 1);
-			  call TXFIFO.write(TCAST(uint8_t *, header), header->length);
+			  call TXFIFO.write(TCAST(uint8_t *, header), usePreparedJamMsg ? header->length-1 : header->length);
 			  
 			  // see TXFIFO.writeDone() for more logic after packet was copied to buffer 
 		    }
