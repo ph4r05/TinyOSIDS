@@ -250,7 +250,7 @@ implementation {
     uint8_t attacker_delay_type = CTP_ATTACKER_DELAY_DISABLED;
     uint16_t attacker_delay_flat = 0;
 
-    void checkDelayQueue(bool dumpEverything);
+    task void checkDelayQueue();
     message_t* ONE delayForward(message_t* ONE m);
 #endif
 
@@ -1212,7 +1212,7 @@ implementation {
 	        }
 	        
 	        // everything went ok - check delay queue now
-	        checkDelayQueue(FALSE);
+	        post checkDelayQueue();
 	        
 	        // Successful function exit point
 	        return newMsg;
@@ -1231,7 +1231,7 @@ implementation {
 	    call CollectionDebug.logEvent(NET_C_FE_SEND_QUEUE_FULL);
 	    
 	    // failed something, just try to check queue also
-        checkDelayQueue(FALSE);
+        post checkDelayQueue();
 	    
 	    return m;
     }
@@ -1250,13 +1250,13 @@ implementation {
      * and in case of success, new buffer returned from this function is added to DelayMessagePool.
      * Analogically, message from my DelayMessagePool is then used in forward() call to store message.
      * 
-     * @param dumpEverything - if TRUE, expire time for messages is ignored, message is forward()-ed.
-     *                          used when delaying attack is disabled to forward all messages correctly.  
+     * If packet delay attack is disabled, queue is dumped.  
      */
-    void checkDelayQueue(bool dumpEverything){
+    task void checkDelayQueue(){
     	// extract local time, to compare with messages expire timers
     	uint32_t ltime = 0;
     	fe_queue_entry_t * qe;
+    	bool dumpEverything = attacker_delay_type == CTP_ATTACKER_DELAY_DISABLED;
     	
     	// check queue, if is empty, do nothing
     	if (call DelaySendQueue.empty()){
@@ -1357,7 +1357,7 @@ implementation {
      * DelayTimer fired - check delay queue again
      */
     event void DelayTimer.fired(){
-    	checkDelayQueue(FALSE);
+    	post checkDelayQueue();
     }
 #endif	
 
@@ -1386,10 +1386,10 @@ implementation {
 #ifndef CTP_FORWARD_ATTACKER_DELAY    	
     	return FAIL;
 #else
-        // dump everything from queues cleanly
-        checkDelayQueue(TRUE);
-        // end finally disable
+        // finally disable
         attacker_delay_type = CTP_ATTACKER_DELAY_DISABLED;
+        // dump everything from queues cleanly
+        post checkDelayQueue();
 #endif
    	}
     
