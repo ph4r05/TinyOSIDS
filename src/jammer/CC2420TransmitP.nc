@@ -903,17 +903,24 @@ implementation {
 			printf("u");
 #endif			
 			// collect statistics
-			jamUnderflow+=1;
+			atomic {
+			 jamUnderflow+=1;
+			}
 
 			// separate FLUSH command with CSN low-high
 			call CSN.clr();
 			call SFLUSHTX.strobe();
 			call CSN.set();
-        	jammingNOW=FALSE;
-        	jamCounter=0;
+			
+			atomic {
+        	   jammingNOW=FALSE;
+        	   jamCounter=0;
+        	}
         	
         	// kind of backoff, after UNDERFLOW_BACKOFF jiffies jamming task is posted in backoffTimer.fired()
-        	m_state=S_JAM;
+        	atomic {
+            	m_state=S_JAM; 
+        	}
         	call BackoffTimer.start(UNDERFLOW_BACKOFF);
         	return;
 		}
@@ -922,7 +929,9 @@ implementation {
 		// thus something went wrong, set backoff period (called after returning from this function)
 		if (congestion) {
 		  myInitialBackoff=CONGESTION_BACKOFF;
-		  jamCongestion+=1;
+		  atomic {
+		      jamCongestion+=1;
+		  }
 #ifdef PFO      
 	      printf("c");
 #endif      
@@ -1039,9 +1048,17 @@ implementation {
 		
 	}
 	
-	// if true set immediatelly jamming
 	command void JammingRadio.setJamming(bool enabled){
+		call JammingRadio.setJammingTX(enabled, CC2420_DEF_RFPOWER);
+	}
+	
+	// if true set immediately jamming
+	command void JammingRadio.setJammingTX(bool enabled, uint8_t tx_power){
 		 jamming = enabled;
+		 
+		 // set wanted TX power to jam msg
+		 (call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power = tx_power;
+		 
 #ifdef PFO		 
 		 printf("p");
 #endif		 
@@ -1051,18 +1068,21 @@ implementation {
 #endif		 	
 		 	post startjam();
 		 } else {
-		 	jamCounter=0;
-		 	jammingNOW=FALSE;
-		 	
-		 	jammingTimeout=0;
-		 	jamReportTimer=0;
-		 	jamSPINotMine=0;
-		 	jamUnderflow=0;
-		 	jamCongestion=0;
+		 	atomic {
+			 	jamCounter=0;
+			 	jammingNOW=FALSE;
+			 	
+			 	jammingTimeout=0;
+			 	jamReportTimer=0;
+			 	jamSPINotMine=0;
+			 	jamUnderflow=0;
+			 	jamCongestion=0;
+		 	}
 		 }
 	}
 	
 	void startjamNow(){
+		bool jamCounterBiggerThanZero = FALSE;
 #ifdef STATREPORT
 		jamReportTimer+=1;
 		if (jamReportTimer>=1000){
@@ -1092,7 +1112,11 @@ implementation {
 		
 		// already in TXFIFO, no need to copy again, speed gain
 		// send directly
-		if (jamCounter>0){
+		atomic {
+			jamCounterBiggerThanZero = jamCounter > 0;
+		}
+		
+		if (jamCounterBiggerThanZero){
 			myInitialBackoff = 1;
 			
 		    call CSN.set();		
@@ -1100,7 +1124,9 @@ implementation {
 	    	printf("e");
 #endif    	
 			// call attemptSend() which leads to strobe on STXON
-	      	m_state = S_BEGIN_TRANSMIT;
+			atomic {
+	      	    m_state = S_BEGIN_TRANSMIT;
+	      	}
       		attemptSend();
       		call BackoffTimer.start(myInitialBackoff);    		
 	      	return;
@@ -1108,8 +1134,9 @@ implementation {
 		
 		// block for writing packet to TXFIFO
 		{
+			// load TX power from jam_msg
 			cc2420_header_t* header = call CC2420PacketBody.getHeader( &jam_msg );
-		    uint8_t tx_power = CC2420_DEF_RFPOWER;
+			uint8_t tx_power = (call CC2420PacketBody.getMetadata( &jam_msg ))->tx_power;
 		    
 			// in order to gain high efficiency in channel jamming, large packet 
 			// length 30 seems to be OK
