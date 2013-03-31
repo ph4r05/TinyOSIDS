@@ -21,6 +21,7 @@ configuration ForgedActiveMessageC
 	    interface LowPowerListening;
 		
   		interface AMTap;
+  		interface SendDoneTap;
 	}
 
 }
@@ -31,6 +32,7 @@ implementation
   	components ForgedActiveMessageP;
 
     AMTap = ForgedActiveMessageP.AMTap;    
+    SendDoneTap = ForgedActiveMessageP.SendDoneTap;
 	
   	//forged components
   	AMSend       = ForgedActiveMessageP.AMSend;

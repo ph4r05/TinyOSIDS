@@ -79,25 +79,44 @@ typedef nx_struct CtpSendRequestMsg {
 // ctp spoof report message, all collected information available
 typedef nx_struct CtpReportDataMsg {
 	nx_struct CtpResponseMsg response;
-	ctp_data_header_t ctpDataHeader;
+	
+	// local time when this message was created
+	nx_uint32_t localTime32khz;
 	
 	// source of message
 	nx_am_addr_t amSource;
 	
-	// rssi of received packet
-	nx_int16_t rssi;
+	// packet timestamp
+	nx_uint32_t timestamp32khz;
+	
+	// RSSI of received packet
+	nx_union{
+		nx_struct {
+	       ctp_data_header_t ctpDataHeader;
+	       nx_int16_t rssi;
+	    } recv;
+	    
+	    nx_struct {
+	    	nx_uint32_t ccaWaitTime;
+	    	nx_uint16_t ccaWaitRounds;
+	    	
+	    	nx_uint8_t fwdRetryCount; 
+	    } sent;
+	} data;
 	
 	// LSB
 	// 1. bit 0x1 = spoofed boolean
 	// 2. bit 0x2 = normal CTP reception == TRUE, otherwise was tapped
 	// 3. bit 0x4 = message was sent from node - reporting of sending by same node
-	//			in this case rssi, ctpDataHeader has no meaning, thus must be nulled 
+	//			in this case rssi, ctpDataHeader has no meaning, thus must be nulled
+	// 4. bit 0x8 = sent message, detected from sendDone snooper in ForwardingEngine.
 	nx_uint8_t flags;
 } CtpReportDataMsg;
 
 
 typedef nx_struct CtpInfoMsg {
     nx_uint8_t type;
+    nx_uint32_t localTime32khz;
     nx_union {        
         nx_struct {
         	nx_uint16_t data[6];

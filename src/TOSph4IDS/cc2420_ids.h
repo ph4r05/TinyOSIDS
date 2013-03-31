@@ -135,7 +135,7 @@ typedef nx_struct cc2420_metadata_t {
   nx_bool crc;
   nx_bool ack;
   nx_bool timesync;
-#define CC2420_METADATA_EXTENDED
+#define CC2420_METADATA_EXTENDED 1
 #ifdef CC2420_HW_SECURITY
 	// whether message was correctly authentized when using MAC
 	// has meaning only for received messages
@@ -146,7 +146,10 @@ typedef nx_struct cc2420_metadata_t {
 	nx_uint32_t ccaWaitTime;
 	// Number of CCA checks needed to send message.
 	// Has meaning only for SENT messages
-	nx_uint8_t ccaWaitRounds;
+	// If is non-zero at the time message was passed to the sending
+	// layer, it means maximum threshold for message to wait 
+	// for free medium to transmit (CCA)
+	nx_uint16_t ccaWaitRounds;
 
   nx_uint32_t timestamp;
   nx_uint16_t rxInterval;

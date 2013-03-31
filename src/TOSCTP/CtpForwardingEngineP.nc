@@ -103,6 +103,10 @@
 
 #include <CtpForwardingEngine.h>
 #include <CtpDebugMsg.h>
+
+#include "IEEE802154.h"
+#include "message.h"
+#include "AM.h"
    
 generic module CtpForwardingEngineP() {
   provides {
@@ -172,6 +176,13 @@ generic module CtpForwardingEngineP() {
     // radio is on or not in order to start/stop forwarding
     // as appropriate.
     interface SplitControl as RadioControl;
+    
+#if defined(CC2420_METADATA_EXTENDED)
+    // Radio dependent code
+    interface CC2420Packet;
+    interface CC2420PacketBody;
+    interface PacketTimeStamp<T32khz,uint32_t>;
+#endif
   }
 }
 implementation {
@@ -587,6 +598,14 @@ implementation {
 						call CollectionPacket.getOrigin(msg), 
 						call CollectionPacket.getSequenceNumber(msg), 
 						qe->client);
+						
+#if defined(CC2420_METADATA_EXTENDED)
+				// TODO: collect metadata information (carrier sensing time)
+				{
+				    //cc2420_metadata_t* metadata = call CC2420PacketBody.getMetadata( msg );
+                    //cc2420_header_t* header = call CC2420PacketBody.getHeader( msg );
+				}
+#endif				
 				call CollectionDebug.logEventMsg(NET_C_FE_SENT_MSG, 
 						call CollectionPacket.getSequenceNumber(msg), 
 						call CollectionPacket.getOrigin(msg),

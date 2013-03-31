@@ -137,6 +137,16 @@ implementation {
   components new QueueC(fe_queue_entry_t*, QUEUE_SIZE) as SendQueueP;
   Forwarder.SendQueue -> SendQueueP;
 
+#if defined(CC2420_METADATA_EXTENDED)
+  //
+  // Enables to use metadata information (carrier sensing time) from message in forwarder
+  //  
+  components CC2420PacketC;
+  Forwarder.CC2420Packet -> CC2420PacketC;
+  Forwarder.CC2420PacketBody -> CC2420PacketC;
+  Forwarder.PacketTimeStamp -> CC2420PacketC;
+#endif
+
 #if defined(CTP_FORWARD_ATTACKER_DELAY)
   components new PoolC(message_t, DELAY_POOL_SIZE) as DelayMessagePoolP;
   components new PoolC(fe_queue_entry_t, DELAY_POOL_SIZE) as DelayQEntryPoolP;

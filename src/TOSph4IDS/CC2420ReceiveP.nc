@@ -860,4 +860,7 @@ implementation {
         || header->dest == AM_BROADCAST_ADDR);
   }
 
+  default event message_t* ReceiveBadCRC.receive(message_t* msg, void* payload, uint8_t len) { 
+    return msg;
+  }
 }

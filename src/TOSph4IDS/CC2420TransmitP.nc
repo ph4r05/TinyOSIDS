@@ -148,7 +148,16 @@ implementation {
   /**
    * Number of CCA checks needed during last packet send
    */
-  norace uint8_t lastCcaChecks;
+  norace uint16_t lastCcaChecks;
+  
+  /**
+   * Retry counter for message to wait in BackoffTimer waiting 
+   * for free medium to send message. 
+   * 
+   * If 0, no threshold is used. 
+   * If 1, message will pass only 1 cca check before droping.
+   */
+  norace uint16_t ccaRoundsToRetry;
 	
   /**
    * Time when was the first CCA check performed - used to compute CCA wait time
@@ -187,6 +196,9 @@ implementation {
       m_receiving = FALSE;
       abortSpiRelease = FALSE;
       m_tx_power = 0;
+#ifdef CC2420_METADATA_EXTENDED        
+      ccaRoundsToRetry = 0;
+#endif
     }
     return SUCCESS;
   }
@@ -528,10 +540,16 @@ implementation {
         // sample CCA and wait a little longer if free, just in case we
         // sampled during the ack turn-around window
 #ifdef CC2420_METADATA_EXTENDED        
-        if (lastCcaChecks==0){
+        if (lastCcaChecks++==0){
         	 ccaStartTime = call BackoffTimer.getNow();
         }
-        lastCcaChecks+=1;
+        
+        if (ccaRoundsToRetry!=0 && ccaRoundsToRetry < lastCcaChecks){
+        	m_state = S_CANCEL;
+	    	if ( acquireSpiResource() == SUCCESS ) {
+		      attemptSend();
+		    }
+        }
 #endif        
         
         if ( call CCA.get() ) {
@@ -595,6 +613,7 @@ implementation {
       totalCcaChecks = 0;
 #ifdef CC2420_METADATA_EXTENDED      
       lastCcaChecks = 0;
+      ccaRoundsToRetry = 0;
 #endif      
     }
     
@@ -782,7 +801,11 @@ implementation {
         releaseSpiResource();
         call CSN.set();
         m_state = S_STARTED;
+#ifdef CC2420_METADATA_EXTENDED
+        signal Send.sendDone( m_msg, (ccaRoundsToRetry != 0 && ccaRoundsToRetry < lastCcaChecks) ? EBUSY : ECANCEL );
+#else
         signal Send.sendDone( m_msg, ECANCEL );
+#endif
         return;
       }
 #ifdef CC2420_HW_SECURITY
@@ -857,6 +880,10 @@ implementation {
   void loadTXFIFO() {
     cc2420_header_t* header = call CC2420PacketBody.getHeader( m_msg );
     uint8_t tx_power = (call CC2420PacketBody.getMetadata( m_msg ))->tx_power;
+
+#ifdef CC2420_METADATA_EXTENDED
+    ccaRoundsToRetry = (call CC2420PacketBody.getMetadata( m_msg ))->ccaWaitRounds;
+#endif
 
     if ( !tx_power ) {
       tx_power = CC2420_DEF_RFPOWER;

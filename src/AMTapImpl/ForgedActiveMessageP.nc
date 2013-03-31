@@ -11,6 +11,7 @@ module ForgedActiveMessageP{
 		interface Receive[uint8_t id];
 		interface Receive as Snoop[uint8_t id];
 		interface AMTap;
+		interface SendDoneTap;
 		
   }
   uses {
@@ -46,6 +47,7 @@ implementation {
 	}
 
 	event void ExtAMSend.sendDone[uint8_t id](message_t * msg, error_t error) {
+		signal SendDoneTap.sendDone(id, msg, error);
 		signal AMSend.sendDone[id](msg, error);
 		//signal AMSend.sendDone[call AMPacket.type(msg)](msg, error);
 	}
@@ -87,4 +89,8 @@ implementation {
 	default event message_t * AMTap.send(uint8_t type, message_t * msg,	uint8_t len) {
 		return msg;
 	}
+	
+	default event void SendDoneTap.sendDone(uint8_t type, message_t* msg, error_t error){
+        ;
+    }		
 }
