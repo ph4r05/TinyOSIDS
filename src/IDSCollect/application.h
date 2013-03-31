@@ -67,4 +67,10 @@
 #define CTP_FORWARD_ATTACKER_DROPPING 1
 #define CTP_FORWARD_ATTACKER_DELAY 1
 
+#define CTP_ROUTING_TABLE_SIZE 60
+typedef struct staticRoute_t_ {
+	am_addr_t nodeId;
+	am_addr_t parentId;
+} staticRoute_t;
+
 #endif // CTPTEST_APP_H__

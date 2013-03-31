@@ -70,6 +70,8 @@ module IDSCollectP @safe() {
         interface RootControl; 
         interface CtpInfo;
         interface CollectionDebug;
+        interface FixedTopology;
+        interface CtpAttacker;
         interface Timer<TMilli> as CtpTimer;
         interface Timer<TMilli> as TreeTimer;
         
@@ -187,6 +189,9 @@ module IDSCollectP @safe() {
   		bool treeDumping;
   		// tree dumping interval
   		uint16_t treeDumpingInterval;
+  		// static routing table
+  		bool useStaticRoute;
+  		staticRoute_t rtable[CTP_ROUTING_TABLE_SIZE];
 	} config_t;
   	config_t bconf;
   	
@@ -263,6 +268,8 @@ module IDSCollectP @safe() {
 	
 	/************************ INITIALIZATION ************************/
 	event void Boot.booted() {
+		int i=0; 
+		
 		// hard wired configuration
 		bconf.ctpTxData=7;
 		bconf.ctpTxRoute=7;
@@ -278,6 +285,43 @@ module IDSCollectP @safe() {
 		bconf.ctpSendRequest.flags |= CTP_SEND_REQUEST_COUNTER_STRATEGY_SUCCESS;
 		bconf.ctpSendRequest.flags |= CTP_SEND_REQUEST_PACKETS_UNLIMITED;
 		bconf.ctpSendRequest.flags &= ~(CTP_SEND_REQUEST_TIMER_STRATEGY_PERIODIC);
+		
+		// static routing table
+		bconf.useStaticRoute=TRUE;
+		bconf.rtable[i].nodeId = 50;    bconf.rtable[i++].parentId = 50;
+		// 1 hop
+		bconf.rtable[i].nodeId = 30;    bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 32;    bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 29;    bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 10;    bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 6;     bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 25;    bconf.rtable[i++].parentId = 50;
+		bconf.rtable[i].nodeId = 4;     bconf.rtable[i++].parentId = 50;
+		// 2 hops
+		bconf.rtable[i].nodeId = 37;    bconf.rtable[i++].parentId = 30;
+		bconf.rtable[i].nodeId = 22;    bconf.rtable[i++].parentId = 30;
+		bconf.rtable[i].nodeId = 35;    bconf.rtable[i++].parentId = 30;
+		bconf.rtable[i].nodeId = 13;    bconf.rtable[i++].parentId = 32;
+		bconf.rtable[i].nodeId = 5;     bconf.rtable[i++].parentId = 32;
+		bconf.rtable[i].nodeId = 31;    bconf.rtable[i++].parentId = 10;
+		bconf.rtable[i].nodeId = 41;    bconf.rtable[i++].parentId = 4;
+		// 3 hops
+		bconf.rtable[i].nodeId = 17;    bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 43;    bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 14;    bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 7;     bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 47;    bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 46;    bconf.rtable[i++].parentId = 37;
+		bconf.rtable[i].nodeId = 36;    bconf.rtable[i++].parentId = 5;
+		bconf.rtable[i].nodeId = 28;    bconf.rtable[i++].parentId = 31;
+		bconf.rtable[i].nodeId = 42;    bconf.rtable[i++].parentId = 31;
+		bconf.rtable[i].nodeId = 12;    bconf.rtable[i++].parentId = 41;
+		// 4h hops
+		bconf.rtable[i].nodeId = 15;    bconf.rtable[i++].parentId = 14;
+		bconf.rtable[i].nodeId = 48;    bconf.rtable[i++].parentId = 47;
+		bconf.rtable[i].nodeId = 33;    bconf.rtable[i++].parentId = 47;
+		bconf.rtable[i].nodeId = 4;     bconf.rtable[i++].parentId = 12;
+		
 		// apply config		
 		ctpTxData=bconf.ctpTxData;
 		ctpTxRoute=bconf.ctpTxRoute;
@@ -316,9 +360,11 @@ module IDSCollectP @safe() {
 	}
   
   	event void RadioControl.startDone(error_t error){
+  		uint8_t i;
 		busy=FALSE;
 			
 		// start forwarding
+		call FixedTopology.setFixedTopologyParent(1);     // to disable routing messages after start
 		call ForwardingControl.start();
 		
 		// tree dumping?
@@ -332,9 +378,15 @@ module IDSCollectP @safe() {
 			// start sending each X seconds
 			memcpy((uint8_t*) &ctpSendRequest, (uint8_t*) &(bconf.ctpSendRequest), sizeof(nx_struct CtpSendRequestMsg));
 			
-			// set correct root if this node ID is root
+			// set correct root if this node ID is root, apply static routing
 			if (TOS_NODE_ID==bconf.rootAddress){
 				call RootControl.setRoot();
+			} else if (bconf.useStaticRoute){
+				for(i=0; i<CTP_ROUTING_TABLE_SIZE; i++){
+					if (bconf.rtable[i].nodeId!=TOS_NODE_ID) continue;
+					call FixedTopology.setFixedTopologyParent(bconf.rtable[i].parentId);
+					break;
+				}
 			}
 
 			// one-shot timer only, add some time for CTP tree stabilization at boot
@@ -1229,4 +1281,12 @@ module IDSCollectP @safe() {
 		
 		return msg; 
 	}
+	
+	event bool CtpAttacker.attackPacketDropCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+		return FALSE;
+	}
+	
+	event bool CtpAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+        return FALSE;
+    }	
 }

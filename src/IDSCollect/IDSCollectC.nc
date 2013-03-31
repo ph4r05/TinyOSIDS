@@ -141,6 +141,8 @@ configuration IDSCollectC {
 //    App.CtpCongestion -> Collector;
     App.CollectionPacket -> Collector;
     App.CtpReceive -> Collector.Receive[AM_CTPRESPONSEMSG];
+    App.FixedTopology -> Collector.FixedTopology;
+    App.CtpAttacker -> Collector.CtpAttacker;
 
     components RandomC;
     App.Random -> RandomC;

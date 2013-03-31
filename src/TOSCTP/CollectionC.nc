@@ -65,6 +65,8 @@ configuration CollectionC {
      interface Init as LinkEstimatorInit;
      interface Init as ForwardingInit;
      interface ForwardControl;
+     interface FixedTopology;
+     interface CtpAttacker;
   }
 
   uses {
@@ -97,5 +99,8 @@ implementation {
   ForwardingInit = CtpP.ForwardingInit;
   LinkEstimatorInit = CtpP.LinkEstimatorInit;
   ForwardControl = CtpP;
+  
+  FixedTopology = CtpP;
+  CtpAttacker = CtpP;
 }
 

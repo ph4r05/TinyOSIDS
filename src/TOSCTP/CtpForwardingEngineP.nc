@@ -123,7 +123,7 @@ generic module CtpForwardingEngineP() {
     
     // added interfaces
     interface ForwardControl;
-    interface ForwarderAttacker;
+    interface CtpAttacker;
   }
   uses {
     // These five interfaces are used in the forwarding path
@@ -892,7 +892,7 @@ implementation {
             // callback type for packet dropping, let user logic to decide whethet
             // message is subject to probabilistic dropping or not
             if (attacker_dropping_type == CTP_ATTACKER_DROPPING_CALLBACK){
-            	probDrop =  signal ForwarderAttacker.attackPacketDropCallback(msg, call Packet.getPayload(msg, 
+            	probDrop =  signal CtpAttacker.attackPacketDropCallback(msg, call Packet.getPayload(msg, 
                         call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid);
             }
              
@@ -932,7 +932,7 @@ implementation {
             if (attacker_delay_type==CTP_ATTACKER_DELAY_CALLBACK){
             	// callback to user wired event to determine whether this message
             	// should be delayed or not.
-	            if (signal ForwarderAttacker.attackPacketDelayCallback(msg, call Packet.getPayload(msg, 
+	            if (signal CtpAttacker.attackPacketDelayCallback(msg, call Packet.getPayload(msg, 
 	                    call Packet.payloadLength(msg)), call Packet.payloadLength(msg), collectid)){
                     // it was signalized from user that this message should be delayed
                     return delayForward(msg);
@@ -1391,12 +1391,12 @@ implementation {
     }
 #endif	
 
-	command error_t ForwarderAttacker.enablePacketDelay(uint8_t type, uint16_t milli){
+	command error_t CtpAttacker.enablePacketDelay(uint8_t type, uint16_t milli){
 #ifndef CTP_FORWARD_ATTACKER_DELAY
         return FAIL;
 #else
         if (type==CTP_ATTACKER_DELAY_DISABLED){
-        	return call ForwarderAttacker.disablePacketDelay();
+        	return call CtpAttacker.disablePacketDelay();
         } else if (type==CTP_ATTACKER_DELAY_CALLBACK){
         	attacker_delay_type = type;
         } else if (type==CTP_ATTACKER_DELAY_FLAT){
@@ -1412,7 +1412,7 @@ implementation {
 #endif
 	}
 
-    command error_t ForwarderAttacker.disablePacketDelay(){
+    command error_t CtpAttacker.disablePacketDelay(){
 #ifndef CTP_FORWARD_ATTACKER_DELAY    	
     	return FAIL;
 #else
@@ -1423,7 +1423,7 @@ implementation {
 #endif
    	}
     
-	command uint8_t ForwarderAttacker.getAttackPacketDelayType(){
+	command uint8_t CtpAttacker.getAttackPacketDelayType(){
 #ifndef CTP_FORWARD_ATTACKER_DELAY
 		return 0;
 #else
@@ -1431,20 +1431,20 @@ implementation {
 #endif
 	}
 	
-	default event bool ForwarderAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+	default event bool CtpAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
         return FALSE;
     }
     
-    default event bool ForwarderAttacker.attackPacketDropCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
+    default event bool CtpAttacker.attackPacketDropCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
         return FALSE;
     }
 	
-	command error_t ForwarderAttacker.enablePacketDropping(uint8_t type, float p){
+	command error_t CtpAttacker.enablePacketDropping(uint8_t type, float p){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING
 		return FAIL;
 #else
         if (type==CTP_ATTACKER_DROPPING_DISABLED){
-            call ForwarderAttacker.disablePacketDropping();
+            call CtpAttacker.disablePacketDropping();
         } else if (type==CTP_ATTACKER_DROPPING_CALLBACK){
             attacker_dropping_type = type;
             attacker_dropping_flat_rate = p;
@@ -1459,16 +1459,16 @@ implementation {
 #endif
 	}
 
-    command error_t ForwarderAttacker.disablePacketDropping(){
+    command error_t CtpAttacker.disablePacketDropping(){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING  
         return FAIL;
 #else
         attacker_dropping_type = CTP_ATTACKER_DROPPING_DISABLED;
         return SUCCESS;
-#endif        
+#endif
     }
 
-	command bool ForwarderAttacker.getPacketDroppingType(){
+	command bool CtpAttacker.getPacketDroppingType(){
 #ifndef CTP_FORWARD_ATTACKER_DROPPING		
 		return 0;
 #else

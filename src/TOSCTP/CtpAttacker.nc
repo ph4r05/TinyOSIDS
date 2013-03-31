@@ -11,7 +11,7 @@
  *          interface of CtpForwardingEngine. 
  *      based on packet content
  */
-interface ForwarderAttacker {
+interface CtpAttacker {
 	/**
 	 * Enables flat packet delaying - each packet will be delayed by specified
 	 * amount of time.
