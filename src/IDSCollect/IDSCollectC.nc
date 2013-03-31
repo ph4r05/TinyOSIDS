@@ -65,11 +65,15 @@ configuration IDSCollectC {
   components CC2420ControlC;
   components CC2420ControlP;
   components CC2420PacketC;
+  components CC2420TransmitC;
   
   App.CC2420PacketBody -> CC2420PacketC.CC2420PacketBody;
   App.PacketTimeStamp32khz -> CC2420PacketC.PacketTimeStamp32khz;
   App.PacketTimeStampMilli -> CC2420PacketC.PacketTimeStampMilli;
   App -> CC2420ControlC.CC2420Config;
+  
+  App.EnergyIndicator -> CC2420TransmitC.EnergyIndicator;
+  App.ByteIndicator -> CC2420TransmitC.ByteIndicator;  
 #elif  defined(PLATFORM_IRIS)
   components  RF230ActiveMessageC, PacketField;
   App -> RF230ActiveMessageC.PacketRSSI;

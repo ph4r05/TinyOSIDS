@@ -110,6 +110,8 @@ module IDSCollectP @safe() {
 #ifdef __CC2420_H__
   uses interface CC2420Packet;
   uses interface CC2420PacketBody;
+  uses interface ReceiveIndicator as EnergyIndicator;
+  uses interface ReceiveIndicator as ByteIndicator;
   uses interface PacketTimeStamp<T32khz, uint32_t> as PacketTimeStamp32khz;
   uses interface PacketTimeStamp<TMilli, uint32_t> as PacketTimeStampMilli;
 
