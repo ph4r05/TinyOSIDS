@@ -88,6 +88,7 @@ configuration CtpP {
     interface ForwardControl;
     interface FixedTopology;
     interface CtpAttacker;
+    interface CtpForwardingSubSendDone;
   }
 
   uses {
@@ -182,6 +183,7 @@ implementation {
   RootControl = Router;
   FixedTopology = Router; 
   CtpAttacker = Forwarder;
+  CtpForwardingSubSendDone = Forwarder;
   MainC.SoftwareInit -> Router.Init;
   Router.BeaconSend -> Estimator.Send;
   Router.BeaconReceive -> Estimator.Receive;

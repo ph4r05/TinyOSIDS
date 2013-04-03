@@ -101,6 +101,8 @@ typedef nx_struct CtpReportDataMsg {
 	    	nx_uint16_t ccaWaitRounds;
 	    	
 	    	nx_uint8_t fwdRetryCount; 
+	    	nx_uint8_t client;
+	    	nx_bool acked;
 	    } sent;
 	} data;
 	
@@ -113,6 +115,10 @@ typedef nx_struct CtpReportDataMsg {
 	nx_uint8_t flags;
 } CtpReportDataMsg;
 
+#define CTP_REPORT_DATA_MSG_FLAG_SPOOF 0x1
+#define CTP_REPORT_DATA_MSG_FLAG_RECV 0x2
+#define CTP_REPORT_DATA_MSG_FLAG_SENT 0x4
+#define CTP_REPORT_DATA_MSG_FLAG_SENDDONE 0x8
 
 typedef nx_struct CtpInfoMsg {
     nx_uint8_t type;

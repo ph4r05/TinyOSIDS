@@ -79,6 +79,8 @@ module IDSCollectP @safe() {
         interface Receive as UartCtpSendRequestReceiver;
         
         interface AMTap as AMTapForg;
+        interface SendDoneTap;
+        interface CtpForwardingSubSendDone;
 		
 		interface CollectionDebug as CtpLogger;
 		interface ForwardControl;
@@ -1264,6 +1266,11 @@ module IDSCollectP @safe() {
 			setPower(msg, ctpTxData);
 		}
 		
+		// Set CCA sampling time maximal threshold for message being sent
+		if (type==AM_CTP_DATA){
+			(call CC2420PacketBody.getMetadata( msg ))->ccaWaitRounds = CCA_MSG_SEND_WAITROUNDS;
+		}
+		
 		// CTP ROUTE message sent here, set wanted tx power
 		// maximum power is default, thus ignore maximum power level
 		if (type==AM_CTP_ROUTING && ctpTxRoute<=31){
@@ -1305,5 +1312,62 @@ module IDSCollectP @safe() {
 		}
 		
 		call CCATimer.startOneShot(CCA_SAMPLE_TIMER_MILLI);
+	}
+
+    // Measure Carrier Sensing Time for CTP data messages
+	event void SendDoneTap.sendDone(uint8_t type, message_t *msg, error_t error){
+		return;
+	}
+	
+	event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, bool acked){
+		if ((error != SUCCESS && error != EBUSY) || msg==NULL){   // generic error, ignore it, no notification
+			return;
+		}
+		
+		if(call UartCtpReportDataSender.full() == TRUE) {
+			return;
+		}
+	    
+	    {   // just new block, define new variables
+            // nx_uint8_t retries = qe->retries;
+            // meta->ccaWaitTime;     // nx_uint32_t ccaWaitTime;
+            cc2420_metadata_t * meta = call CC2420PacketBody.getMetadata(msg);
+            uint16_t realWaitRounds = error == EBUSY ? CCA_MSG_SEND_WAITROUNDS : meta->ccaWaitRounds;   // nx_uint16_t ccaWaitRounds;
+		    
+            //CTP spoof is interesting for me
+            CtpResponseMsg * response = NULL;
+            ctp_data_header_t  * ctpDataHeader = NULL;
+            void * payload = call CtpSend.getPayload(msg, sizeof(CtpResponseMsg));
+            CtpReportDataMsg dataBuff; 
+            CtpReportDataMsg * btrpkt = &dataBuff;
+	        
+            // interested only in my collection id
+            ctpDataHeader = (ctp_data_header_t  *) payload;
+            if (ctpDataHeader->type!=AM_CTPRESPONSEMSG){
+                return;
+            }
+	        
+            response = (CtpResponseMsg *) (payload + sizeof(ctp_data_header_t));   // get correct payload (take CTP headers into account)
+            btrpkt->flags = CTP_REPORT_DATA_MSG_FLAG_SENDDONE;
+            btrpkt->amSource = call AMPacket.source(msg);
+            btrpkt->data.sent.ccaWaitTime = meta->ccaWaitTime;
+            btrpkt->data.sent.ccaWaitRounds = realWaitRounds;
+            btrpkt->data.sent.fwdRetryCount = qe->retries;
+            btrpkt->data.sent.client = qe->client;
+            btrpkt->data.sent.acked = acked;
+            btrpkt->timestamp32khz = ((call PacketTimeStamp32khz.isValid(msg))==FALSE) ? 0 : call PacketTimeStamp32khz.timestamp(msg);
+            btrpkt->localTime32khz = call LocalTime32khz.get();
+            memcpy((void*)&(btrpkt->response), (void*)response, sizeof(CtpResponseMsg));        
+            
+            // use queue here to add messages
+            // build queue message
+	         atomic {
+	            if (call UartCtpReportDataSender.enqueueData(btrpkt, sizeof(CtpReportDataMsg))==SUCCESS){
+	                return;
+	            } else {
+	                return;    // message add ignoring...
+	            }
+	        }  	
+	    }
 	}
 }

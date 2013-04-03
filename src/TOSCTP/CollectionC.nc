@@ -67,6 +67,7 @@ configuration CollectionC {
      interface ForwardControl;
      interface FixedTopology;
      interface CtpAttacker;
+     interface CtpForwardingSubSendDone;
   }
 
   uses {
@@ -102,5 +103,6 @@ implementation {
   
   FixedTopology = CtpP;
   CtpAttacker = CtpP;
+  CtpForwardingSubSendDone = CtpP;
 }
 

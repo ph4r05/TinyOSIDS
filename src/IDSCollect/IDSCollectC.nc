@@ -147,6 +147,7 @@ configuration IDSCollectC {
     App.CtpReceive -> Collector.Receive[AM_CTPRESPONSEMSG];
     App.FixedTopology -> Collector.FixedTopology;
     App.CtpAttacker -> Collector.CtpAttacker;
+    App.CtpForwardingSubSendDone -> Collector.CtpForwardingSubSendDone;
 
     components RandomC;
     App.Random -> RandomC;
@@ -164,6 +165,7 @@ configuration IDSCollectC {
   	// to hook send() calls by this way. Needed to set TX power for some messages
   	components ForgedActiveMessageC as FAM;
   	App.AMTapForg -> FAM.AMTap;
+  	App.SendDoneTap -> FAM.SendDoneTap;
   	
   	// LOGGER DISABLED TEMPORARILY
   	// Logger produces intensive data streams, if everybody is set to listen to 

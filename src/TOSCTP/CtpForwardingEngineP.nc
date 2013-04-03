@@ -124,6 +124,7 @@ generic module CtpForwardingEngineP() {
     // added interfaces
     interface ForwardControl;
     interface CtpAttacker;
+    interface CtpForwardingSubSendDone;
   }
   uses {
     // These five interfaces are used in the forwarding path
@@ -598,14 +599,7 @@ implementation {
 						call CollectionPacket.getOrigin(msg), 
 						call CollectionPacket.getSequenceNumber(msg), 
 						qe->client);
-						
-#if defined(CC2420_METADATA_EXTENDED)
-				// TODO: collect metadata information (carrier sensing time)
-				{
-				    //cc2420_metadata_t* metadata = call CC2420PacketBody.getMetadata( msg );
-                    //cc2420_header_t* header = call CC2420PacketBody.getHeader( msg );
-				}
-#endif				
+								
 				call CollectionDebug.logEventMsg(NET_C_FE_SENT_MSG, 
 						call CollectionPacket.getSequenceNumber(msg), 
 						call CollectionPacket.getOrigin(msg),
@@ -671,9 +665,12 @@ implementation {
 				       call CollectionPacket.getOrigin(msg), 
 				       call AMPacket.destination(msg));
       startRetxmitTimer(SENDDONE_FAIL_WINDOW, SENDDONE_FAIL_OFFSET);
+      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, error, qe, FALSE);
     }
     else if (hasState(ACK_PENDING) && !call PacketAcknowledgements.wasAcked(msg)) {
       /* No ack: if countdown is not 0, retransmit, else drop the packet. */
+      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, FALSE); // signal it now, before state changes
+      
       call LinkEstimator.txNoAck(call AMPacket.destination(msg));
       call CtpInfo.recomputeRoutes();
       if (--qe->retries) { 
@@ -696,6 +693,8 @@ implementation {
       /* Packet was acknowledged. Updated the link estimator,
 	 free the buffer (pool or sendDone), start timer to
 	 send next packet. */
+	  signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, TRUE); // signal it now, before state changes
+	 
       call SendQueue.dequeue();
       clearState(SENDING);
       startRetxmitTimer(SENDDONE_OK_WINDOW, SENDDONE_OK_OFFSET);
@@ -1475,5 +1474,9 @@ implementation {
         return attacker_dropping_type;
 #endif		
 	}
+	
+	default event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, bool acked){
+        return;
+    }
 }
 

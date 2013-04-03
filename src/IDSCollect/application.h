@@ -41,7 +41,12 @@
 #endif
 
 #include "../TOSph4IDS/cc2420_ids.h"
+
+#ifdef MIG
+#include "../printf.h"
+#else
 #include "printf.h"
+#endif
 
 /**
  * Warning!
@@ -64,6 +69,7 @@
 #define NULL ((void*)0)
 #endif
 
+#define CCA_MSG_SEND_WAITROUNDS 500
 #define CCA_SAMPLE_BUFFER_SIZE 4
 #define CCA_SAMPLE_BUFFER_ELEM_SIZE 16
 #define CCA_SAMPLE_TIMER_MILLI 50
@@ -107,4 +113,5 @@ typedef struct config_t {
     staticRoute_t rtable[CTP_ROUTING_TABLE_SIZE];
 } config_t;
 
+#include "../TOSCTP/CtpForwardingEngine.h"
 #endif // CTPTEST_APP_H__
