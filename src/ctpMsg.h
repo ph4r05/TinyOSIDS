@@ -139,6 +139,11 @@ typedef nx_struct CtpInfoMsg {
         	nx_uint16_t routeQuality;		
         	nx_uint16_t flags;
         } neighInfo;
+        
+        nx_struct {
+        	nx_uint32_t tstamp;
+        	nx_uint16_t data[4];
+        } cca;
 
     } data;
 } CtpInfoMsg;

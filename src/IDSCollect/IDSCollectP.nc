@@ -74,6 +74,7 @@ module IDSCollectP @safe() {
         interface CtpAttacker;
         interface Timer<TMilli> as CtpTimer;
         interface Timer<TMilli> as TreeTimer;
+        interface Timer<TMilli> as CCATimer;
         
         interface Receive as UartCtpSendRequestReceiver;
         
@@ -168,37 +169,18 @@ module IDSCollectP @safe() {
   		DBG_CTP_NEWDELAY=0x63,
   	};
   	
-  	// Config structure
-  	// This configuration structure can be stored to flash memory
-  	// in order to be configurable at runtime and to survive node
-  	// restart/power-cycle. 
-  	// Now it is hardwired in boot, but can be easily modiffied
-  	// to be configurable at runtime with config commands. 
-  	// Each config command should change this config structure,
-  	// it would be then saved to flash memory like in http://docs.tinyos.net/tinywiki/index.php/Storage
-  	typedef struct config_t {
-  		uint8_t ctpTxData;
-  		uint8_t ctpTxRoute;
-  		// send request wired to configuration structure
-  		nx_struct CtpSendRequestMsg ctpSendRequest;
-  		// if YES then after boot is launched CTP send according to ctpSendRequest
-  		bool sendingCTP;
-  		// static CTP root address, only 1 node can be root here
-  		uint16_t rootAddress;
-  		// if tree dumping is enabled
-  		bool treeDumping;
-  		// tree dumping interval
-  		uint16_t treeDumpingInterval;
-  		// static routing table
-  		bool useStaticRoute;
-  		staticRoute_t rtable[CTP_ROUTING_TABLE_SIZE];
-	} config_t;
+  	// Configuration structure
   	config_t bconf;
   	
   	uint16_t ctpGetNewDelay();
   	void task sendCtpMsg();
   	void ctpMessageSend(message_t *msg, void *payload);
   	void sendCtpInfoMsg(uint8_t type, uint8_t arg);
+  	
+  	// CCA sampling related stuff
+  	uint16_t ccaSampleIdx=0;
+  	uint32_t ccaSampleStart=0;
+  	uint16_t ccaBuffer[CCA_SAMPLE_BUFFER_SIZE];
   	
 	/**************** GENERIC ****************/
 	bool radioOn=FALSE;  
@@ -276,6 +258,7 @@ module IDSCollectP @safe() {
 		bconf.sendingCTP=TRUE;
 		bconf.rootAddress=50;
 		
+		bconf.CCASampling=TRUE;
 		bconf.treeDumping=TRUE;
 		bconf.treeDumpingInterval=2000;
 		
@@ -370,6 +353,11 @@ module IDSCollectP @safe() {
 		// tree dumping?
 		if (bconf.treeDumping){
 			call TreeTimer.startPeriodic(bconf.treeDumpingInterval);
+		}
+		
+		// cca sampling?
+		if (bconf.CCASampling){
+			call CCATimer.startOneShot(CCA_SAMPLE_TIMER_MILLI);
 		}
 		
 		// apply loaded config - prevents suddenly node reset and
@@ -1174,6 +1162,9 @@ module IDSCollectP @safe() {
 					btrpkt->data.neighInfo.routeQuality = call CtpInfo.getNeighborRouteQuality(arg);
 					btrpkt->data.neighInfo.flags = 0;
 					btrpkt->data.neighInfo.flags |= call CtpInfo.isNeighborCongested(btrpkt->data.neighInfo.addr) ? 1 : 0;
+				} else if (type==CTPINFO_TYPE_CCA){ 
+				    btrpkt->data.cca.tstamp = ccaSampleStart;
+				    memcpy(btrpkt->data.cca.data, ccaBuffer, sizeof(ccaBuffer[0]) * CCA_SAMPLE_BUFFER_SIZE);
 				} else {
 					return;
 				}
@@ -1289,4 +1280,30 @@ module IDSCollectP @safe() {
 	event bool CtpAttacker.attackPacketDelayCallback(message_t* msg, void* payload, uint8_t len, am_id_t type){
         return FALSE;
     }	
+
+	event void CCATimer.fired(){
+		if (ccaSampleIdx != (CCA_SAMPLE_BUFFER_ELEM_SIZE * CCA_SAMPLE_BUFFER_SIZE)){  // do no sampling if waiting for flush
+			if ((ccaSampleIdx++)==0){
+				ccaSampleStart = call LocalTimeMilli.get();
+				memset(ccaBuffer, 0, CCA_SAMPLE_BUFFER_SIZE * sizeof(ccaBuffer[0])); // zero-out CCA buffer
+			}
+			
+			if (call EnergyIndicator.isReceiving()){
+			  ccaBuffer[ccaSampleIdx / CCA_SAMPLE_BUFFER_ELEM_SIZE] |= 1 << (ccaSampleIdx % CCA_SAMPLE_BUFFER_ELEM_SIZE);
+			} 
+		}
+		
+		if (ccaSampleIdx >= (CCA_SAMPLE_BUFFER_ELEM_SIZE * CCA_SAMPLE_BUFFER_SIZE-1)){    // send CCA measurements to server
+          if(call UartCtpInfoMsgSender.full()==TRUE){                                     // cannot send report, buffer is full, wait, no samping meanwhile
+          	ccaSampleIdx = CCA_SAMPLE_BUFFER_ELEM_SIZE * CCA_SAMPLE_BUFFER_SIZE;
+          } else {
+	          atomic {
+	            sendCtpInfoMsg(CTPINFO_TYPE_CCA, 0);
+			    ccaSampleIdx=0;
+			  }
+	      }
+		}
+		
+		call CCATimer.startOneShot(CCA_SAMPLE_TIMER_MILLI);
+	}
 }

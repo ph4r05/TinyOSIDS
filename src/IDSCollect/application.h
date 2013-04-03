@@ -64,6 +64,12 @@
 #define NULL ((void*)0)
 #endif
 
+#define CCA_SAMPLE_BUFFER_SIZE 4
+#define CCA_SAMPLE_BUFFER_ELEM_SIZE 16
+#define CCA_SAMPLE_TIMER_MILLI 50
+#define CTPINFO_TYPE_CCA 2
+
+
 #define CTP_FORWARD_ATTACKER_DROPPING 1
 #define CTP_FORWARD_ATTACKER_DELAY 1
 
@@ -72,5 +78,33 @@ typedef struct staticRoute_t_ {
 	am_addr_t nodeId;
 	am_addr_t parentId;
 } staticRoute_t;
+
+// Config structure
+// This configuration structure can be stored to flash memory
+// in order to be configurable at runtime and to survive node
+// restart/power-cycle. 
+// Now it is hardwired in boot, but can be easily modiffied
+// to be configurable at runtime with config commands. 
+// Each config command should change this config structure,
+// it would be then saved to flash memory like in http://docs.tinyos.net/tinywiki/index.php/Storage
+typedef struct config_t {
+    uint8_t ctpTxData;
+    uint8_t ctpTxRoute;
+    // send request wired to configuration structure
+    nx_struct CtpSendRequestMsg ctpSendRequest;
+    // if YES then after boot is launched CTP send according to ctpSendRequest
+    bool sendingCTP;
+    // static CTP root address, only 1 node can be root here
+    uint16_t rootAddress;
+    // if tree dumping is enabled
+    bool treeDumping;
+    // if CCA sampling is enabled
+    bool CCASampling;
+    // tree dumping interval
+    uint16_t treeDumpingInterval;
+    // static routing table
+    bool useStaticRoute;
+    staticRoute_t rtable[CTP_ROUTING_TABLE_SIZE];
+} config_t;
 
 #endif // CTPTEST_APP_H__

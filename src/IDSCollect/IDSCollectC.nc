@@ -53,6 +53,9 @@ configuration IDSCollectC {
   // dumps actual CTP structure to application
   components new TimerMilliC() as TreeTimer;
   
+  // CCA sampling timer
+  components new TimerMilliC() as CCATimer;
+  
   components ResetC;
   
   /**************** NOISE FLOOR READING ****************/
@@ -105,6 +108,7 @@ configuration IDSCollectC {
   App.InitTimer -> InitTimer;
   App.AliveTimer -> AliveTimer;
   App.TreeTimer -> TreeTimer;
+  App.CCATimer -> CCATimer;
   
   //App.RadioControl -> ActiveMessageC;
   App.Leds -> LedsC;
@@ -124,7 +128,7 @@ configuration IDSCollectC {
   components new SerialQueueSenderC(CtpReportDataMsg, 12, AM_CTPREPORTDATAMSG) as UartCtpReportDataSender;
   App.UartCtpReportDataSender -> UartCtpReportDataSender;
   
-  components new SerialQueueSenderC(CtpInfoMsg, 4, AM_CTPINFOMSG) as UartCtpInfoMsgSender;
+  components new SerialQueueSenderC(CtpInfoMsg, 6, AM_CTPINFOMSG) as UartCtpInfoMsgSender;
   App.UartCtpInfoMsgSender -> UartCtpInfoMsgSender;
   
   /**************** Collector ****************/   
