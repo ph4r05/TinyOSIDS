@@ -1319,7 +1319,7 @@ module IDSCollectP @safe() {
 		return;
 	}
 	
-	event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, bool acked){
+	event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, am_addr_t dest, bool acked){
 		if ((error != SUCCESS && error != EBUSY) || msg==NULL){   // generic error, ignore it, no notification
 			return;
 		}
@@ -1355,6 +1355,7 @@ module IDSCollectP @safe() {
             btrpkt->data.sent.fwdRetryCount = qe->retries;
             btrpkt->data.sent.client = qe->client;
             btrpkt->data.sent.acked = acked;
+            btrpkt->data.sent.dest = dest;
             btrpkt->timestamp32khz = ((call PacketTimeStamp32khz.isValid(msg))==FALSE) ? 0 : call PacketTimeStamp32khz.timestamp(msg);
             btrpkt->localTime32khz = call LocalTime32khz.get();
             memcpy((void*)&(btrpkt->response), (void*)response, sizeof(CtpResponseMsg));        

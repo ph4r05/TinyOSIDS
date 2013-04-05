@@ -102,6 +102,8 @@ typedef nx_struct CtpReportDataMsg {
 	    	
 	    	nx_uint8_t fwdRetryCount; 
 	    	nx_uint8_t client;
+	    	
+	    	nx_am_addr_t dest;
 	    	nx_bool acked;
 	    } sent;
 	} data;

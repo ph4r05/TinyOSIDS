@@ -12,6 +12,6 @@ interface CtpForwardingSubSendDone {
 	 * @param acked    was ACK received? Is relevant only if error==SUCCESS 
 	 * @return void
 	 */
-    event void CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, bool acked);
+    event void CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, am_addr_t dest, bool acked);
 }
 

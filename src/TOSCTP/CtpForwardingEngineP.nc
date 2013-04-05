@@ -655,6 +655,7 @@ implementation {
   
   event void SubSend.sendDone(message_t* msg, error_t error) {
     fe_queue_entry_t *qe = call SendQueue.head();
+    am_addr_t dest = call UnicastNameFreeRouting.nextHop();
     dbg("Forwarder", "%s to %hu and %hhu\n", __FUNCTION__, call AMPacket.destination(msg), error);
 
     if (error != SUCCESS) {
@@ -665,11 +666,11 @@ implementation {
 				       call CollectionPacket.getOrigin(msg), 
 				       call AMPacket.destination(msg));
       startRetxmitTimer(SENDDONE_FAIL_WINDOW, SENDDONE_FAIL_OFFSET);
-      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, error, qe, FALSE);
+      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, error, qe, dest, FALSE);
     }
     else if (hasState(ACK_PENDING) && !call PacketAcknowledgements.wasAcked(msg)) {
       /* No ack: if countdown is not 0, retransmit, else drop the packet. */
-      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, FALSE); // signal it now, before state changes
+      signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, dest, FALSE); // signal it now, before state changes
       
       call LinkEstimator.txNoAck(call AMPacket.destination(msg));
       call CtpInfo.recomputeRoutes();
@@ -693,7 +694,7 @@ implementation {
       /* Packet was acknowledged. Updated the link estimator,
 	 free the buffer (pool or sendDone), start timer to
 	 send next packet. */
-	  signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, TRUE); // signal it now, before state changes
+	  signal CtpForwardingSubSendDone.CTPSubSendDone(msg, SUCCESS, qe, dest, TRUE); // signal it now, before state changes
 	 
       call SendQueue.dequeue();
       clearState(SENDING);
@@ -1475,7 +1476,7 @@ implementation {
 #endif		
 	}
 	
-	default event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, bool acked){
+	default event void CtpForwardingSubSendDone.CTPSubSendDone(message_t *msg, error_t error, fe_queue_entry_t ONE * qe, am_addr_t dest, bool acked){
         return;
     }
 }
